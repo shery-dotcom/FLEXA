@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
-/* â”€â”€â”€ Daily inspiration quotes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Daily inspiration quotes ─────────────────────────────────── */
 const QUOTES = [
   {
     text: "Discipline is choosing between what you want now and what you want most.",
@@ -142,12 +142,12 @@ function getDayLabel() {
 }
 
 function fmtGoal(g) {
-  if (!g) return "â€”";
+  if (!g) return "\u2014";
   return g.charAt(0).toUpperCase() + g.slice(1);
 }
 
 function fmtActivity(a) {
-  if (!a) return "â€”";
+  if (!a) return "\u2014";
   return a.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
@@ -160,9 +160,9 @@ function bmiColor(cat) {
   return "#ef5350";
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════════════════════════════════
    MAIN COMPONENT
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+═══════════════════════════════════════════════════════════════ */
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -217,7 +217,7 @@ export default function Dashboard() {
         gap: 14,
       }}
     >
-      {/* â”€â”€ Welcome Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Welcome Banner ─────────────────────────────────────────── */}
       <div
         style={{
           display: "flex",
@@ -280,7 +280,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* â”€â”€ Daily Motivation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Daily Motivation ───────────────────────────────────────── */}
       <div
         style={{
           background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
@@ -300,7 +300,7 @@ export default function Dashboard() {
             textAlign: "center",
           }}
         >
-          âœ¦ Daily Motivation âœ¦
+          &#10022; Daily Motivation &#10022;
         </p>
         <p
           style={{
@@ -313,7 +313,7 @@ export default function Dashboard() {
             fontWeight: 500,
           }}
         >
-          "{quote.text}"
+          &ldquo;{quote.text}&rdquo;
         </p>
         <p
           style={{
@@ -323,11 +323,11 @@ export default function Dashboard() {
             fontWeight: 600,
           }}
         >
-          â€” {quote.author}
+          &mdash; {quote.author}
         </p>
       </div>
 
-      {/* â”€â”€ 2Ã—2 Stats Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── 2×2 Stats Grid ─────────────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <StatCard
           label="Current Goal"
@@ -344,27 +344,31 @@ export default function Dashboard() {
         />
         <StatCard
           label="BMI"
-          value={data.bmi ? data.bmi.toFixed(2) : "â€”"}
+          value={data.bmi ? data.bmi.toFixed(2) : "\u2014"}
           sub={data.bmi_category || "Not measured"}
           subColor={bmiColor(data.bmi_category)}
         />
         <StatCard
           label="Daily Calories"
           value={
-            data.daily_calories ? data.daily_calories.toLocaleString() : "â€”"
+            data.daily_calories
+              ? data.daily_calories.toLocaleString()
+              : "\u2014"
           }
           sub={fmtActivity(data.activity_level)}
         />
         <StatCard
           label="Target Calories"
           value={
-            data.target_calories ? data.target_calories.toLocaleString() : "â€”"
+            data.target_calories
+              ? data.target_calories.toLocaleString()
+              : "\u2014"
           }
           sub="cal"
         />
       </div>
 
-      {/* â”€â”€ Workout CTA (no plan) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Workout CTA (no plan) ──────────────────────────────────── */}
       {!data.has_workout_plan && (
         <div
           style={{
@@ -376,7 +380,7 @@ export default function Dashboard() {
           }}
         >
           <div style={{ fontSize: 42, marginBottom: 14, lineHeight: 1 }}>
-            ðŸ‹ï¸
+            &#127947;
           </div>
           <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>
             No Workout Plan Yet
@@ -408,7 +412,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* â”€â”€ Weekly progress (has plan) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Weekly progress (has plan) ─────────────────────────────── */}
       {data.has_workout_plan && (
         <div
           style={{
@@ -443,7 +447,7 @@ export default function Dashboard() {
             </span>
           </div>
 
-          {/* Day dots â€” Mon-Sun */}
+          {/* Day dots – Mon-Sun */}
           <div
             style={{
               display: "flex",
@@ -492,12 +496,12 @@ export default function Dashboard() {
                           fontSize: 12,
                         }}
                       >
-                        â€¢
+                        &bull;
                       </span>
                     )}
                     {done && (
                       <span style={{ color: "#4caf50", fontSize: 10 }}>
-                        âœ“
+                        &#10003;
                       </span>
                     )}
                   </div>
@@ -527,12 +531,12 @@ export default function Dashboard() {
             }}
             onClick={() => navigate("/workouts")}
           >
-            View Today's Workout
+            View Today&apos;s Workout
           </button>
         </div>
       )}
 
-      {/* â”€â”€ Today's Tasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Today's Tasks ──────────────────────────────────────────── */}
       {data.today_tasks?.length > 0 && (
         <div
           style={{
@@ -559,7 +563,7 @@ export default function Dashboard() {
                 textTransform: "uppercase",
               }}
             >
-              Today's Tasks
+              Today&apos;s Tasks
             </p>
             <span style={{ fontSize: 11, color: "#616161" }}>
               {data.today_tasks.filter((t) => t.is_completed).length}/
@@ -574,7 +578,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* â”€â”€ All-time strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── All-time strip ─────────────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <MiniStatCard
           label="Total Sessions"
@@ -590,7 +594,7 @@ export default function Dashboard() {
   );
 }
 
-/* â”€â”€â”€ StatCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── StatCard ──────────────────────────────────────────────────── */
 function StatCard({ label, value, sub, subColor = "#D4AF37" }) {
   return (
     <div
@@ -629,7 +633,7 @@ function StatCard({ label, value, sub, subColor = "#D4AF37" }) {
   );
 }
 
-/* â”€â”€â”€ MiniStatCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── MiniStatCard ──────────────────────────────────────────────── */
 function MiniStatCard({ label, value, unit }) {
   return (
     <div
@@ -663,7 +667,7 @@ function MiniStatCard({ label, value, unit }) {
   );
 }
 
-/* â”€â”€â”€ TaskRow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── TaskRow ───────────────────────────────────────────────────── */
 function TaskRow({ task }) {
   return (
     <div
@@ -690,7 +694,7 @@ function TaskRow({ task }) {
       >
         {task.is_completed && (
           <span style={{ color: "#000", fontSize: 10, fontWeight: 900 }}>
-            âœ“
+            &#10003;
           </span>
         )}
       </div>
