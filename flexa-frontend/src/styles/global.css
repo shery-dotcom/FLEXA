@@ -1,0 +1,597 @@
+/* ============================================================
+   FLEXA GLOBAL STYLES — Gold & Black Aesthetic
+   ============================================================ */
+:root {
+  --gold: #d4af37;
+  --gold-light: #f5d67b;
+  --gold-dark: #a08c29;
+  --black: #0a0a0a;
+  --black-2: #111111;
+  --black-3: #1a1a1a;
+  --black-4: #242424;
+  --black-5: #2e2e2e;
+  --white: #ffffff;
+  --gray-1: #e0e0e0;
+  --gray-2: #9e9e9e;
+  --gray-3: #616161;
+  --success: #4caf50;
+  --danger: #ef5350;
+  --warning: #ff9800;
+
+  --font-main: "Inter", sans-serif;
+  --font-hero: "Bebas Neue", sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-gold: 0 0 20px rgba(212, 175, 55, 0.2);
+  --transition: all 0.25s ease;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--black);
+  color: var(--white);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--gold);
+  text-decoration: none;
+  transition: var(--transition);
+}
+a:hover {
+  color: var(--gold-light);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--black-2);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--gold-dark);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold);
+}
+
+/* ===== BUTTONS ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-main);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  letter-spacing: 0.5px;
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+  color: var(--black);
+}
+.btn-gold:hover {
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-gold);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--gold);
+  border: 1.5px solid var(--gold);
+}
+.btn-outline:hover {
+  background: rgba(212, 175, 55, 0.1);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background: var(--black-4);
+  color: var(--gray-1);
+  border: 1.5px solid var(--black-5);
+}
+.btn-ghost:hover {
+  background: var(--black-5);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--black-2);
+  border: 1px solid var(--black-4);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  transition: var(--transition);
+}
+.card:hover {
+  border-color: rgba(212, 175, 55, 0.3);
+  box-shadow: var(--shadow-gold);
+}
+
+.card-gold-border {
+  background: var(--black-2);
+  border: 1.5px solid var(--gold-dark);
+  border-radius: var(--radius-md);
+  padding: 24px;
+}
+
+/* ===== FORM ELEMENTS ===== */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-2);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  background: var(--black-3);
+  border: 1.5px solid var(--black-5);
+  border-radius: var(--radius-sm);
+  color: var(--white);
+  font-family: var(--font-main);
+  font-size: 15px;
+  padding: 12px 16px;
+  transition: var(--transition);
+  outline: none;
+}
+.form-input:focus,
+.form-select:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+}
+.form-input::placeholder {
+  color: var(--gray-3);
+}
+.form-select option {
+  background: var(--black-3);
+}
+
+/* ===== BADGES ===== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.badge-gold {
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--gold);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+.badge-green {
+  background: rgba(76, 175, 80, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+.badge-red {
+  background: rgba(239, 83, 80, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+}
+.badge-gray {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--gray-2);
+  border: 1px solid var(--black-5);
+}
+
+/* ===== DIVIDER ===== */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--black-4), transparent);
+  margin: 24px 0;
+}
+.divider-gold {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--gold-dark),
+    transparent
+  );
+}
+
+/* ===== GOLD TEXT ===== */
+.text-gold {
+  color: var(--gold);
+}
+.text-gray {
+  color: var(--gray-2);
+}
+.text-white {
+  color: var(--white);
+}
+
+/* ===== LOADING SPINNER ===== */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--black-4);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+/* ===== PAGE WRAPPER ===== */
+.page {
+  min-height: 100vh;
+  background: var(--black);
+}
+.page-content {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 24px 80px;
+}
+
+/* ===== GRID ===== */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1100px) {
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 768px) {
+  .grid-2,
+  .grid-3,
+  .grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== SECTION HEADER ===== */
+.section-header {
+  margin-bottom: 24px;
+}
+.section-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--white);
+}
+.section-subtitle {
+  font-size: 14px;
+  color: var(--gray-2);
+  margin-top: 4px;
+}
+.section-title span {
+  color: var(--gold);
+}
+
+/* ===== STAT CARD ===== */
+.stat-card {
+  background: var(--black-2);
+  border: 1px solid var(--black-4);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: var(--transition);
+}
+.stat-card:hover {
+  border-color: rgba(212, 175, 55, 0.25);
+}
+.stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-2);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+.stat-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--gold);
+  line-height: 1;
+}
+.stat-sub {
+  font-size: 13px;
+  color: var(--gray-2);
+}
+
+/* ===== AUTH PAGES ===== */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+    ellipse at center top,
+    rgba(212, 175, 55, 0.08) 0%,
+    var(--black) 60%
+  );
+  padding: 24px;
+}
+
+.auth-box {
+  background: var(--black-2);
+  border: 1px solid var(--black-4);
+  border-radius: var(--radius-lg);
+  padding: 48px 42px;
+  width: 100%;
+  max-width: 440px;
+}
+
+.auth-logo {
+  font-family: var(--font-hero);
+  font-size: 40px;
+  letter-spacing: 4px;
+  color: var(--gold);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.auth-tagline {
+  font-size: 13px;
+  color: var(--gray-2);
+  text-align: center;
+  margin-bottom: 36px;
+  letter-spacing: 1px;
+}
+
+/* ===== PROGRESS BAR ===== */
+.progress-bar-wrap {
+  background: var(--black-4);
+  border-radius: 100px;
+  overflow: hidden;
+  height: 6px;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-dark), var(--gold));
+  border-radius: 100px;
+  transition: width 0.6s ease;
+}
+
+/* ===== STEP WIZARD ===== */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+.step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--black-4);
+  transition: var(--transition);
+}
+.step-dot.active {
+  background: var(--gold);
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+}
+.step-dot.done {
+  background: var(--gold-dark);
+}
+
+/* ============================================================
+   MOBILE RESPONSIVE — Full coverage ≤ 768px
+   ============================================================ */
+
+/* Navbar: show hamburger, hide desktop items */
+@media (max-width: 768px) {
+  .nav-desktop-links {
+    display: none !important;
+  }
+  .nav-email-desktop {
+    display: none !important;
+  }
+  .nav-logout-desktop {
+    display: none !important;
+  }
+  .nav-hamburger {
+    display: flex !important;
+  }
+}
+
+/* Page content padding on mobile */
+@media (max-width: 768px) {
+  .page-content {
+    padding: 16px 14px 80px;
+  }
+}
+
+/* Auth box: reduce padding on small screens */
+@media (max-width: 480px) {
+  .auth-box {
+    padding: 32px 20px;
+    border-radius: var(--radius-md);
+  }
+  .auth-logo {
+    font-size: 32px;
+  }
+}
+
+/* Stat cards: 2 columns on tablet, 1 on mobile */
+@media (max-width: 520px) {
+  .grid-4 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 360px) {
+  .grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Buttons: full-width in forms on mobile */
+@media (max-width: 480px) {
+  .btn-full-mobile {
+    width: 100%;
+  }
+}
+
+/* Card padding reduction on mobile */
+@media (max-width: 480px) {
+  .card {
+    padding: 16px;
+  }
+}
+
+/* ===== WORKOUT PLANNER MOBILE ===== */
+.workout-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+}
+.workout-day-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+@media (max-width: 900px) {
+  .workout-layout {
+    grid-template-columns: 1fr;
+  }
+  .workout-day-sidebar {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+}
+
+/* ===== PROGRESS CHARTS MOBILE ===== */
+.chart-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 600px) {
+  .chart-container {
+    min-height: 220px;
+  }
+}
+
+/* ===== DASHBOARD WELCOME BANNER ===== */
+@media (max-width: 600px) {
+  .dashboard-banner {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  .dashboard-score {
+    text-align: left !important;
+  }
+  .dashboard-score .progress-bar-wrap {
+    margin-left: 0 !important;
+  }
+}
+
+/* ===== GOAL SETUP GRID ===== */
+@media (max-width: 600px) {
+  .goal-type-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ===== SECTION TITLES ON MOBILE ===== */
+@media (max-width: 480px) {
+  .section-title {
+    font-size: 18px;
+  }
+}
+
+/* ===== FREQ SELECTOR WRAP ===== */
+@media (max-width: 600px) {
+  .freq-selector {
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+  .freq-selector button {
+    flex: 1;
+    min-width: 70px;
+  }
+}
+
+/* ===== PROGRESS LOG FORM ===== */
+@media (max-width: 768px) {
+  .progress-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ===== TABLE SCROLL ON MOBILE ===== */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-md);
+}

@@ -1,0 +1,53 @@
+{
+  "best_model": "Tuned XGBoost + SMOTE",
+  "cv_accuracy": 66.61,
+  "test_accuracy": 47.73,
+  "features": [
+    "frequency",
+    "exp_enc",
+    "goal_enc",
+    "gender_enc",
+    "age",
+    "freq_x_exp",
+    "freq_x_goal",
+    "exp_x_goal",
+    "freq_sq",
+    "freq_bin",
+    "age_grp",
+    "goal_cut",
+    "goal_main",
+    "goal_bulk",
+    "exp_beg",
+    "exp_inter",
+    "exp_adv",
+    "effort"
+  ],
+  "n_features": 18,
+  "n_classes": 5,
+  "classes": [
+    "Bro Split",
+    "Full Body",
+    "PPL",
+    "PPL x2",
+    "Upper/Lower"
+  ],
+  "smote_applied": true,
+  "dataset_size": 436,
+  "train_size_after_smote": 422,
+  "encodings": {
+    "experience": {
+      "Beginner": 0,
+      "Intermediate": 1,
+      "Advanced": 2
+    },
+    "goal": {
+      "Cutting": 0,
+      "Maintaining": 1,
+      "Bulking": 2
+    },
+    "gender": {
+      "Female": 0,
+      "Male": 1
+    }
+  }
+}

@@ -1,0 +1,33 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+flexa-backend/venv/
+flexa-backend/__pycache__/
+flexa-backend/**/__pycache__/
+flexa-backend/**/*.py[cod]
+flexa-backend/.env
+flexa-backend/*.egg-info/
+flexa-backend/dist/
+flexa-backend/build/
+flexa-backend/.pytest_cache/
+flexa-backend/.mypy_cache/
+
+# ── Node / React ──────────────────────────────────────────────────────────────
+flexa-frontend/node_modules/
+flexa-frontend/build/
+flexa-frontend/.env
+flexa-frontend/.env.local
+flexa-frontend/.env.*.local
+flexa-frontend/npm-debug.log*
+flexa-frontend/yarn-debug.log*
+flexa-frontend/yarn-error.log*
+
+# ── OS / Editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+*.swp
+*.swo
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+*.log
+*.tmp
+~$*
