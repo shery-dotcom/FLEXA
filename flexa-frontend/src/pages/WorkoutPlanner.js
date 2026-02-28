@@ -170,19 +170,28 @@ export default function WorkoutPlanner() {
         if (gap < 20 * 60 * 1000) {
           toast(
             () => (
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <div
+                style={{ display: "flex", alignItems: "flex-start", gap: 10 }}
+              >
                 <FiAlertTriangle
                   size={20}
                   color="#ff9800"
                   style={{ marginTop: 2, flexShrink: 0 }}
                 />
                 <div>
-                  <p style={{ fontWeight: 700, color: "#ff9800", marginBottom: 4 }}>
+                  <p
+                    style={{
+                      fontWeight: 700,
+                      color: "#ff9800",
+                      marginBottom: 4,
+                    }}
+                  >
                     You're going too fast!
                   </p>
                   <p style={{ fontSize: 13, color: "#ccc" }}>
-                    You've completed this workout twice today in under 20 minutes.
-                    Slow down, rest properly — recovery is part of training.
+                    You've completed this workout twice today in under 20
+                    minutes. Slow down, rest properly — recovery is part of
+                    training.
                   </p>
                 </div>
               </div>
@@ -268,7 +277,8 @@ export default function WorkoutPlanner() {
               }}
             >
               <FiClock size={12} />
-              {timerRunsToday} rest timer{timerRunsToday !== 1 ? "s" : ""} used today
+              {timerRunsToday} rest timer{timerRunsToday !== 1 ? "s" : ""} used
+              today
             </div>
           )}
         </div>
@@ -459,19 +469,43 @@ export default function WorkoutPlanner() {
 /* ─── WorkoutDetail ─────────────────────────────────────────────── */
 function WorkoutDetail({ workout, onComplete, onTimerFinished }) {
   const totalExercises = workout.exercises?.length || 0;
+
+  // Experience-based mandatory rest config
+  const XP_CONFIG = {
+    beginner: { threshold: 3, restSec: 120 },
+    intermediate: { threshold: 5, restSec: 90 },
+    advanced: { threshold: 7, restSec: 60 },
+  };
+  const xp =
+    XP_CONFIG[(workout.difficulty || "intermediate").toLowerCase()] ||
+    XP_CONFIG.intermediate;
+
+  // Per-exercise rest timer
   const [doneSet, setDoneSet] = useState(new Set());
   const [activeTimer, setActiveTimer] = useState(null);
   const [timerSec, setTimerSec] = useState(0);
   const [timerRunning, setTimerRunning] = useState(false);
-  const [timerMaxSec, setTimerMaxSec] = useState(60);
+  const [timerMaxSec, setTimerMaxSec] = useState(90);
   const intervalRef = useRef(null);
+
+  // Mandatory rest state
+  const consecSetsRef = useRef(0);
+  const [consecSets, setConsecSets] = useState(0);
+  const [showMandatoryRest, setShowMandatoryRest] = useState(false);
+  const [mandatoryRestSec, setMandatoryRestSec] = useState(xp.restSec);
+  const [mandatoryRestMax, setMandatoryRestMax] = useState(xp.restSec);
+  const mandatoryIntervalRef = useRef(null);
 
   useEffect(() => {
     setDoneSet(new Set());
     clearInterval(intervalRef.current);
+    clearInterval(mandatoryIntervalRef.current);
     setActiveTimer(null);
     setTimerRunning(false);
     setTimerSec(0);
+    consecSetsRef.current = 0;
+    setConsecSets(0);
+    setShowMandatoryRest(false);
   }, [workout.id]);
 
   const startTimer = (exIndex, restSec) => {
@@ -489,6 +523,49 @@ function WorkoutDetail({ workout, onComplete, onTimerFinished }) {
     setTimerSec(0);
   };
 
+  // Trigger mandatory rest overlay
+  const triggerMandatoryRest = useCallback(() => {
+    clearInterval(intervalRef.current);
+    setTimerRunning(false);
+    setActiveTimer(null);
+    setTimerSec(0);
+    setMandatoryRestSec(xp.restSec);
+    setMandatoryRestMax(xp.restSec);
+    setShowMandatoryRest(true);
+  }, [xp.restSec]);
+
+  // Mandatory rest countdown
+  useEffect(() => {
+    if (!showMandatoryRest) return;
+    clearInterval(mandatoryIntervalRef.current);
+    mandatoryIntervalRef.current = setInterval(() => {
+      setMandatoryRestSec((s) => {
+        if (s <= 1) {
+          clearInterval(mandatoryIntervalRef.current);
+          setShowMandatoryRest(false);
+          consecSetsRef.current = 0;
+          setConsecSets(0);
+          toast("Ready! Continue your workout.", {
+            duration: 3000,
+            style: {
+              background: "#1a1a1a",
+              border: "1px solid #D4AF37",
+              color: "#D4AF37",
+              fontWeight: 700,
+            },
+          });
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(mandatoryIntervalRef.current);
+  }, [showMandatoryRest]); // eslint-disable-line
+
+  const reduceMandatoryRest = () => {
+    setMandatoryRestSec((s) => Math.max(30, s - 10));
+  };
+
   useEffect(() => {
     if (!timerRunning) return;
     intervalRef.current = setInterval(() => {
@@ -497,6 +574,9 @@ function WorkoutDetail({ workout, onComplete, onTimerFinished }) {
           clearInterval(intervalRef.current);
           setTimerRunning(false);
           setActiveTimer(null);
+          // Proper rest taken — reset consecutive counter
+          consecSetsRef.current = 0;
+          setConsecSets(0);
           onTimerFinished();
           toast("⏱ Rest complete! Start your next set.", {
             duration: 4000,
@@ -516,11 +596,22 @@ function WorkoutDetail({ workout, onComplete, onTimerFinished }) {
   }, [timerRunning]); // eslint-disable-line
 
   const toggleDone = (idx) => {
+    const isAdding = !doneSet.has(idx);
     setDoneSet((prev) => {
       const next = new Set(prev);
       next.has(idx) ? next.delete(idx) : next.add(idx);
       return next;
     });
+    if (isAdding) {
+      const newConsec = consecSetsRef.current + 1;
+      consecSetsRef.current = newConsec;
+      setConsecSets(newConsec);
+      if (newConsec >= xp.threshold) {
+        triggerMandatoryRest();
+        consecSetsRef.current = 0;
+        setConsecSets(0);
+      }
+    }
   };
 
   const doneCount = doneSet.size;
@@ -557,6 +648,16 @@ function WorkoutDetail({ workout, onComplete, onTimerFinished }) {
 
   return (
     <div className="card">
+      {/* Mandatory rest overlay */}
+      {showMandatoryRest && (
+        <MandatoryRestScreen
+          restSec={mandatoryRestSec}
+          restMax={mandatoryRestMax}
+          difficulty={(workout.difficulty || "intermediate").toLowerCase()}
+          onReduce={reduceMandatoryRest}
+        />
+      )}
+
       {/* Header */}
       <div
         style={{
@@ -642,6 +743,56 @@ function WorkoutDetail({ workout, onComplete, onTimerFinished }) {
         </div>
       )}
 
+      {/* Consecutive sets progress */}
+      {consecSets > 0 && !showMandatoryRest && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "9px 14px",
+            background: "rgba(212,175,55,0.06)",
+            border: "1px solid rgba(212,175,55,0.2)",
+            borderRadius: 8,
+            marginBottom: 16,
+            fontSize: 12,
+          }}
+        >
+          <FiBarChart2 size={13} color="#D4AF37" />
+          <span style={{ color: "#9e9e9e" }}>Sets since last rest:</span>
+          <div
+            style={{
+              flex: 1,
+              background: "#242424",
+              borderRadius: 4,
+              height: 5,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                width: `${Math.min((consecSets / xp.threshold) * 100, 100)}%`,
+                height: "100%",
+                background:
+                  consecSets >= xp.threshold - 1 ? "#ff9800" : "#D4AF37",
+                borderRadius: 4,
+                transition: "width 0.3s ease",
+              }}
+            />
+          </div>
+          <span
+            style={{
+              color: consecSets >= xp.threshold - 1 ? "#ff9800" : "#D4AF37",
+              fontWeight: 700,
+              minWidth: 36,
+              textAlign: "right",
+            }}
+          >
+            {consecSets}/{xp.threshold}
+          </span>
+        </div>
+      )}
+
       {/* Active rest timer banner */}
       {timerRunning && activeTimer !== null && (
         <div
@@ -680,9 +831,7 @@ function WorkoutDetail({ workout, onComplete, onTimerFinished }) {
                 {String(timerSec % 60).padStart(2, "0")}
               </span>
             </div>
-            <div
-              style={{ background: "#242424", borderRadius: 4, height: 5 }}
-            >
+            <div style={{ background: "#242424", borderRadius: 4, height: 5 }}>
               <div
                 style={{
                   width: `${(timerSec / timerMaxSec) * 100}%`,
@@ -847,11 +996,7 @@ function ExerciseRow({
                 : `Start ${ex.rest_seconds}s rest timer`
             }
           >
-            {isTimerActive ? (
-              <FiSquare size={11} />
-            ) : (
-              <FiPlay size={11} />
-            )}
+            {isTimerActive ? <FiSquare size={11} /> : <FiPlay size={11} />}
             {isTimerActive ? "Stop" : "Rest"}
           </button>
         )}
@@ -904,6 +1049,158 @@ function SimpleRow({ name, detail }) {
       <span style={{ fontSize: 13, color: "#D4AF37", fontWeight: 600 }}>
         {detail}
       </span>
+    </div>
+  );
+}
+
+/* ─── MandatoryRestScreen overlay ──────────────────────────────── */
+function MandatoryRestScreen({ restSec, restMax, difficulty, onReduce }) {
+  const fmtTime = (s) =>
+    `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const pct = restMax > 0 ? (restSec / restMax) * 100 : 0;
+  const atMin = restSec <= 30;
+
+  const CONFIG = {
+    beginner: {
+      label: "Beginner",
+      color: "#4caf50",
+      msg: "You've been pushing hard! Beginners fatigue faster — this rest is essential for muscle recovery and injury prevention.",
+    },
+    intermediate: {
+      label: "Intermediate",
+      color: "#D4AF37",
+      msg: "Good work! Time for a mandatory rest before continuing. Consistent rest keeps your performance high across all sets.",
+    },
+    advanced: {
+      label: "Advanced",
+      color: "#ff9800",
+      msg: "High-volume checkpoint. Brief mandatory rest — even advanced athletes need recovery between intense efforts.",
+    },
+  };
+  const cfg = CONFIG[difficulty] || CONFIG.intermediate;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1100,
+        background: "rgba(0,0,0,0.93)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          background: "#111",
+          border: `1px solid ${cfg.color}55`,
+          borderRadius: 20,
+          padding: "44px 40px",
+          maxWidth: 420,
+          width: "100%",
+          textAlign: "center",
+        }}
+      >
+        {/* Icon */}
+        <FiClock size={52} color={cfg.color} style={{ marginBottom: 16 }} />
+
+        {/* Title */}
+        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 10 }}>
+          Mandatory Rest Break
+        </h2>
+
+        {/* Level badge */}
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "4px 14px",
+            background: `${cfg.color}18`,
+            border: `1px solid ${cfg.color}44`,
+            borderRadius: 20,
+            fontSize: 12,
+            color: cfg.color,
+            fontWeight: 700,
+            marginBottom: 18,
+          }}
+        >
+          {cfg.label} Level
+        </div>
+
+        {/* Message */}
+        <p
+          style={{
+            color: "#9e9e9e",
+            fontSize: 13,
+            lineHeight: 1.65,
+            marginBottom: 30,
+          }}
+        >
+          {cfg.msg}
+        </p>
+
+        {/* Countdown */}
+        <div
+          style={{
+            fontSize: 60,
+            fontWeight: 900,
+            fontFamily: "monospace",
+            color: atMin ? "#ff9800" : cfg.color,
+            marginBottom: 18,
+            letterSpacing: 2,
+          }}
+        >
+          {fmtTime(restSec)}
+        </div>
+
+        {/* Depleting progress bar */}
+        <div
+          style={{
+            background: "#242424",
+            borderRadius: 8,
+            height: 10,
+            overflow: "hidden",
+            marginBottom: 28,
+          }}
+        >
+          <div
+            style={{
+              width: `${pct}%`,
+              height: "100%",
+              background: atMin ? "#ff9800" : cfg.color,
+              borderRadius: 8,
+              transition: "width 1s linear",
+            }}
+          />
+        </div>
+
+        {/* -10s button */}
+        <button
+          onClick={onReduce}
+          disabled={atMin}
+          style={{
+            padding: "11px 28px",
+            background: atMin ? "rgba(66,66,66,0.2)" : `${cfg.color}18`,
+            border: `1px solid ${atMin ? "#424242" : cfg.color + "55"}`,
+            borderRadius: 10,
+            cursor: atMin ? "not-allowed" : "pointer",
+            color: atMin ? "#424242" : cfg.color,
+            fontWeight: 700,
+            fontSize: 14,
+            marginBottom: 10,
+            display: "inline-block",
+          }}
+        >
+          − 10 seconds
+        </button>
+
+        <p style={{ fontSize: 11, color: "#424242", marginTop: 6 }}>
+          Minimum rest: 30s &nbsp;·&nbsp; Timer auto-dismisses when done
+        </p>
+      </div>
     </div>
   );
 }

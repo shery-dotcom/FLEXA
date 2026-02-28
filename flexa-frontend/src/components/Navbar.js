@@ -13,9 +13,9 @@ import {
 } from "react-icons/fi";
 
 const NAV_LINKS = [
-  { to: "/dashboard", label: "Dashboard", icon: <FiGrid /> },
-  { to: "/workouts", label: "Workouts", icon: <FiActivity /> },
-  { to: "/progress", label: "Progress", icon: <FiTrendingUp /> },
+  { to: "/dashboard", label: "Home", icon: <FiGrid /> },
+  { to: "/progress", label: "Report", icon: <FiTrendingUp /> },
+  { to: "/workouts", label: "Workout", icon: <FiActivity /> },
   { to: "/goal-setup", label: "Goals", icon: <FiTarget /> },
 ];
 
@@ -207,8 +207,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: 6,
-    padding: "6px 14px",
-    borderRadius: 6,
+    padding: "6px 16px",
+    borderRadius: 20,
     color: "#9e9e9e",
     textDecoration: "none",
     fontSize: 14,
@@ -216,7 +216,11 @@ const styles = {
     transition: "all 0.2s",
     whiteSpace: "nowrap",
   },
-  activeLink: { color: "#D4AF37", background: "rgba(212,175,55,0.1)" },
+  activeLink: {
+    color: "#0a0a0a",
+    background: "linear-gradient(135deg, #D4AF37, #a08c29)",
+    fontWeight: 700,
+  },
   right: { display: "flex", alignItems: "center", gap: 12 },
   email: { fontSize: 13, color: "#9e9e9e", fontWeight: 500 },
   logoutBtn: {

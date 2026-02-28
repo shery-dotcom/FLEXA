@@ -4,7 +4,7 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from app.models.user import User
 from app.models.profile import Profile
-from app.models.workout import FitnessGoal, WorkoutSession
+from app.models.workout import FitnessGoal, WorkoutSession, Workout
 from app.models.progress import DashboardTask, Achievement
 from app.ml.motivation_engine import compute_motivation_score
 from app.ml.milestone_detector import detect_milestones
@@ -15,6 +15,28 @@ from typing import List
 
 
 class DashboardService:
+
+    @staticmethod
+    def _compute_calories(profile, goal_type: str, activity_level: str):
+        """Mifflin-St Jeor TDEE + goal adjustment."""
+        if not profile or not profile.weight_kg or not profile.height_cm or not profile.age:
+            return None, None
+        w, h, a = profile.weight_kg, profile.height_cm, profile.age
+        gender = (profile.gender or "male").lower()
+        if gender == "female":
+            bmr = 10 * w + 6.25 * h - 5 * a - 161
+        else:
+            bmr = 10 * w + 6.25 * h - 5 * a + 5
+        multipliers = {
+            "sedentary": 1.2, "light": 1.375, "moderate": 1.55,
+            "active": 1.725, "very_active": 1.9,
+        }
+        mult = multipliers.get(activity_level.lower().replace(" ", "_"), 1.55)
+        tdee = round(bmr * mult)
+        adj = {"cutting": -500, "bulking": 400, "recomp": -250, "maintaining": 0}.get(
+            (goal_type or "maintaining").lower(), 0
+        )
+        return tdee, max(1200, tdee + adj)
 
     @staticmethod
     async def get_dashboard(db: AsyncSession, user_id: uuid.UUID) -> dict:
@@ -51,6 +73,12 @@ class DashboardService:
         )
         total_sessions = total_result.scalar() or 0
 
+        # Has workout plan
+        plan_result = await db.execute(
+            select(func.count()).select_from(Workout).where(Workout.user_id == user_id)
+        )
+        has_workout_plan = (plan_result.scalar() or 0) > 0
+
         # Days since joined
         days_since_joined = (datetime.utcnow() - user.created_at.replace(tzinfo=None)).days if user.created_at else 0
 
@@ -86,11 +114,20 @@ class DashboardService:
         }
         milestones = detect_milestones(milestone_data)
 
+        # Calories
+        act_level = goal.activity_level if goal else "moderate"
+        goal_type = goal.goal_type if goal else "maintaining"
+        daily_calories, target_calories = DashboardService._compute_calories(profile, goal_type, act_level)
+
         return {
             "user_name": username,
             "bmi": profile.bmi if profile else None,
             "bmi_category": profile.bmi_category if profile else None,
-            "current_goal": goal.goal_type if goal else None,
+            "current_goal": goal_type,
+            "activity_level": act_level,
+            "daily_calories": daily_calories,
+            "target_calories": target_calories,
+            "has_workout_plan": has_workout_plan,
             "motivation_message": motivation["message"],
             "motivation_score": motivation["motivation_score"],
             "today_tasks": [DashboardTaskResponse.model_validate(t) for t in today_tasks],
