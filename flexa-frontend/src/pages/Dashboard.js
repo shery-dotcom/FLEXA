@@ -206,9 +206,6 @@ export default function Dashboard() {
       </div>
     );
 
-  /* keep linter quiet */
-  void _unused;
-
   return (
     <div
       style={{
@@ -266,7 +263,15 @@ export default function Dashboard() {
             justifyContent: "center",
           }}
         >
-          <p style={{ fontSize: 19, fontWeight: 800, color: "#ffffff", lineHeight: 1.2, marginBottom: 5 }}>
+          <p
+            style={{
+              fontSize: 19,
+              fontWeight: 800,
+              color: "#ffffff",
+              lineHeight: 1.2,
+              marginBottom: 5,
+            }}
+          >
             {getGreeting()}, {data.user_name}!
           </p>
           <p style={{ fontSize: 12, color: "#9e9e9e" }}>
@@ -284,13 +289,40 @@ export default function Dashboard() {
           padding: "22px 22px 20px",
         }}
       >
-        <p style={{ fontSize: 11, fontWeight: 700, color: "#D4AF37", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 14, textAlign: "center" }}>
+        <p
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: "#D4AF37",
+            letterSpacing: "2px",
+            textTransform: "uppercase",
+            marginBottom: 14,
+            textAlign: "center",
+          }}
+        >
           âœ¦ Daily Motivation âœ¦
         </p>
-        <p style={{ fontSize: 15, fontStyle: "italic", color: "#f0f0f0", lineHeight: 1.65, textAlign: "center", marginBottom: 14, fontWeight: 500 }}>
+        <p
+          style={{
+            fontSize: 15,
+            fontStyle: "italic",
+            color: "#f0f0f0",
+            lineHeight: 1.65,
+            textAlign: "center",
+            marginBottom: 14,
+            fontWeight: 500,
+          }}
+        >
           "{quote.text}"
         </p>
-        <p style={{ textAlign: "center", color: "#D4AF37", fontSize: 13, fontWeight: 600 }}>
+        <p
+          style={{
+            textAlign: "center",
+            color: "#D4AF37",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
           â€” {quote.author}
         </p>
       </div>
@@ -301,9 +333,13 @@ export default function Dashboard() {
           label="Current Goal"
           value={fmtGoal(data.current_goal)}
           sub={
-            data.current_goal === "cutting"    ? "Calorie Deficit" :
-            data.current_goal === "bulking"    ? "Calorie Surplus" :
-            data.current_goal === "recomp"     ? "Body Recomp"     : "Maintenance"
+            data.current_goal === "cutting"
+              ? "Calorie Deficit"
+              : data.current_goal === "bulking"
+                ? "Calorie Surplus"
+                : data.current_goal === "recomp"
+                  ? "Body Recomp"
+                  : "Maintenance"
           }
         />
         <StatCard
@@ -314,12 +350,16 @@ export default function Dashboard() {
         />
         <StatCard
           label="Daily Calories"
-          value={data.daily_calories ? data.daily_calories.toLocaleString() : "â€”"}
+          value={
+            data.daily_calories ? data.daily_calories.toLocaleString() : "â€”"
+          }
           sub={fmtActivity(data.activity_level)}
         />
         <StatCard
           label="Target Calories"
-          value={data.target_calories ? data.target_calories.toLocaleString() : "â€”"}
+          value={
+            data.target_calories ? data.target_calories.toLocaleString() : "â€”"
+          }
           sub="cal"
         />
       </div>
@@ -335,14 +375,32 @@ export default function Dashboard() {
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: 42, marginBottom: 14, lineHeight: 1 }}>ðŸ‹ï¸</div>
-          <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>No Workout Plan Yet</h3>
-          <p style={{ color: "#9e9e9e", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>
+          <div style={{ fontSize: 42, marginBottom: 14, lineHeight: 1 }}>
+            ðŸ‹ï¸
+          </div>
+          <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>
+            No Workout Plan Yet
+          </h3>
+          <p
+            style={{
+              color: "#9e9e9e",
+              fontSize: 13,
+              marginBottom: 24,
+              lineHeight: 1.6,
+            }}
+          >
             Create a personalized workout plan to get started
           </p>
           <button
             className="btn btn-gold"
-            style={{ width: "100%", padding: "14px 0", fontSize: 14, fontWeight: 800, letterSpacing: "1px", borderRadius: 10 }}
+            style={{
+              width: "100%",
+              padding: "14px 0",
+              fontSize: 14,
+              fontWeight: 800,
+              letterSpacing: "1px",
+              borderRadius: 10,
+            }}
             onClick={() => navigate("/workouts")}
           >
             CREATE WORKOUT PLAN
@@ -360,40 +418,98 @@ export default function Dashboard() {
             padding: "20px 22px",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: "#D4AF37", letterSpacing: "1px", textTransform: "uppercase" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 16,
+            }}
+          >
+            <p
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "#D4AF37",
+                letterSpacing: "1px",
+                textTransform: "uppercase",
+              }}
+            >
               This Week
             </p>
             <span style={{ fontSize: 12, color: "#9e9e9e" }}>
-              {data.weekly_sessions} session{data.weekly_sessions !== 1 ? "s" : ""} done
+              {data.weekly_sessions} session
+              {data.weekly_sessions !== 1 ? "s" : ""} done
             </span>
           </div>
 
           {/* Day dots â€” Mon-Sun */}
-          <div style={{ display: "flex", gap: 6, justifyContent: "space-between", marginBottom: 16 }}>
-            {["M","T","W","T","F","S","S"].map((d, i) => {
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              justifyContent: "space-between",
+              marginBottom: 16,
+            }}
+          >
+            {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => {
               const todayIdx = (new Date().getDay() + 6) % 7;
-              const isPast   = i < todayIdx;
-              const isToday  = i === todayIdx;
-              const done     = isPast && i < data.weekly_sessions;
+              const isPast = i < todayIdx;
+              const isToday = i === todayIdx;
+              const done = isPast && i < data.weekly_sessions;
               return (
-                <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                <div
+                  key={i}
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 5,
+                  }}
+                >
                   <div
                     style={{
                       width: "100%",
                       aspectRatio: "1",
                       borderRadius: 6,
-                      background: isToday ? "rgba(212,175,55,0.25)" : done ? "rgba(76,175,80,0.25)" : "#1a1a1a",
+                      background: isToday
+                        ? "rgba(212,175,55,0.25)"
+                        : done
+                          ? "rgba(76,175,80,0.25)"
+                          : "#1a1a1a",
                       border: `1.5px solid ${isToday ? "#D4AF37" : done ? "#4caf50" : "#2a2a2a"}`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
-                    {isToday && <span style={{ color: "#D4AF37", fontWeight: 900, fontSize: 12 }}>â€¢</span>}
-                    {done   && <span style={{ color: "#4caf50", fontSize: 10 }}>âœ“</span>}
+                    {isToday && (
+                      <span
+                        style={{
+                          color: "#D4AF37",
+                          fontWeight: 900,
+                          fontSize: 12,
+                        }}
+                      >
+                        â€¢
+                      </span>
+                    )}
+                    {done && (
+                      <span style={{ color: "#4caf50", fontSize: 10 }}>
+                        âœ“
+                      </span>
+                    )}
                   </div>
-                  <span style={{ fontSize: 10, color: isToday ? "#D4AF37" : "#424242", fontWeight: isToday ? 700 : 400 }}>{d}</span>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      color: isToday ? "#D4AF37" : "#424242",
+                      fontWeight: isToday ? 700 : 400,
+                    }}
+                  >
+                    {d}
+                  </span>
                 </div>
               );
             })}
@@ -401,7 +517,14 @@ export default function Dashboard() {
 
           <button
             className="btn btn-gold"
-            style={{ width: "100%", padding: "12px 0", fontSize: 13, fontWeight: 700, letterSpacing: "0.5px", borderRadius: 10 }}
+            style={{
+              width: "100%",
+              padding: "12px 0",
+              fontSize: 13,
+              fontWeight: 700,
+              letterSpacing: "0.5px",
+              borderRadius: 10,
+            }}
             onClick={() => navigate("/workouts")}
           >
             View Today's Workout
@@ -419,12 +542,28 @@ export default function Dashboard() {
             padding: "20px 22px",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: "#D4AF37", letterSpacing: "1px", textTransform: "uppercase" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 16,
+            }}
+          >
+            <p
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "#D4AF37",
+                letterSpacing: "1px",
+                textTransform: "uppercase",
+              }}
+            >
               Today's Tasks
             </p>
             <span style={{ fontSize: 11, color: "#616161" }}>
-              {data.today_tasks.filter((t) => t.is_completed).length}/{data.today_tasks.length} done
+              {data.today_tasks.filter((t) => t.is_completed).length}/
+              {data.today_tasks.length} done
             </span>
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
@@ -437,8 +576,15 @@ export default function Dashboard() {
 
       {/* â”€â”€ All-time strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <MiniStatCard label="Total Sessions" value={data.total_workouts_completed} />
-        <MiniStatCard label="This Week"      value={data.weekly_sessions} unit="sessions" />
+        <MiniStatCard
+          label="Total Sessions"
+          value={data.total_workouts_completed}
+        />
+        <MiniStatCard
+          label="This Week"
+          value={data.weekly_sessions}
+          unit="sessions"
+        />
       </div>
     </div>
   );
@@ -455,10 +601,27 @@ function StatCard({ label, value, sub, subColor = "#D4AF37" }) {
         padding: "18px 16px 16px",
       }}
     >
-      <p style={{ fontSize: 11, color: "#D4AF37", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>
+      <p
+        style={{
+          fontSize: 11,
+          color: "#D4AF37",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.8px",
+          marginBottom: 10,
+        }}
+      >
         {label}
       </p>
-      <p style={{ fontSize: 28, fontWeight: 900, color: "#ffffff", lineHeight: 1, marginBottom: 6 }}>
+      <p
+        style={{
+          fontSize: 28,
+          fontWeight: 900,
+          color: "#ffffff",
+          lineHeight: 1,
+          marginBottom: 6,
+        }}
+      >
         {value}
       </p>
       <p style={{ fontSize: 12, color: subColor, fontWeight: 600 }}>{sub}</p>
@@ -483,7 +646,18 @@ function MiniStatCard({ label, value, unit }) {
       <span style={{ fontSize: 12, color: "#9e9e9e" }}>{label}</span>
       <span style={{ fontSize: 22, fontWeight: 900, color: "#D4AF37" }}>
         {value}
-        {unit && <span style={{ fontSize: 11, color: "#616161", fontWeight: 500, marginLeft: 3 }}>{unit}</span>}
+        {unit && (
+          <span
+            style={{
+              fontSize: 11,
+              color: "#616161",
+              fontWeight: 500,
+              marginLeft: 3,
+            }}
+          >
+            {unit}
+          </span>
+        )}
       </span>
     </div>
   );
@@ -514,14 +688,27 @@ function TaskRow({ task }) {
           flexShrink: 0,
         }}
       >
-        {task.is_completed && <span style={{ color: "#000", fontSize: 10, fontWeight: 900 }}>âœ“</span>}
+        {task.is_completed && (
+          <span style={{ color: "#000", fontSize: 10, fontWeight: 900 }}>
+            âœ“
+          </span>
+        )}
       </div>
       <div style={{ flex: 1 }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: task.is_completed ? "#424242" : "#e0e0e0", textDecoration: task.is_completed ? "line-through" : "none" }}>
+        <p
+          style={{
+            fontSize: 13,
+            fontWeight: 600,
+            color: task.is_completed ? "#424242" : "#e0e0e0",
+            textDecoration: task.is_completed ? "line-through" : "none",
+          }}
+        >
           {task.title}
         </p>
         {task.description && (
-          <p style={{ fontSize: 11, color: "#616161", marginTop: 2 }}>{task.description}</p>
+          <p style={{ fontSize: 11, color: "#616161", marginTop: 2 }}>
+            {task.description}
+          </p>
         )}
       </div>
     </div>
