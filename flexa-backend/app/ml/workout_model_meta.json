@@ -2,6 +2,8 @@
   "best_model": "Tuned XGBoost + SMOTE",
   "cv_accuracy": 66.61,
   "test_accuracy": 47.73,
+  "macro_f1": 46.79,
+  "weighted_f1": 47.88,
   "features": [
     "frequency",
     "exp_enc",
@@ -49,5 +51,30 @@
       "Female": 0,
       "Male": 1
     }
+  },
+  "integration": {
+    "import": "from app.ml.workout_ml_predictor import predict_split_with_proba",
+    "usage": "predict_split_with_proba(goal_type, activity_level, gender, age)",
+    "returns": {
+      "split": "str",
+      "probas": "dict[str, float]"
+    },
+    "goal_type_values": [
+      "bulking",
+      "cutting",
+      "maintaining",
+      "recomp"
+    ],
+    "activity_level_values": [
+      "sedentary",
+      "light",
+      "moderate",
+      "active",
+      "very_active"
+    ],
+    "gender_values": [
+      "male",
+      "female"
+    ]
   }
 }
