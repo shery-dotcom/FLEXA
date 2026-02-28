@@ -233,7 +233,9 @@ def generate_workout_plan(
     if split_type and split_type in ML_SPLIT_TEMPLATES:
         # ── ML-predicted split path ──────────────────────────────────────────
         ml_split   = ML_SPLIT_TEMPLATES[split_type]
-        n_workout_days = len(ml_split)
+        # ALWAYS respect the user-selected frequency, not the template length.
+        # The ML split provides the muscle-group pattern; we cycle through it.
+        n_workout_days = max(2, min(6, frequency_per_week))
 
         # Distribute evenly; for PPL x2 (6 days) use Mon-Sat
         _DIST_BY_COUNT = {

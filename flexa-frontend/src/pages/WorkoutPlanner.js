@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   FiActivity,
   FiRefreshCw,
@@ -12,9 +12,36 @@ import {
   FiBarChart2,
   FiCalendar,
   FiSettings,
+  FiCheckCircle,
+  FiCircle,
+  FiPlay,
+  FiSquare,
+  FiAlertTriangle,
 } from "react-icons/fi";
 import api from "../api/axios";
 import toast from "react-hot-toast";
+
+/* ── localStorage helpers ── */
+function todayKey(suffix) {
+  return `flexa_${suffix}_${new Date().toISOString().slice(0, 10)}`;
+}
+function getTimerCount() {
+  return parseInt(localStorage.getItem(todayKey("timers")) || "0", 10);
+}
+function incTimerCount() {
+  const n = getTimerCount() + 1;
+  localStorage.setItem(todayKey("timers"), String(n));
+  return n;
+}
+function getCompletions() {
+  return JSON.parse(localStorage.getItem(todayKey("completions")) || "[]");
+}
+function addCompletion(workoutId) {
+  const c = getCompletions();
+  c.push({ id: String(workoutId), ts: Date.now() });
+  localStorage.setItem(todayKey("completions"), JSON.stringify(c));
+  return c;
+}
 
 const FREQ_OPTIONS = [
   { value: 3, label: "3 Days", desc: "Perfect for beginners" },
@@ -67,6 +94,12 @@ export default function WorkoutPlanner() {
   const [hasPlan, setHasPlan] = useState(false);
   const [changePlanOpen, setChangePlanOpen] = useState(false);
   const [newFreq, setNewFreq] = useState(4);
+  const [timerRunsToday, setTimerRunsToday] = useState(getTimerCount);
+
+  const onTimerFinished = useCallback(() => {
+    const n = incTimerCount();
+    setTimerRunsToday(n);
+  }, []);
 
   const fetchMlSplit = async () => {
     try {
@@ -130,7 +163,42 @@ export default function WorkoutPlanner() {
   const completeWorkout = async (workoutId) => {
     try {
       await api.post(`/workouts/${workoutId}/complete`);
-      toast.success("Workout completed!");
+      const completions = addCompletion(workoutId);
+      const todaySame = completions.filter((c) => c.id === String(workoutId));
+      if (todaySame.length >= 2) {
+        const gap = Date.now() - todaySame[todaySame.length - 2].ts;
+        if (gap < 20 * 60 * 1000) {
+          toast(
+            () => (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <FiAlertTriangle
+                  size={20}
+                  color="#ff9800"
+                  style={{ marginTop: 2, flexShrink: 0 }}
+                />
+                <div>
+                  <p style={{ fontWeight: 700, color: "#ff9800", marginBottom: 4 }}>
+                    You're going too fast!
+                  </p>
+                  <p style={{ fontSize: 13, color: "#ccc" }}>
+                    You've completed this workout twice today in under 20 minutes.
+                    Slow down, rest properly — recovery is part of training.
+                  </p>
+                </div>
+              </div>
+            ),
+            {
+              duration: 6000,
+              style: {
+                background: "#1a1a1a",
+                border: "1px solid #ff9800",
+              },
+            },
+          );
+          return;
+        }
+      }
+      toast.success("Workout marked complete!");
     } catch (err) {
       toast.error(err.response?.data?.detail || "Error logging session.");
     }
@@ -182,6 +250,25 @@ export default function WorkoutPlanner() {
               <span style={{ color: "#9e9e9e" }}>
                 — {SPLIT_INFO[mlSplit.split]?.desc}
               </span>
+            </div>
+          )}
+          {timerRunsToday > 0 && (
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                marginTop: 8,
+                padding: "5px 12px",
+                background: "rgba(76,175,80,0.1)",
+                border: "1px solid rgba(76,175,80,0.3)",
+                borderRadius: 20,
+                fontSize: 12,
+                color: "#4caf50",
+              }}
+            >
+              <FiClock size={12} />
+              {timerRunsToday} rest timer{timerRunsToday !== 1 ? "s" : ""} used today
             </div>
           )}
         </div>
@@ -357,7 +444,11 @@ export default function WorkoutPlanner() {
 
           {/* Workout detail */}
           {selectedDay && (
-            <WorkoutDetail workout={selectedDay} onComplete={completeWorkout} />
+            <WorkoutDetail
+              workout={selectedDay}
+              onComplete={completeWorkout}
+              onTimerFinished={onTimerFinished}
+            />
           )}
         </div>
       )}
@@ -365,7 +456,76 @@ export default function WorkoutPlanner() {
   );
 }
 
-function WorkoutDetail({ workout, onComplete }) {
+/* ─── WorkoutDetail ─────────────────────────────────────────────── */
+function WorkoutDetail({ workout, onComplete, onTimerFinished }) {
+  const totalExercises = workout.exercises?.length || 0;
+  const [doneSet, setDoneSet] = useState(new Set());
+  const [activeTimer, setActiveTimer] = useState(null);
+  const [timerSec, setTimerSec] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerMaxSec, setTimerMaxSec] = useState(60);
+  const intervalRef = useRef(null);
+
+  useEffect(() => {
+    setDoneSet(new Set());
+    clearInterval(intervalRef.current);
+    setActiveTimer(null);
+    setTimerRunning(false);
+    setTimerSec(0);
+  }, [workout.id]);
+
+  const startTimer = (exIndex, restSec) => {
+    clearInterval(intervalRef.current);
+    setActiveTimer(exIndex);
+    setTimerMaxSec(restSec);
+    setTimerSec(restSec);
+    setTimerRunning(true);
+  };
+
+  const stopTimer = () => {
+    clearInterval(intervalRef.current);
+    setTimerRunning(false);
+    setActiveTimer(null);
+    setTimerSec(0);
+  };
+
+  useEffect(() => {
+    if (!timerRunning) return;
+    intervalRef.current = setInterval(() => {
+      setTimerSec((s) => {
+        if (s <= 1) {
+          clearInterval(intervalRef.current);
+          setTimerRunning(false);
+          setActiveTimer(null);
+          onTimerFinished();
+          toast("⏱ Rest complete! Start your next set.", {
+            duration: 4000,
+            style: {
+              background: "#1a1a1a",
+              border: "1px solid #4caf50",
+              color: "#4caf50",
+              fontWeight: 700,
+            },
+          });
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(intervalRef.current);
+  }, [timerRunning]); // eslint-disable-line
+
+  const toggleDone = (idx) => {
+    setDoneSet((prev) => {
+      const next = new Set(prev);
+      next.has(idx) ? next.delete(idx) : next.add(idx);
+      return next;
+    });
+  };
+
+  const doneCount = doneSet.size;
+  const allDone = totalExercises > 0 && doneCount === totalExercises;
+
   if (workout.is_rest_day) {
     return (
       <div
@@ -397,12 +557,13 @@ function WorkoutDetail({ workout, onComplete }) {
 
   return (
     <div className="card">
+      {/* Header */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          marginBottom: 24,
+          marginBottom: 20,
         }}
       >
         <div>
@@ -429,19 +590,132 @@ function WorkoutDetail({ workout, onComplete }) {
           </p>
         </div>
         <button
-          className="btn btn-gold"
+          className={`btn ${allDone ? "btn-gold" : "btn-outline"}`}
           style={{ padding: "10px 20px", fontSize: 13 }}
           onClick={() => onComplete(workout.id)}
         >
-          ✓ Mark Complete
+          ✓ Mark Workout Complete
         </button>
       </div>
+
+      {/* Exercise progress bar */}
+      {totalExercises > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: 6,
+            }}
+          >
+            <span style={{ fontSize: 12, color: "#9e9e9e" }}>
+              Exercise Progress
+            </span>
+            <span
+              style={{
+                fontSize: 12,
+                color: allDone ? "#4caf50" : "#D4AF37",
+                fontWeight: 700,
+              }}
+            >
+              {doneCount}/{totalExercises} done{allDone && " ✓"}
+            </span>
+          </div>
+          <div
+            style={{
+              background: "#242424",
+              borderRadius: 6,
+              height: 6,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                width: `${(doneCount / totalExercises) * 100}%`,
+                height: "100%",
+                background: allDone ? "#4caf50" : "#D4AF37",
+                borderRadius: 6,
+                transition: "width 0.4s ease",
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Active rest timer banner */}
+      {timerRunning && activeTimer !== null && (
+        <div
+          style={{
+            background: "rgba(212,175,55,0.08)",
+            border: "1px solid rgba(212,175,55,0.4)",
+            borderRadius: 10,
+            padding: "12px 16px",
+            marginBottom: 20,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <FiClock size={18} color="#D4AF37" />
+          <div style={{ flex: 1 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: 5,
+              }}
+            >
+              <span style={{ fontSize: 13, color: "#D4AF37", fontWeight: 700 }}>
+                Rest Timer
+              </span>
+              <span
+                style={{
+                  fontSize: 20,
+                  fontWeight: 800,
+                  color: timerSec <= 10 ? "#ff5252" : "#D4AF37",
+                  fontFamily: "monospace",
+                }}
+              >
+                {Math.floor(timerSec / 60)}:
+                {String(timerSec % 60).padStart(2, "0")}
+              </span>
+            </div>
+            <div
+              style={{ background: "#242424", borderRadius: 4, height: 5 }}
+            >
+              <div
+                style={{
+                  width: `${(timerSec / timerMaxSec) * 100}%`,
+                  height: "100%",
+                  background: timerSec <= 10 ? "#ff5252" : "#D4AF37",
+                  borderRadius: 4,
+                  transition: "width 1s linear",
+                }}
+              />
+            </div>
+          </div>
+          <button
+            onClick={stopTimer}
+            style={{
+              background: "none",
+              border: "1px solid #424242",
+              borderRadius: 6,
+              padding: "4px 8px",
+              cursor: "pointer",
+              color: "#9e9e9e",
+              lineHeight: 0,
+            }}
+          >
+            <FiSquare size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Warmup */}
       {workout.warmup?.length > 0 && (
         <Section title="Warmup" icon={<FiSun size={13} />} color="#ff9800">
           {workout.warmup.map((item, i) => (
-            <ExerciseRow key={i} name={item.name} detail={item.duration} />
+            <SimpleRow key={i} name={item.name} detail={item.duration} />
           ))}
         </Section>
       )}
@@ -455,9 +729,13 @@ function WorkoutDetail({ workout, onComplete }) {
         {workout.exercises?.map((ex, i) => (
           <ExerciseRow
             key={i}
-            name={ex.name}
-            detail={`${ex.sets} sets × ${ex.reps}`}
-            sub={`Rest: ${ex.rest_seconds}s | ${ex.equipment || "bodyweight"}`}
+            index={i}
+            ex={ex}
+            done={doneSet.has(i)}
+            isTimerActive={activeTimer === i && timerRunning}
+            onToggle={() => toggleDone(i)}
+            onStartTimer={() => startTimer(i, ex.rest_seconds || 60)}
+            onStopTimer={stopTimer}
           />
         ))}
       </Section>
@@ -466,7 +744,7 @@ function WorkoutDetail({ workout, onComplete }) {
       {workout.cooldown?.length > 0 && (
         <Section title="Cooldown" icon={<FiWind size={13} />} color="#4caf50">
           {workout.cooldown.map((item, i) => (
-            <ExerciseRow key={i} name={item.name} detail={item.duration} />
+            <SimpleRow key={i} name={item.name} detail={item.duration} />
           ))}
         </Section>
       )}
@@ -474,6 +752,115 @@ function WorkoutDetail({ workout, onComplete }) {
   );
 }
 
+/* ─── InteractiveExerciseRow ────────────────────────────────────── */
+function ExerciseRow({
+  ex,
+  done,
+  isTimerActive,
+  onToggle,
+  onStartTimer,
+  onStopTimer,
+}) {
+  return (
+    <div
+      style={{
+        background: done ? "rgba(76,175,80,0.07)" : "#1a1a1a",
+        borderRadius: 8,
+        padding: "12px 14px",
+        border: `1px solid ${done ? "rgba(76,175,80,0.35)" : "transparent"}`,
+        transition: "all 0.2s",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Completion tick */}
+        <button
+          onClick={onToggle}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+            flexShrink: 0,
+            lineHeight: 0,
+          }}
+          title={done ? "Mark incomplete" : "Mark complete"}
+        >
+          {done ? (
+            <FiCheckCircle size={20} color="#4caf50" />
+          ) : (
+            <FiCircle size={20} color="#424242" />
+          )}
+        </button>
+
+        {/* Name + sub */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: done ? "#9e9e9e" : "#e0e0e0",
+              textDecoration: done ? "line-through" : "none",
+            }}
+          >
+            {ex.name}
+          </p>
+          <p style={{ fontSize: 12, color: "#616161", marginTop: 2 }}>
+            Rest: {ex.rest_seconds}s | {ex.equipment || "bodyweight"}
+          </p>
+        </div>
+
+        {/* Sets × reps */}
+        <span
+          style={{
+            fontSize: 13,
+            color: done ? "#4caf50" : "#D4AF37",
+            fontWeight: 700,
+            flexShrink: 0,
+          }}
+        >
+          {ex.sets} × {ex.reps}
+        </span>
+
+        {/* Rest timer button */}
+        {!done && (
+          <button
+            onClick={isTimerActive ? onStopTimer : onStartTimer}
+            style={{
+              background: isTimerActive
+                ? "rgba(255,82,82,0.1)"
+                : "rgba(212,175,55,0.1)",
+              border: `1px solid ${isTimerActive ? "#ff5252" : "rgba(212,175,55,0.4)"}`,
+              borderRadius: 6,
+              padding: "5px 10px",
+              cursor: "pointer",
+              color: isTimerActive ? "#ff5252" : "#D4AF37",
+              fontSize: 11,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              flexShrink: 0,
+            }}
+            title={
+              isTimerActive
+                ? "Stop rest timer"
+                : `Start ${ex.rest_seconds}s rest timer`
+            }
+          >
+            {isTimerActive ? (
+              <FiSquare size={11} />
+            ) : (
+              <FiPlay size={11} />
+            )}
+            {isTimerActive ? "Stop" : "Rest"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Section wrapper ───────────────────────────────────────────── */
 function Section({ title, icon, color, children }) {
   return (
     <div style={{ marginBottom: 24 }}>
@@ -500,7 +887,8 @@ function Section({ title, icon, color, children }) {
   );
 }
 
-function ExerciseRow({ name, detail, sub }) {
+/* ─── SimpleRow (warmup / cooldown) ────────────────────────────── */
+function SimpleRow({ name, detail }) {
   return (
     <div
       style={{
@@ -512,14 +900,7 @@ function ExerciseRow({ name, detail, sub }) {
         alignItems: "center",
       }}
     >
-      <div>
-        <p style={{ fontSize: 14, fontWeight: 600, color: "#e0e0e0" }}>
-          {name}
-        </p>
-        {sub && (
-          <p style={{ fontSize: 12, color: "#616161", marginTop: 2 }}>{sub}</p>
-        )}
-      </div>
+      <p style={{ fontSize: 14, fontWeight: 600, color: "#e0e0e0" }}>{name}</p>
       <span style={{ fontSize: 13, color: "#D4AF37", fontWeight: 600 }}>
         {detail}
       </span>
