@@ -1,218 +1,238 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   FiActivity,
-  FiRefreshCw,
-  FiZap,
-  FiArrowUp,
-  FiUser,
+  FiArrowLeft,
   FiMoon,
   FiClock,
   FiSun,
   FiWind,
   FiBarChart2,
-  FiCalendar,
   FiSettings,
-  FiCheckCircle,
-  FiCircle,
-  FiPlay,
-  FiSquare,
-  FiAlertTriangle,
+  FiChevronRight,
+  FiPlus,
+  FiCheck,
 } from "react-icons/fi";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
-/* ── localStorage helpers ── */
-function todayKey(suffix) {
-  return `flexa_${suffix}_${new Date().toISOString().slice(0, 10)}`;
-}
-function getTimerCount() {
-  return parseInt(localStorage.getItem(todayKey("timers")) || "0", 10);
-}
-function incTimerCount() {
-  const n = getTimerCount() + 1;
-  localStorage.setItem(todayKey("timers"), String(n));
-  return n;
-}
-function getCompletions() {
-  return JSON.parse(localStorage.getItem(todayKey("completions")) || "[]");
-}
-function addCompletion(workoutId) {
-  const c = getCompletions();
-  c.push({ id: String(workoutId), ts: Date.now() });
-  localStorage.setItem(todayKey("completions"), JSON.stringify(c));
-  return c;
-}
-
+/* ─────────────────────────────────────────────────────────────────
+   Constants
+───────────────────────────────────────────────────────────────── */
 const FREQ_OPTIONS = [
-  { value: 3, label: "3 Days", desc: "Perfect for beginners" },
-  { value: 4, label: "4 Days", desc: "Balanced routine" },
-  { value: 5, label: "5 Days", desc: "Advanced split" },
-  { value: 6, label: "6 Days", desc: "Elite level" },
+  { value: 3, label: "3 Days / Week", desc: "Full Body split" },
+  { value: 4, label: "4 Days / Week", desc: "Upper / Lower or Bro Split" },
+  { value: 5, label: "5 Days / Week", desc: "PPL + extras" },
+  { value: 6, label: "6 Days / Week", desc: "PPL twice per week" },
 ];
 
-const DAY_COLORS = {
-  Monday: "#D4AF37",
-  Tuesday: "#A08C29",
-  Wednesday: "#D4AF37",
-  Thursday: "#A08C29",
-  Friday: "#D4AF37",
-  Saturday: "#A08C29",
-  Sunday: "#616161",
-};
+const EXPERIENCE_OPTIONS = [
+  { value: "beginner", label: "Beginner", desc: "Less than 1 year" },
+  { value: "intermediate", label: "Intermediate", desc: "1–3 years" },
+  { value: "advanced", label: "Advanced", desc: "3+ years" },
+];
 
 const SPLIT_INFO = {
-  "Full Body": {
-    icon: <FiActivity size={16} color="#D4AF37" />,
-    desc: "All muscles each session — ideal for beginners",
-  },
-  PPL: {
-    icon: <FiRefreshCw size={16} color="#D4AF37" />,
-    desc: "Push / Pull / Legs 3-day cycle",
-  },
-  "PPL x2": {
-    icon: <FiZap size={16} color="#D4AF37" />,
-    desc: "Push / Pull / Legs — 6 days per week",
-  },
-  "Upper/Lower": {
-    icon: <FiArrowUp size={16} color="#D4AF37" />,
-    desc: "Alternating upper and lower body days",
-  },
-  "Bro Split": {
-    icon: <FiUser size={16} color="#D4AF37" />,
-    desc: "One muscle group per session",
-  },
+  "Full Body": { desc: "All muscles every session — best for beginners" },
+  PPL: { desc: "Push / Pull / Legs 3-day cycle" },
+  "PPL x2": { desc: "Push / Pull / Legs — twice per week" },
+  "Upper/Lower": { desc: "Alternating upper and lower body days" },
+  "Bro Split": { desc: "One muscle group per session" },
 };
 
+const ALL_DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
+/* ─────────────────────────────────────────────────────────────────
+   Helpers
+───────────────────────────────────────────────────────────────── */
+function fmtTime(totalSec) {
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function makeDefaultSets(ex) {
+  const count = Number(ex?.sets) || 3;
+  return Array.from({ length: count }, () => ({
+    weight: "",
+    reps: "",
+    done: false,
+  }));
+}
+
+function getMuscleLabel(workout) {
+  if (workout.is_rest_day) return "Rest";
+  const name = (workout.name || "").toLowerCase();
+  if (name.includes("push")) return "Chest · Shoulders · Triceps";
+  if (name.includes("pull")) return "Back · Biceps";
+  if (name.includes("leg")) return "Quads · Hamstrings · Glutes";
+  if (name.includes("upper")) return "Chest · Back · Shoulders · Arms";
+  if (name.includes("lower")) return "Legs · Core";
+  if (name.includes("chest")) return "Chest";
+  if (name.includes("back")) return "Back";
+  if (name.includes("arm")) return "Biceps · Triceps";
+  if (name.includes("shoulder")) return "Shoulders";
+  if (name.includes("full")) return "Full Body";
+  const groups = [
+    ...new Set(
+      (workout.exercises || [])
+        .map((e) => e.muscle_group)
+        .filter(Boolean)
+        .map((g) => g.charAt(0).toUpperCase() + g.slice(1)),
+    ),
+  ];
+  return groups.length > 0 ? groups.slice(0, 3).join(" · ") : "General";
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Root component
+───────────────────────────────────────────────────────────────── */
 export default function WorkoutPlanner() {
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [freq, setFreq] = useState(4);
-  const [selectedDay, setSelectedDay] = useState(null);
   const [week, setWeek] = useState(1);
   const [mlSplit, setMlSplit] = useState(null);
   const [hasPlan, setHasPlan] = useState(false);
+  const [experienceLevel, setExperienceLevel] = useState("intermediate");
   const [changePlanOpen, setChangePlanOpen] = useState(false);
   const [newFreq, setNewFreq] = useState(4);
-  const [timerRunsToday, setTimerRunsToday] = useState(getTimerCount);
+  const [newExperienceLevel, setNewExperienceLevel] = useState("intermediate");
 
-  const onTimerFinished = useCallback(() => {
-    const n = incTimerCount();
-    setTimerRunsToday(n);
-  }, []);
+  // "plan" | "detail" | "active"
+  const [view, setView] = useState("plan");
+  const [selectedWorkout, setSelectedWorkout] = useState(null);
 
+  /* ── fetch ── */
   const fetchMlSplit = async () => {
     try {
       const res = await api.get("/workouts/my-split");
       if (res.data?.split) setMlSplit(res.data);
     } catch {
-      /* silently ignore */
+      /* ignore */
     }
   };
 
-  const fetchWorkouts = async () => {
+  const fetchWorkouts = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get(`/workouts/?week=${week}`);
-      setWorkouts(res.data);
-      if (res.data.length > 0) {
-        setHasPlan(true);
-        setSelectedDay(res.data.find((w) => !w.is_rest_day) || res.data[0]);
-      }
+      const sorted = [...res.data].sort(
+        (a, b) =>
+          ALL_DAYS.indexOf(a.day_of_week) - ALL_DAYS.indexOf(b.day_of_week),
+      );
+      setWorkouts(sorted);
+      if (sorted.length > 0) setHasPlan(true);
     } catch {
-      /* no workouts yet */
+      /* no plan yet */
     } finally {
       setLoading(false);
     }
-  };
+  }, [week]);
 
   useEffect(() => {
     fetchWorkouts();
-  }, [week]); // eslint-disable-line
-
+  }, [fetchWorkouts]);
   useEffect(() => {
     fetchMlSplit();
-  }, []); // eslint-disable-line
+  }, []);
 
-  const generate = async (targetFreq = freq, targetWeek = week) => {
+  /* ── generate ── */
+  const generate = async (
+    targetFreq = freq,
+    targetWeek = week,
+    targetXp = experienceLevel,
+  ) => {
     setGenerating(true);
     try {
       const res = await api.post("/workouts/generate", {
         frequency_per_week: targetFreq,
         week_number: targetWeek,
+        experience_level: targetXp,
       });
-      setWorkouts(res.data);
-      setSelectedDay(res.data.find((w) => !w.is_rest_day) || res.data[0]);
+      const sorted = [...res.data].sort(
+        (a, b) =>
+          ALL_DAYS.indexOf(a.day_of_week) - ALL_DAYS.indexOf(b.day_of_week),
+      );
+      setWorkouts(sorted);
       setHasPlan(true);
       setFreq(targetFreq);
+      setExperienceLevel(targetXp);
       if (targetWeek === 1) setWeek(1);
       toast.success(
         targetWeek === 1
-          ? `New ${targetFreq}-day plan generated!`
-          : `Week ${targetWeek} plan ready!`,
+          ? `${targetFreq}-day plan generated!`
+          : `Week ${targetWeek} ready!`,
       );
     } catch (err) {
       toast.error(
-        err.response?.data?.detail || "Generate your profile & goal first.",
+        err.response?.data?.detail || "Set up your profile and goal first.",
       );
     } finally {
       setGenerating(false);
     }
   };
 
+  /* ── complete workout ── */
   const completeWorkout = async (workoutId) => {
     try {
       await api.post(`/workouts/${workoutId}/complete`);
-      const completions = addCompletion(workoutId);
-      const todaySame = completions.filter((c) => c.id === String(workoutId));
-      if (todaySame.length >= 2) {
-        const gap = Date.now() - todaySame[todaySame.length - 2].ts;
-        if (gap < 20 * 60 * 1000) {
-          toast(
-            () => (
-              <div
-                style={{ display: "flex", alignItems: "flex-start", gap: 10 }}
-              >
-                <FiAlertTriangle
-                  size={20}
-                  color="#ff9800"
-                  style={{ marginTop: 2, flexShrink: 0 }}
-                />
-                <div>
-                  <p
-                    style={{
-                      fontWeight: 700,
-                      color: "#ff9800",
-                      marginBottom: 4,
-                    }}
-                  >
-                    You're going too fast!
-                  </p>
-                  <p style={{ fontSize: 13, color: "#ccc" }}>
-                    You've completed this workout twice today in under 20
-                    minutes. Slow down, rest properly — recovery is part of
-                    training.
-                  </p>
-                </div>
-              </div>
-            ),
-            {
-              duration: 6000,
-              style: {
-                background: "#1a1a1a",
-                border: "1px solid #ff9800",
-              },
-            },
-          );
-          return;
-        }
-      }
-      toast.success("Workout marked complete!");
+      toast.success("Workout session recorded!");
+      fetchWorkouts();
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Error logging session.");
+      toast.error(err.response?.data?.detail || "Could not log session.");
     }
   };
 
+  /* ── view transitions ── */
+  const openDetail = (workout) => {
+    setSelectedWorkout(workout);
+    setView("detail");
+    window.scrollTo({ top: 0 });
+  };
+  const openActive = () => {
+    setView("active");
+    window.scrollTo({ top: 0 });
+  };
+  const backToPlan = () => {
+    setView("plan");
+    setSelectedWorkout(null);
+  };
+  const backToDetail = () => {
+    setView("detail");
+  };
+
+  /* ── render ── */
+  if (view === "detail" && selectedWorkout)
+    return (
+      <DayDetailView
+        workout={selectedWorkout}
+        onBack={backToPlan}
+        onStart={openActive}
+      />
+    );
+
+  if (view === "active" && selectedWorkout)
+    return (
+      <ActiveWorkoutView
+        workout={selectedWorkout}
+        onBack={backToDetail}
+        onComplete={async () => {
+          await completeWorkout(selectedWorkout.id);
+          backToPlan();
+        }}
+      />
+    );
+
+  /* ── Plan view ── */
   return (
     <div className="page-content">
       {/* Header */}
@@ -221,7 +241,7 @@ export default function WorkoutPlanner() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          marginBottom: 32,
+          marginBottom: 28,
           flexWrap: "wrap",
           gap: 16,
         }}
@@ -231,7 +251,7 @@ export default function WorkoutPlanner() {
             Workout <span className="text-gold">Planner</span>
           </h1>
           <p style={{ color: "#9e9e9e", marginTop: 6, fontSize: 14 }}>
-            AI-generated weekly training plan tailored to your goal
+            AI-generated weekly training plan built around your goal
           </p>
           {mlSplit && (
             <div
@@ -240,79 +260,24 @@ export default function WorkoutPlanner() {
                 alignItems: "center",
                 gap: 8,
                 marginTop: 10,
-                padding: "8px 16px",
-                background: "rgba(212,175,55,0.1)",
-                border: "1px solid rgba(212,175,55,0.35)",
-                borderRadius: 24,
+                padding: "7px 14px",
+                background: "rgba(212,175,55,0.08)",
+                border: "1px solid rgba(212,175,55,0.3)",
+                borderRadius: 20,
                 fontSize: 13,
               }}
             >
-              <span style={{ display: "flex", alignItems: "center" }}>
-                {SPLIT_INFO[mlSplit.split]?.icon || (
-                  <FiBarChart2 size={16} color="#D4AF37" />
-                )}
-              </span>
+              <FiBarChart2 size={14} color="#D4AF37" />
               <span style={{ color: "#D4AF37", fontWeight: 700 }}>
                 ML Recommended:
               </span>
-              <span style={{ color: "#fff" }}>{mlSplit.split}</span>
-              <span style={{ color: "#9e9e9e" }}>
+              <span style={{ color: "#e0e0e0" }}>{mlSplit.split}</span>
+              <span style={{ color: "#616161", fontSize: 12 }}>
                 — {SPLIT_INFO[mlSplit.split]?.desc}
               </span>
             </div>
           )}
-          {timerRunsToday > 0 && (
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                marginTop: 8,
-                padding: "5px 12px",
-                background: "rgba(76,175,80,0.1)",
-                border: "1px solid rgba(76,175,80,0.3)",
-                borderRadius: 20,
-                fontSize: 12,
-                color: "#4caf50",
-              }}
-            >
-              <FiClock size={12} />
-              {timerRunsToday} rest timer{timerRunsToday !== 1 ? "s" : ""} used
-              today
-            </div>
-          )}
         </div>
-
-        {!hasPlan && (
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <div style={{ display: "flex", gap: 8 }}>
-              {FREQ_OPTIONS.map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => setFreq(f.value)}
-                  className={`btn ${freq === f.value ? "btn-gold" : "btn-ghost"}`}
-                  style={{ padding: "8px 16px", fontSize: 13 }}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-            <button
-              className="btn btn-gold"
-              onClick={() => generate(freq, 1)}
-              disabled={generating}
-            >
-              {generating ? "Generating..." : "Generate Plan"}
-            </button>
-          </div>
-        )}
 
         {hasPlan && (
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -330,6 +295,7 @@ export default function WorkoutPlanner() {
                 fontWeight: 700,
                 minWidth: 60,
                 textAlign: "center",
+                fontSize: 14,
               }}
             >
               Week {week}
@@ -342,9 +308,10 @@ export default function WorkoutPlanner() {
               Next →
             </button>
             <button
-              className="btn btn-outline"
+              className="btn btn-ghost"
               onClick={() => {
                 setNewFreq(freq);
+                setNewExperienceLevel(experienceLevel);
                 setChangePlanOpen(true);
               }}
               style={{
@@ -354,8 +321,7 @@ export default function WorkoutPlanner() {
                 gap: 6,
               }}
             >
-              <FiSettings size={14} />
-              Change Plan
+              <FiSettings size={14} /> Change Plan
             </button>
           </div>
         )}
@@ -365,11 +331,12 @@ export default function WorkoutPlanner() {
         <ChangePlanOverlay
           freq={newFreq}
           setFreq={setNewFreq}
-          mlSplit={mlSplit}
+          experienceLevel={newExperienceLevel}
+          setExperienceLevel={setNewExperienceLevel}
           generating={generating}
           onConfirm={() => {
             setChangePlanOpen(false);
-            generate(newFreq, 1);
+            generate(newFreq, 1, newExperienceLevel);
           }}
           onCancel={() => setChangePlanOpen(false)}
         />
@@ -381,389 +348,784 @@ export default function WorkoutPlanner() {
         </div>
       ) : workouts.length === 0 && !hasPlan ? (
         <EmptyState
-          onGenerate={() => generate(freq, 1)}
-          generating={generating}
           freq={freq}
           setFreq={setFreq}
+          experienceLevel={experienceLevel}
+          setExperienceLevel={setExperienceLevel}
+          generating={generating}
+          onGenerate={() => generate(freq, 1, experienceLevel)}
         />
       ) : workouts.length === 0 && hasPlan ? (
         <WeekEmptyCard
           week={week}
           generating={generating}
-          onGenerate={() => generate(freq, week)}
+          onGenerate={() => generate(freq, week, experienceLevel)}
         />
       ) : (
-        <div className="workout-layout">
-          {/* Day sidebar */}
-          <div
-            className="workout-day-sidebar"
-            style={{ display: "flex", flexDirection: "column", gap: 8 }}
-          >
-            {workouts.map((w) => (
-              <div
-                key={w.id}
-                onClick={() => setSelectedDay(w)}
-                style={{
-                  background:
-                    selectedDay?.id === w.id ? "rgba(212,175,55,0.12)" : "#111",
-                  border: `2px solid ${selectedDay?.id === w.id ? "#D4AF37" : "#242424"}`,
-                  borderRadius: 10,
-                  padding: "14px 16px",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <div>
-                    <p
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: DAY_COLORS[w.day_of_week] || "#D4AF37",
-                      }}
-                    >
-                      {w.day_of_week}
-                    </p>
-                    <p
-                      style={{
-                        fontSize: 13,
-                        color: w.is_rest_day ? "#616161" : "#e0e0e0",
-                        marginTop: 2,
-                      }}
-                    >
-                      {w.name}
-                    </p>
-                  </div>
-                  {w.is_rest_day ? (
-                    <FiMoon size={18} color="#616161" />
-                  ) : (
-                    <span style={{ fontSize: 12, color: "#9e9e9e" }}>
-                      {w.duration_minutes}m
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Workout detail */}
-          {selectedDay && (
-            <WorkoutDetail
-              workout={selectedDay}
-              onComplete={completeWorkout}
-              onTimerFinished={onTimerFinished}
-            />
-          )}
-        </div>
+        <WeekGrid workouts={workouts} onViewWorkout={openDetail} />
       )}
     </div>
   );
 }
 
-/* ─── WorkoutDetail ─────────────────────────────────────────────── */
-function WorkoutDetail({ workout, onComplete, onTimerFinished }) {
-  const totalExercises = workout.exercises?.length || 0;
-
-  // Experience-based mandatory rest config
-  const XP_CONFIG = {
-    beginner: { threshold: 3, restSec: 120 },
-    intermediate: { threshold: 5, restSec: 90 },
-    advanced: { threshold: 7, restSec: 60 },
-  };
-  const xp =
-    XP_CONFIG[(workout.difficulty || "intermediate").toLowerCase()] ||
-    XP_CONFIG.intermediate;
-
-  // Per-exercise rest timer
-  const [doneSet, setDoneSet] = useState(new Set());
-  const [activeTimer, setActiveTimer] = useState(null);
-  const [timerSec, setTimerSec] = useState(0);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [timerMaxSec, setTimerMaxSec] = useState(90);
-  const intervalRef = useRef(null);
-
-  // Mandatory rest state
-  const consecSetsRef = useRef(0);
-  const [consecSets, setConsecSets] = useState(0);
-  const [showMandatoryRest, setShowMandatoryRest] = useState(false);
-  const [mandatoryRestSec, setMandatoryRestSec] = useState(xp.restSec);
-  const [mandatoryRestMax, setMandatoryRestMax] = useState(xp.restSec);
-  const mandatoryIntervalRef = useRef(null);
-
-  useEffect(() => {
-    setDoneSet(new Set());
-    clearInterval(intervalRef.current);
-    clearInterval(mandatoryIntervalRef.current);
-    setActiveTimer(null);
-    setTimerRunning(false);
-    setTimerSec(0);
-    consecSetsRef.current = 0;
-    setConsecSets(0);
-    setShowMandatoryRest(false);
-  }, [workout.id]);
-
-  const startTimer = (exIndex, restSec) => {
-    clearInterval(intervalRef.current);
-    setActiveTimer(exIndex);
-    setTimerMaxSec(restSec);
-    setTimerSec(restSec);
-    setTimerRunning(true);
-  };
-
-  const stopTimer = () => {
-    clearInterval(intervalRef.current);
-    setTimerRunning(false);
-    setActiveTimer(null);
-    setTimerSec(0);
-  };
-
-  // Trigger mandatory rest overlay
-  const triggerMandatoryRest = useCallback(() => {
-    clearInterval(intervalRef.current);
-    setTimerRunning(false);
-    setActiveTimer(null);
-    setTimerSec(0);
-    setMandatoryRestSec(xp.restSec);
-    setMandatoryRestMax(xp.restSec);
-    setShowMandatoryRest(true);
-  }, [xp.restSec]);
-
-  // Mandatory rest countdown
-  useEffect(() => {
-    if (!showMandatoryRest) return;
-    clearInterval(mandatoryIntervalRef.current);
-    mandatoryIntervalRef.current = setInterval(() => {
-      setMandatoryRestSec((s) => {
-        if (s <= 1) {
-          clearInterval(mandatoryIntervalRef.current);
-          setShowMandatoryRest(false);
-          consecSetsRef.current = 0;
-          setConsecSets(0);
-          toast("Ready! Continue your workout.", {
-            duration: 3000,
-            style: {
-              background: "#1a1a1a",
-              border: "1px solid #D4AF37",
-              color: "#D4AF37",
-              fontWeight: 700,
-            },
-          });
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(mandatoryIntervalRef.current);
-  }, [showMandatoryRest]); // eslint-disable-line
-
-  const reduceMandatoryRest = () => {
-    setMandatoryRestSec((s) => Math.max(30, s - 10));
-  };
-
-  useEffect(() => {
-    if (!timerRunning) return;
-    intervalRef.current = setInterval(() => {
-      setTimerSec((s) => {
-        if (s <= 1) {
-          clearInterval(intervalRef.current);
-          setTimerRunning(false);
-          setActiveTimer(null);
-          // Proper rest taken — reset consecutive counter
-          consecSetsRef.current = 0;
-          setConsecSets(0);
-          onTimerFinished();
-          toast("⏱ Rest complete! Start your next set.", {
-            duration: 4000,
-            style: {
-              background: "#1a1a1a",
-              border: "1px solid #4caf50",
-              color: "#4caf50",
-              fontWeight: 700,
-            },
-          });
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(intervalRef.current);
-  }, [timerRunning]); // eslint-disable-line
-
-  const toggleDone = (idx) => {
-    const isAdding = !doneSet.has(idx);
-    setDoneSet((prev) => {
-      const next = new Set(prev);
-      next.has(idx) ? next.delete(idx) : next.add(idx);
-      return next;
-    });
-    if (isAdding) {
-      const newConsec = consecSetsRef.current + 1;
-      consecSetsRef.current = newConsec;
-      setConsecSets(newConsec);
-      if (newConsec >= xp.threshold) {
-        triggerMandatoryRest();
-        consecSetsRef.current = 0;
-        setConsecSets(0);
-      }
-    }
-  };
-
-  const doneCount = doneSet.size;
-  const allDone = totalExercises > 0 && doneCount === totalExercises;
-
-  if (workout.is_rest_day) {
-    return (
-      <div
-        className="card"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: 400,
-        }}
-      >
-        <FiMoon size={64} color="#616161" />
-        <h2 style={{ marginTop: 20, marginBottom: 8 }}>Rest Day</h2>
-        <p
-          style={{
-            color: "#9e9e9e",
-            textAlign: "center",
-            maxWidth: 300,
-            lineHeight: 1.6,
-          }}
-        >
-          Recovery is where muscle is built. Stay hydrated, eat well, and get
-          quality sleep tonight.
-        </p>
-      </div>
-    );
-  }
+/* ─────────────────────────────────────────────────────────────────
+   WeekGrid — 7 day cards
+───────────────────────────────────────────────────────────────── */
+function WeekGrid({ workouts, onViewWorkout }) {
+  const dayMap = {};
+  workouts.forEach((w) => {
+    dayMap[w.day_of_week] = w;
+  });
 
   return (
-    <div className="card">
-      {/* Mandatory rest overlay */}
-      {showMandatoryRest && (
-        <MandatoryRestScreen
-          restSec={mandatoryRestSec}
-          restMax={mandatoryRestMax}
-          difficulty={(workout.difficulty || "intermediate").toLowerCase()}
-          onReduce={reduceMandatoryRest}
-        />
-      )}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+        gap: 16,
+      }}
+    >
+      {ALL_DAYS.map((day) => {
+        const workout = dayMap[day];
+        const isRest = !workout || workout.is_rest_day;
+        const exCount = workout?.exercises?.length || 0;
+        return (
+          <div
+            key={day}
+            style={{
+              background: isRest ? "rgba(255,255,255,0.02)" : "#111",
+              border: `1px solid ${isRest ? "#1a1a1a" : "#242424"}`,
+              borderRadius: 12,
+              padding: "18px 16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: isRest ? "#303030" : "#D4AF37",
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+              }}
+            >
+              {day}
+            </p>
+            <p
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: isRest ? "#2e2e2e" : "#e0e0e0",
+              }}
+            >
+              {isRest ? "Rest Day" : workout.name}
+            </p>
+            {!isRest && (
+              <p style={{ fontSize: 12, color: "#616161" }}>
+                {exCount} exercises
+              </p>
+            )}
+            {!isRest && (
+              <button
+                onClick={() => onViewWorkout(workout)}
+                style={{
+                  marginTop: "auto",
+                  background: "transparent",
+                  border: "1px solid #2a2a2a",
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  color: "#D4AF37",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(212,175,55,0.5)";
+                  e.currentTarget.style.background = "rgba(212,175,55,0.06)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#2a2a2a";
+                  e.currentTarget.style.background = "transparent";
+                }}
+              >
+                View Workout <FiChevronRight size={14} />
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-      {/* Header */}
+/* ─────────────────────────────────────────────────────────────────
+   Shared sub-components
+───────────────────────────────────────────────────────────────── */
+function StatPill({ icon, label }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        fontSize: 13,
+        color: "#9e9e9e",
+      }}
+    >
+      <span style={{ color: "#D4AF37" }}>{icon}</span>
+      {label}
+    </div>
+  );
+}
+
+function SectionLabel({ icon, label, color }) {
+  return (
+    <p
+      style={{
+        fontSize: 11,
+        fontWeight: 700,
+        color,
+        textTransform: "uppercase",
+        letterSpacing: "1.5px",
+        marginBottom: 12,
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+      }}
+    >
+      {icon}
+      {label}
+    </p>
+  );
+}
+
+function SimpleDetailRow({ name, right, rightColor }) {
+  return (
+    <div
+      style={{
+        background: "#111",
+        borderRadius: 8,
+        padding: "12px 16px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        border: "1px solid #1e1e1e",
+      }}
+    >
+      <p style={{ fontSize: 14, color: "#e0e0e0" }}>{name}</p>
+      <span
+        style={{
+          fontSize: 13,
+          color: rightColor || "#9e9e9e",
+          fontWeight: 600,
+        }}
+      >
+        {right}
+      </span>
+    </div>
+  );
+}
+
+function ExerciseDetailCard({ index, ex }) {
+  return (
+    <div
+      style={{
+        background: "#111",
+        border: "1px solid #1e1e1e",
+        borderRadius: 10,
+        padding: "14px 16px",
+      }}
+    >
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          marginBottom: 20,
+          gap: 12,
         }}
       >
-        <div>
-          <span className="badge badge-gold" style={{ marginBottom: 8 }}>
-            {workout.day_of_week}
-          </span>
-          <h2 style={{ fontSize: 22, fontWeight: 800 }}>{workout.name}</h2>
-          <p
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 12,
+            flex: 1,
+          }}
+        >
+          <span
             style={{
-              color: "#9e9e9e",
-              fontSize: 13,
-              marginTop: 4,
+              width: 26,
+              height: 26,
+              borderRadius: "50%",
+              background: "rgba(212,175,55,0.1)",
+              border: "1px solid rgba(212,175,55,0.25)",
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              justifyContent: "center",
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#D4AF37",
+              flexShrink: 0,
+              marginTop: 1,
             }}
           >
-            <FiClock size={13} color="#9e9e9e" />
-            {workout.duration_minutes} min
-            <span style={{ margin: "0 4px" }}>|</span>
-            <FiActivity size={13} color="#9e9e9e" />
-            {workout.difficulty?.charAt(0).toUpperCase() +
-              workout.difficulty?.slice(1)}
-          </p>
-        </div>
-        <button
-          className={`btn ${allDone ? "btn-gold" : "btn-outline"}`}
-          style={{ padding: "10px 20px", fontSize: 13 }}
-          onClick={() => onComplete(workout.id)}
-        >
-          ✓ Mark Workout Complete
-        </button>
-      </div>
-
-      {/* Exercise progress bar */}
-      {totalExercises > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: 6,
-            }}
-          >
-            <span style={{ fontSize: 12, color: "#9e9e9e" }}>
-              Exercise Progress
-            </span>
-            <span
+            {index + 1}
+          </span>
+          <div>
+            <p
               style={{
-                fontSize: 12,
-                color: allDone ? "#4caf50" : "#D4AF37",
+                fontSize: 14,
                 fontWeight: 700,
+                color: "#e0e0e0",
+                marginBottom: 4,
               }}
             >
-              {doneCount}/{totalExercises} done{allDone && " ✓"}
-            </span>
+              {ex.name}
+            </p>
+            <p style={{ fontSize: 12, color: "#616161" }}>
+              {ex.muscle_group
+                ? ex.muscle_group.charAt(0).toUpperCase() +
+                  ex.muscle_group.slice(1)
+                : ""}
+              {ex.equipment && ex.equipment !== "none"
+                ? ` · ${ex.equipment.replace(/_/g, " ")}`
+                : ""}
+            </p>
           </div>
-          <div
-            style={{
-              background: "#242424",
-              borderRadius: 6,
-              height: 6,
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                width: `${(doneCount / totalExercises) * 100}%`,
-                height: "100%",
-                background: allDone ? "#4caf50" : "#D4AF37",
-                borderRadius: 6,
-                transition: "width 0.4s ease",
-              }}
+        </div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <p style={{ fontSize: 15, fontWeight: 800, color: "#D4AF37" }}>
+            {ex.sets} × {ex.reps}
+          </p>
+          <p style={{ fontSize: 11, color: "#616161", marginTop: 2 }}>
+            {ex.rest_seconds}s rest
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   DayDetailView
+───────────────────────────────────────────────────────────────── */
+function DayDetailView({ workout, onBack, onStart }) {
+  const exercises = workout.exercises || [];
+  const warmup = workout.warmup || [];
+  const cooldown = workout.cooldown || [];
+
+  return (
+    <div className="page-content" style={{ maxWidth: 720, margin: "0 auto" }}>
+      <button
+        onClick={onBack}
+        style={{
+          background: "none",
+          border: "none",
+          color: "#9e9e9e",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          fontSize: 14,
+          marginBottom: 24,
+          padding: 0,
+        }}
+      >
+        <FiArrowLeft size={16} /> Back to week plan
+      </button>
+
+      <div style={{ marginBottom: 28 }}>
+        <div
+          style={{
+            display: "inline-block",
+            fontSize: 11,
+            fontWeight: 700,
+            color: "#D4AF37",
+            background: "rgba(212,175,55,0.1)",
+            border: "1px solid rgba(212,175,55,0.25)",
+            borderRadius: 6,
+            padding: "3px 10px",
+            letterSpacing: "0.8px",
+            textTransform: "uppercase",
+            marginBottom: 10,
+          }}
+        >
+          {workout.day_of_week}
+        </div>
+        <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>
+          {workout.name}
+        </h1>
+        <p style={{ color: "#9e9e9e", fontSize: 14 }}>
+          {getMuscleLabel(workout)}
+        </p>
+        <div
+          style={{ display: "flex", gap: 20, marginTop: 14, flexWrap: "wrap" }}
+        >
+          <StatPill
+            icon={<FiClock size={13} />}
+            label={`${workout.duration_minutes} min`}
+          />
+          <StatPill
+            icon={<FiActivity size={13} />}
+            label={`${exercises.length} exercises`}
+          />
+          {workout.difficulty && (
+            <StatPill
+              icon={<FiBarChart2 size={13} />}
+              label={
+                workout.difficulty.charAt(0).toUpperCase() +
+                workout.difficulty.slice(1)
+              }
             />
+          )}
+        </div>
+      </div>
+
+      {warmup.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <SectionLabel
+            icon={<FiSun size={13} />}
+            label="Warmup"
+            color="#ff9800"
+          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {warmup.map((item, i) => (
+              <SimpleDetailRow
+                key={i}
+                name={item.name}
+                right={item.duration}
+                rightColor="#ff9800"
+              />
+            ))}
           </div>
         </div>
       )}
 
-      {/* Consecutive sets progress */}
-      {consecSets > 0 && !showMandatoryRest && (
+      <div style={{ marginBottom: 28 }}>
+        <SectionLabel
+          icon={<FiActivity size={13} />}
+          label="Exercises"
+          color="#D4AF37"
+        />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {exercises.map((ex, i) => (
+            <ExerciseDetailCard key={i} index={i} ex={ex} />
+          ))}
+        </div>
+      </div>
+
+      {cooldown.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <SectionLabel
+            icon={<FiWind size={13} />}
+            label="Cooldown"
+            color="#4caf50"
+          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {cooldown.map((item, i) => (
+              <SimpleDetailRow
+                key={i}
+                name={item.name}
+                right={item.duration}
+                rightColor="#4caf50"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ position: "sticky", bottom: 16, padding: "16px 0 4px" }}>
+        <button
+          className="btn btn-gold"
+          style={{
+            width: "100%",
+            padding: "14px",
+            fontSize: 15,
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
+          onClick={onStart}
+        >
+          Start Workout
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   ActiveWorkoutView — live set tracker
+───────────────────────────────────────────────────────────────── */
+function ActiveWorkoutView({ workout, onBack, onComplete }) {
+  const exercises = (workout.exercises || []).filter(Boolean);
+  const total = exercises.length;
+
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [setRows, setSetRows] = useState(() => makeDefaultSets(exercises[0]));
+  const [sessionSec, setSessionSec] = useState(0);
+  const [restSec, setRestSec] = useState(0);
+  const [restRunning, setRestRunning] = useState(false);
+  const [restMax, setRestMax] = useState(0);
+  const [completing, setCompleting] = useState(false);
+  const [mandatoryWait, setMandatoryWait] = useState(0); // forced rest between sets
+  const [completeBlockWait, setCompleteBlockWait] = useState(0); // forced rest before next exercise
+  const [warnMsgIdx, setWarnMsgIdx] = useState(0);
+
+  const sessionRef = useRef(null);
+  const restRef = useRef(null);
+  const mandatoryRef = useRef(null);
+  const completeBlockRef = useRef(null);
+  const lastSetDoneAt = useRef(null); // timestamp of last set completion
+
+  useEffect(() => {
+    sessionRef.current = setInterval(() => setSessionSec((s) => s + 1), 1000);
+    return () => clearInterval(sessionRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (!restRunning) return;
+    clearInterval(restRef.current);
+    restRef.current = setInterval(() => {
+      setRestSec((s) => {
+        if (s <= 1) {
+          clearInterval(restRef.current);
+          setRestRunning(false);
+          toast("Rest complete — start your next set.", {
+            duration: 4000,
+            style: {
+              background: "#1a1a1a",
+              border: "1px solid #4caf50",
+              color: "#4caf50",
+            },
+          });
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(restRef.current);
+  }, [restRunning]);
+
+  // Clear timers on unmount
+  useEffect(
+    () => () => {
+      clearInterval(mandatoryRef.current);
+      clearInterval(completeBlockRef.current);
+    },
+    [],
+  );
+
+  const WARN_MESSAGES = [
+    {
+      title: "Slow down — you\'re rushing!",
+      sub: "Your muscles need time to recover between exercises.",
+    },
+    {
+      title: "Grab some water.",
+      sub: "Hydration is just as important as the reps.",
+    },
+    {
+      title: "Take a breath.",
+      sub: "Let your heart rate settle before the next movement.",
+    },
+    {
+      title: "Quality over speed.",
+      sub: "Rushing through won\'t build strength — controlled reps do.",
+    },
+    {
+      title: "Rest is part of training.",
+      sub: "Skipping rest increases injury risk. Wait it out.",
+    },
+  ];
+
+  const goToExercise = (idx) => {
+    setCurrentIdx(idx);
+    setSetRows(makeDefaultSets(exercises[idx]));
+    clearInterval(restRef.current);
+    setRestRunning(false);
+    setRestSec(0);
+    clearInterval(mandatoryRef.current);
+    setMandatoryWait(0);
+    clearInterval(completeBlockRef.current);
+    setCompleteBlockWait(0);
+    lastSetDoneAt.current = null;
+    window.scrollTo({ top: 0 });
+  };
+
+  const ex = exercises[currentIdx];
+  const isLast = currentIdx === total - 1;
+
+  const MANDATORY_SEC = 30;
+
+  const updateRow = (idx, field, val) =>
+    setSetRows((rows) =>
+      rows.map((r, i) => (i === idx ? { ...r, [field]: val } : r)),
+    );
+
+  const toggleRowDone = (idx) => {
+    // Un-doing a set — always allowed
+    const currentRow = setRows[idx];
+    if (currentRow?.done) {
+      setSetRows((rows) =>
+        rows.map((r, i) => (i === idx ? { ...r, done: false } : r)),
+      );
+      return;
+    }
+
+    // Check mandatory minimum wait between sets
+    if (lastSetDoneAt.current !== null) {
+      const elapsed = Math.floor((Date.now() - lastSetDoneAt.current) / 1000);
+      const remaining = MANDATORY_SEC - elapsed;
+      if (remaining > 0) {
+        // Start / refresh the mandatory wait countdown
+        clearInterval(mandatoryRef.current);
+        setMandatoryWait(remaining);
+        mandatoryRef.current = setInterval(() => {
+          setMandatoryWait((s) => {
+            if (s <= 1) {
+              clearInterval(mandatoryRef.current);
+              return 0;
+            }
+            return s - 1;
+          });
+        }, 1000);
+        return; // block the tick
+      }
+    }
+
+    // Mark done and record timestamp
+    lastSetDoneAt.current = Date.now();
+    setSetRows((rows) =>
+      rows.map((r, i) => {
+        if (i !== idx) return r;
+        if (ex?.rest_seconds) {
+          clearInterval(restRef.current);
+          setRestMax(ex.rest_seconds);
+          setRestSec(ex.rest_seconds);
+          setRestRunning(true);
+        }
+        return { ...r, done: true };
+      }),
+    );
+  };
+
+  const addSet = () =>
+    setSetRows((rows) => [...rows, { weight: "", reps: "", done: false }]);
+
+  const triggerCompleteBlock = (remaining) => {
+    clearInterval(completeBlockRef.current);
+    const nextMsgIdx = Math.floor(Math.random() * WARN_MESSAGES.length);
+    setWarnMsgIdx(nextMsgIdx);
+    setCompleteBlockWait(remaining);
+    completeBlockRef.current = setInterval(() => {
+      setCompleteBlockWait((s) => {
+        if (s <= 1) {
+          clearInterval(completeBlockRef.current);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+  };
+
+  const handleCompleteExercise = async () => {
+    // Block if user is rushing — require at least MANDATORY_SEC since last set was done
+    if (lastSetDoneAt.current !== null) {
+      const elapsed = Math.floor((Date.now() - lastSetDoneAt.current) / 1000);
+      const remaining = MANDATORY_SEC - elapsed;
+      if (remaining > 0) {
+        triggerCompleteBlock(remaining);
+        return;
+      }
+    }
+    if (isLast) {
+      setCompleting(true);
+      clearInterval(sessionRef.current);
+      await onComplete();
+      setCompleting(false);
+    } else {
+      goToExercise(currentIdx + 1);
+    }
+  };
+
+  if (!ex) return null;
+
+  return (
+    <div className="page-content" style={{ maxWidth: 680, margin: "0 auto" }}>
+      {/* Top bar */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 24,
+        }}
+      >
+        <button
+          onClick={onBack}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#9e9e9e",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 14,
+            padding: 0,
+          }}
+        >
+          <FiArrowLeft size={16} /> Back
+        </button>
+        <div
+          style={{
+            fontFamily: "monospace",
+            fontSize: 14,
+            fontWeight: 700,
+            color: "#D4AF37",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <FiClock size={14} /> {fmtTime(sessionSec)}
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ marginBottom: 22 }}>
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "9px 14px",
-            background: "rgba(212,175,55,0.06)",
-            border: "1px solid rgba(212,175,55,0.2)",
-            borderRadius: 8,
-            marginBottom: 16,
-            fontSize: 12,
+            justifyContent: "space-between",
+            marginBottom: 8,
           }}
         >
-          <FiBarChart2 size={13} color="#D4AF37" />
-          <span style={{ color: "#9e9e9e" }}>Sets since last rest:</span>
+          <span style={{ fontSize: 12, color: "#9e9e9e" }}>
+            Exercise {currentIdx + 1} of {total}
+          </span>
+          <span style={{ fontSize: 12, color: "#D4AF37", fontWeight: 700 }}>
+            {Math.round((currentIdx / total) * 100)}% done
+          </span>
+        </div>
+        <div
+          style={{
+            background: "#1a1a1a",
+            borderRadius: 6,
+            height: 5,
+            overflow: "hidden",
+          }}
+        >
           <div
             style={{
-              flex: 1,
-              background: "#242424",
+              height: "100%",
+              width: `${(currentIdx / total) * 100}%`,
+              background: "#D4AF37",
+              borderRadius: 6,
+              transition: "width 0.4s ease",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Exercise card */}
+      <div
+        style={{
+          background: "linear-gradient(135deg,#111 0%,#181408 100%)",
+          border: "1px solid rgba(212,175,55,0.22)",
+          borderRadius: 14,
+          padding: "20px 20px 18px",
+          marginBottom: 20,
+        }}
+      >
+        <p
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: "#D4AF37",
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            marginBottom: 6,
+          }}
+        >
+          {ex.muscle_group
+            ? ex.muscle_group.charAt(0).toUpperCase() + ex.muscle_group.slice(1)
+            : "Exercise"}
+        </p>
+        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>
+          {ex.name}
+        </h2>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 13, color: "#9e9e9e" }}>
+            Target: {ex.sets} sets × {ex.reps}
+          </span>
+          {ex.equipment && ex.equipment !== "none" && (
+            <span style={{ fontSize: 13, color: "#616161" }}>
+              {ex.equipment.replace(/_/g, " ")}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Mandatory rest warning */}
+      {mandatoryWait > 0 && (
+        <div
+          style={{
+            background: "rgba(239,83,80,0.07)",
+            border: "1px solid rgba(239,83,80,0.35)",
+            borderRadius: 10,
+            padding: "14px 18px",
+            marginBottom: 20,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 8,
+            }}
+          >
+            <div>
+              <p
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#ef5350",
+                  marginBottom: 2,
+                }}
+              >
+                Slow down — rest before your next set
+              </p>
+              <p style={{ fontSize: 12, color: "#9e9e9e" }}>
+                Minimum 30 s between sets to avoid injury
+              </p>
+            </div>
+            <span
+              style={{
+                fontFamily: "monospace",
+                fontSize: 26,
+                fontWeight: 800,
+                color: "#ef5350",
+                minWidth: 54,
+                textAlign: "right",
+              }}
+            >
+              {String(mandatoryWait).padStart(2, "0")}s
+            </span>
+          </div>
+          <div
+            style={{
+              background: "#1a1a1a",
               borderRadius: 4,
               height: 5,
               overflow: "hidden",
@@ -771,34 +1133,23 @@ function WorkoutDetail({ workout, onComplete, onTimerFinished }) {
           >
             <div
               style={{
-                width: `${Math.min((consecSets / xp.threshold) * 100, 100)}%`,
+                width: `${((MANDATORY_SEC - mandatoryWait) / MANDATORY_SEC) * 100}%`,
                 height: "100%",
-                background:
-                  consecSets >= xp.threshold - 1 ? "#ff9800" : "#D4AF37",
+                background: "#ef5350",
                 borderRadius: 4,
-                transition: "width 0.3s ease",
+                transition: "width 1s linear",
               }}
             />
           </div>
-          <span
-            style={{
-              color: consecSets >= xp.threshold - 1 ? "#ff9800" : "#D4AF37",
-              fontWeight: 700,
-              minWidth: 36,
-              textAlign: "right",
-            }}
-          >
-            {consecSets}/{xp.threshold}
-          </span>
         </div>
       )}
 
-      {/* Active rest timer banner */}
-      {timerRunning && activeTimer !== null && (
+      {/* Rest timer */}
+      {restRunning && (
         <div
           style={{
-            background: "rgba(212,175,55,0.08)",
-            border: "1px solid rgba(212,175,55,0.4)",
+            background: "rgba(76,175,80,0.07)",
+            border: "1px solid rgba(76,175,80,0.2)",
             borderRadius: 10,
             padding: "12px 16px",
             marginBottom: 20,
@@ -807,7 +1158,7 @@ function WorkoutDetail({ workout, onComplete, onTimerFinished }) {
             gap: 12,
           }}
         >
-          <FiClock size={18} color="#D4AF37" />
+          <FiClock size={16} color="#4caf50" />
           <div style={{ flex: 1 }}>
             <div
               style={{
@@ -816,27 +1167,26 @@ function WorkoutDetail({ workout, onComplete, onTimerFinished }) {
                 marginBottom: 5,
               }}
             >
-              <span style={{ fontSize: 13, color: "#D4AF37", fontWeight: 700 }}>
-                Rest Timer
+              <span style={{ fontSize: 13, color: "#4caf50", fontWeight: 700 }}>
+                Rest
               </span>
               <span
                 style={{
-                  fontSize: 20,
-                  fontWeight: 800,
-                  color: timerSec <= 10 ? "#ff5252" : "#D4AF37",
                   fontFamily: "monospace",
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: restSec <= 10 ? "#ef5350" : "#4caf50",
                 }}
               >
-                {Math.floor(timerSec / 60)}:
-                {String(timerSec % 60).padStart(2, "0")}
+                {fmtTime(restSec)}
               </span>
             </div>
-            <div style={{ background: "#242424", borderRadius: 4, height: 5 }}>
+            <div style={{ background: "#1a1a1a", borderRadius: 4, height: 4 }}>
               <div
                 style={{
-                  width: `${(timerSec / timerMaxSec) * 100}%`,
+                  width: `${restMax > 0 ? (restSec / restMax) * 100 : 0}%`,
                   height: "100%",
-                  background: timerSec <= 10 ? "#ff5252" : "#D4AF37",
+                  background: restSec <= 10 ? "#ef5350" : "#4caf50",
                   borderRadius: 4,
                   transition: "width 1s linear",
                 }}
@@ -844,454 +1194,540 @@ function WorkoutDetail({ workout, onComplete, onTimerFinished }) {
             </div>
           </div>
           <button
-            onClick={stopTimer}
+            onClick={() => {
+              clearInterval(restRef.current);
+              setRestRunning(false);
+              setRestSec(0);
+            }}
             style={{
               background: "none",
-              border: "1px solid #424242",
+              border: "1px solid #2a2a2a",
               borderRadius: 6,
-              padding: "4px 8px",
+              padding: "5px 10px",
               cursor: "pointer",
-              color: "#9e9e9e",
-              lineHeight: 0,
+              color: "#616161",
+              fontSize: 12,
             }}
           >
-            <FiSquare size={14} />
+            Skip
           </button>
         </div>
       )}
 
-      {/* Warmup */}
-      {workout.warmup?.length > 0 && (
-        <Section title="Warmup" icon={<FiSun size={13} />} color="#ff9800">
-          {workout.warmup.map((item, i) => (
-            <SimpleRow key={i} name={item.name} detail={item.duration} />
-          ))}
-        </Section>
-      )}
-
-      {/* Main exercises */}
-      <Section
-        title="Exercises"
-        icon={<FiActivity size={13} />}
-        color="#D4AF37"
+      {/* Set table */}
+      <div
+        style={{
+          background: "#111",
+          border: "1px solid #1e1e1e",
+          borderRadius: 12,
+          overflow: "hidden",
+          marginBottom: 16,
+        }}
       >
-        {workout.exercises?.map((ex, i) => (
-          <ExerciseRow
-            key={i}
-            index={i}
-            ex={ex}
-            done={doneSet.has(i)}
-            isTimerActive={activeTimer === i && timerRunning}
-            onToggle={() => toggleDone(i)}
-            onStartTimer={() => startTimer(i, ex.rest_seconds || 60)}
-            onStopTimer={stopTimer}
-          />
-        ))}
-      </Section>
-
-      {/* Cooldown */}
-      {workout.cooldown?.length > 0 && (
-        <Section title="Cooldown" icon={<FiWind size={13} />} color="#4caf50">
-          {workout.cooldown.map((item, i) => (
-            <SimpleRow key={i} name={item.name} detail={item.duration} />
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "44px 1fr 1fr 44px",
+            background: "#0d0d0d",
+            padding: "10px 16px",
+            borderBottom: "1px solid #1e1e1e",
+          }}
+        >
+          {["Set", "Weight (kg)", "Reps", ""].map((h) => (
+            <p
+              key={h}
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#616161",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              {h}
+            </p>
           ))}
-        </Section>
+        </div>
+        {setRows.map((row, i) => (
+          <div
+            key={i}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "44px 1fr 1fr 44px",
+              alignItems: "center",
+              padding: "10px 16px",
+              borderBottom:
+                i < setRows.length - 1 ? "1px solid #161616" : "none",
+              background: row.done ? "rgba(76,175,80,0.05)" : "transparent",
+            }}
+          >
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: row.done ? "#4caf50" : "#9e9e9e",
+              }}
+            >
+              {i + 1}
+            </span>
+            <input
+              type="number"
+              placeholder="—"
+              min="0"
+              step="0.5"
+              value={row.weight}
+              onChange={(e) => updateRow(i, "weight", e.target.value)}
+              disabled={row.done}
+              style={{
+                background: "transparent",
+                border: "none",
+                borderBottom: row.done ? "none" : "1px solid #2a2a2a",
+                color: row.done ? "#616161" : "#e0e0e0",
+                fontSize: 14,
+                padding: "4px 4px 4px 0",
+                width: "70%",
+                outline: "none",
+              }}
+            />
+            <input
+              type="number"
+              placeholder="—"
+              min="0"
+              value={row.reps}
+              onChange={(e) => updateRow(i, "reps", e.target.value)}
+              disabled={row.done}
+              style={{
+                background: "transparent",
+                border: "none",
+                borderBottom: row.done ? "none" : "1px solid #2a2a2a",
+                color: row.done ? "#616161" : "#e0e0e0",
+                fontSize: 14,
+                padding: "4px 4px 4px 0",
+                width: "70%",
+                outline: "none",
+              }}
+            />
+            <button
+              onClick={() => toggleRowDone(i)}
+              style={{
+                background: row.done
+                  ? "rgba(76,175,80,0.15)"
+                  : "rgba(255,255,255,0.03)",
+                border: `1px solid ${row.done ? "rgba(76,175,80,0.4)" : "#2a2a2a"}`,
+                borderRadius: 6,
+                width: 32,
+                height: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+              }}
+            >
+              {row.done ? (
+                <FiCheck size={14} color="#4caf50" />
+              ) : (
+                <div
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    border: "2px solid #3a3a3a",
+                  }}
+                />
+              )}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Add set */}
+      <button
+        onClick={addSet}
+        style={{
+          background: "none",
+          border: "1px dashed #2a2a2a",
+          borderRadius: 8,
+          padding: "9px 14px",
+          color: "#616161",
+          fontSize: 13,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          width: "100%",
+          justifyContent: "center",
+          marginBottom: 28,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = "#D4AF37";
+          e.currentTarget.style.color = "#D4AF37";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = "#2a2a2a";
+          e.currentTarget.style.color = "#616161";
+        }}
+      >
+        <FiPlus size={14} /> Add Set
+      </button>
+
+      {/* Complete block warning */}
+      {completeBlockWait > 0 &&
+        (() => {
+          const msg = WARN_MESSAGES[warnMsgIdx];
+          return (
+            <div
+              style={{
+                background: "rgba(239,83,80,0.07)",
+                border: "1px solid rgba(239,83,80,0.35)",
+                borderRadius: 10,
+                padding: "16px 18px",
+                marginBottom: 14,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  marginBottom: 10,
+                }}
+              >
+                <div style={{ flex: 1, paddingRight: 12 }}>
+                  <p
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: "#ef5350",
+                      marginBottom: 4,
+                    }}
+                  >
+                    {msg.title}
+                  </p>
+                  <p
+                    style={{ fontSize: 12, color: "#9e9e9e", lineHeight: 1.5 }}
+                  >
+                    {msg.sub}
+                  </p>
+                </div>
+                <span
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: 28,
+                    fontWeight: 800,
+                    color: "#ef5350",
+                    flexShrink: 0,
+                  }}
+                >
+                  {String(completeBlockWait).padStart(2, "0")}s
+                </span>
+              </div>
+              <div
+                style={{
+                  background: "#1a1a1a",
+                  borderRadius: 4,
+                  height: 4,
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    width: `${((MANDATORY_SEC - completeBlockWait) / MANDATORY_SEC) * 100}%`,
+                    height: "100%",
+                    background: "#ef5350",
+                    borderRadius: 4,
+                    transition: "width 1s linear",
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })()}
+
+      {/* Complete / Finish */}
+      <button
+        className="btn btn-gold"
+        style={{
+          width: "100%",
+          padding: "14px",
+          fontSize: 15,
+          fontWeight: 700,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          opacity: completing || completeBlockWait > 0 ? 0.45 : 1,
+          cursor:
+            completing || completeBlockWait > 0 ? "not-allowed" : "pointer",
+        }}
+        onClick={handleCompleteExercise}
+        disabled={completing || completeBlockWait > 0}
+      >
+        {completing
+          ? "Saving..."
+          : completeBlockWait > 0
+            ? `Wait ${completeBlockWait}s...`
+            : isLast
+              ? "Complete Workout"
+              : `Complete Exercise  →  ${exercises[currentIdx + 1]?.name}`}
+      </button>
+
+      {/* Exercise nav list */}
+      {total > 1 && (
+        <div style={{ marginTop: 28 }}>
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#424242",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              marginBottom: 10,
+            }}
+          >
+            All Exercises
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {exercises.map((e, i) => (
+              <button
+                key={i}
+                onClick={() => i !== currentIdx && goToExercise(i)}
+                style={{
+                  background:
+                    i === currentIdx ? "rgba(212,175,55,0.08)" : "transparent",
+                  border: `1px solid ${i === currentIdx ? "rgba(212,175,55,0.2)" : "#1a1a1a"}`,
+                  borderRadius: 8,
+                  padding: "10px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  cursor: i === currentIdx ? "default" : "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <span
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    background:
+                      i === currentIdx ? "#D4AF37" : "rgba(255,255,255,0.04)",
+                    border: "1px solid",
+                    borderColor: i === currentIdx ? "#D4AF37" : "#2a2a2a",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: i === currentIdx ? "#000" : "#424242",
+                    flexShrink: 0,
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <span
+                  style={{
+                    fontSize: 13,
+                    color: i === currentIdx ? "#e0e0e0" : "#616161",
+                    fontWeight: i === currentIdx ? 600 : 400,
+                  }}
+                >
+                  {e.name}
+                </span>
+                <span
+                  style={{
+                    marginLeft: "auto",
+                    fontSize: 12,
+                    color: i === currentIdx ? "#D4AF37" : "#2a2a2a",
+                  }}
+                >
+                  {e.sets}×{e.reps}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-/* ─── InteractiveExerciseRow ────────────────────────────────────── */
-function ExerciseRow({
-  ex,
-  done,
-  isTimerActive,
-  onToggle,
-  onStartTimer,
-  onStopTimer,
+/* ─────────────────────────────────────────────────────────────────
+   EmptyState
+───────────────────────────────────────────────────────────────── */
+function EmptyState({
+  freq,
+  setFreq,
+  experienceLevel,
+  setExperienceLevel,
+  generating,
+  onGenerate,
 }) {
   return (
     <div
       style={{
-        background: done ? "rgba(76,175,80,0.07)" : "#1a1a1a",
-        borderRadius: 8,
-        padding: "12px 14px",
-        border: `1px solid ${done ? "rgba(76,175,80,0.35)" : "transparent"}`,
-        transition: "all 0.2s",
+        maxWidth: 560,
+        margin: "0 auto",
+        textAlign: "center",
+        paddingTop: 20,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {/* Completion tick */}
-        <button
-          onClick={onToggle}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: 0,
-            flexShrink: 0,
-            lineHeight: 0,
-          }}
-          title={done ? "Mark incomplete" : "Mark complete"}
-        >
-          {done ? (
-            <FiCheckCircle size={20} color="#4caf50" />
-          ) : (
-            <FiCircle size={20} color="#424242" />
-          )}
-        </button>
-
-        {/* Name + sub */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p
-            style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: done ? "#9e9e9e" : "#e0e0e0",
-              textDecoration: done ? "line-through" : "none",
-            }}
-          >
-            {ex.name}
-          </p>
-          <p style={{ fontSize: 12, color: "#616161", marginTop: 2 }}>
-            Rest: {ex.rest_seconds}s | {ex.equipment || "bodyweight"}
-          </p>
-        </div>
-
-        {/* Sets × reps */}
-        <span
-          style={{
-            fontSize: 13,
-            color: done ? "#4caf50" : "#D4AF37",
-            fontWeight: 700,
-            flexShrink: 0,
-          }}
-        >
-          {ex.sets} × {ex.reps}
-        </span>
-
-        {/* Rest timer button */}
-        {!done && (
-          <button
-            onClick={isTimerActive ? onStopTimer : onStartTimer}
-            style={{
-              background: isTimerActive
-                ? "rgba(255,82,82,0.1)"
-                : "rgba(212,175,55,0.1)",
-              border: `1px solid ${isTimerActive ? "#ff5252" : "rgba(212,175,55,0.4)"}`,
-              borderRadius: 6,
-              padding: "5px 10px",
-              cursor: "pointer",
-              color: isTimerActive ? "#ff5252" : "#D4AF37",
-              fontSize: 11,
-              fontWeight: 700,
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              flexShrink: 0,
-            }}
-            title={
-              isTimerActive
-                ? "Stop rest timer"
-                : `Start ${ex.rest_seconds}s rest timer`
-            }
-          >
-            {isTimerActive ? <FiSquare size={11} /> : <FiPlay size={11} />}
-            {isTimerActive ? "Stop" : "Rest"}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Section wrapper ───────────────────────────────────────────── */
-function Section({ title, icon, color, children }) {
-  return (
-    <div style={{ marginBottom: 24 }}>
-      <h4
+      <div
         style={{
-          fontSize: 13,
-          fontWeight: 700,
-          color,
-          textTransform: "uppercase",
-          letterSpacing: "0.8px",
-          marginBottom: 12,
+          width: 72,
+          height: 72,
+          borderRadius: "50%",
+          background: "rgba(212,175,55,0.07)",
+          border: "1px solid rgba(212,175,55,0.2)",
           display: "flex",
           alignItems: "center",
-          gap: 6,
-        }}
-      >
-        {icon}
-        {title}
-      </h4>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-/* ─── SimpleRow (warmup / cooldown) ────────────────────────────── */
-function SimpleRow({ name, detail }) {
-  return (
-    <div
-      style={{
-        background: "#1a1a1a",
-        borderRadius: 8,
-        padding: "12px 16px",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}
-    >
-      <p style={{ fontSize: 14, fontWeight: 600, color: "#e0e0e0" }}>{name}</p>
-      <span style={{ fontSize: 13, color: "#D4AF37", fontWeight: 600 }}>
-        {detail}
-      </span>
-    </div>
-  );
-}
-
-/* ─── MandatoryRestScreen overlay ──────────────────────────────── */
-function MandatoryRestScreen({ restSec, restMax, difficulty, onReduce }) {
-  const fmtTime = (s) =>
-    `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-  const pct = restMax > 0 ? (restSec / restMax) * 100 : 0;
-  const atMin = restSec <= 30;
-
-  const CONFIG = {
-    beginner: {
-      label: "Beginner",
-      color: "#4caf50",
-      msg: "You've been pushing hard! Beginners fatigue faster — this rest is essential for muscle recovery and injury prevention.",
-    },
-    intermediate: {
-      label: "Intermediate",
-      color: "#D4AF37",
-      msg: "Good work! Time for a mandatory rest before continuing. Consistent rest keeps your performance high across all sets.",
-    },
-    advanced: {
-      label: "Advanced",
-      color: "#ff9800",
-      msg: "High-volume checkpoint. Brief mandatory rest — even advanced athletes need recovery between intense efforts.",
-    },
-  };
-  const cfg = CONFIG[difficulty] || CONFIG.intermediate;
-
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1100,
-        background: "rgba(0,0,0,0.93)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-      }}
-    >
-      <div
-        style={{
-          background: "#111",
-          border: `1px solid ${cfg.color}55`,
-          borderRadius: 20,
-          padding: "44px 40px",
-          maxWidth: 420,
-          width: "100%",
-          textAlign: "center",
-        }}
-      >
-        {/* Icon */}
-        <FiClock size={52} color={cfg.color} style={{ marginBottom: 16 }} />
-
-        {/* Title */}
-        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 10 }}>
-          Mandatory Rest Break
-        </h2>
-
-        {/* Level badge */}
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "4px 14px",
-            background: `${cfg.color}18`,
-            border: `1px solid ${cfg.color}44`,
-            borderRadius: 20,
-            fontSize: 12,
-            color: cfg.color,
-            fontWeight: 700,
-            marginBottom: 18,
-          }}
-        >
-          {cfg.label} Level
-        </div>
-
-        {/* Message */}
-        <p
-          style={{
-            color: "#9e9e9e",
-            fontSize: 13,
-            lineHeight: 1.65,
-            marginBottom: 30,
-          }}
-        >
-          {cfg.msg}
-        </p>
-
-        {/* Countdown */}
-        <div
-          style={{
-            fontSize: 60,
-            fontWeight: 900,
-            fontFamily: "monospace",
-            color: atMin ? "#ff9800" : cfg.color,
-            marginBottom: 18,
-            letterSpacing: 2,
-          }}
-        >
-          {fmtTime(restSec)}
-        </div>
-
-        {/* Depleting progress bar */}
-        <div
-          style={{
-            background: "#242424",
-            borderRadius: 8,
-            height: 10,
-            overflow: "hidden",
-            marginBottom: 28,
-          }}
-        >
-          <div
-            style={{
-              width: `${pct}%`,
-              height: "100%",
-              background: atMin ? "#ff9800" : cfg.color,
-              borderRadius: 8,
-              transition: "width 1s linear",
-            }}
-          />
-        </div>
-
-        {/* -10s button */}
-        <button
-          onClick={onReduce}
-          disabled={atMin}
-          style={{
-            padding: "11px 28px",
-            background: atMin ? "rgba(66,66,66,0.2)" : `${cfg.color}18`,
-            border: `1px solid ${atMin ? "#424242" : cfg.color + "55"}`,
-            borderRadius: 10,
-            cursor: atMin ? "not-allowed" : "pointer",
-            color: atMin ? "#424242" : cfg.color,
-            fontWeight: 700,
-            fontSize: 14,
-            marginBottom: 10,
-            display: "inline-block",
-          }}
-        >
-          − 10 seconds
-        </button>
-
-        <p style={{ fontSize: 11, color: "#424242", marginTop: 6 }}>
-          Minimum rest: 30s &nbsp;·&nbsp; Timer auto-dismisses when done
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function EmptyState({ onGenerate, generating, freq, setFreq }) {
-  return (
-    <div className="card" style={{ textAlign: "center", padding: 60 }}>
-      <div style={{ marginBottom: 20 }}>
-        <FiActivity size={64} color="#9e9e9e" />
-      </div>
-      <h2 style={{ fontSize: 24, marginBottom: 12 }}>No Workout Plan Yet</h2>
-      <p
-        style={{
-          color: "#9e9e9e",
-          marginBottom: 32,
-          maxWidth: 400,
-          margin: "0 auto 32px",
-          lineHeight: 1.6,
-        }}
-      >
-        Choose how many days per week you want to train, then let AI generate
-        your personalized plan.
-      </p>
-      <div
-        style={{
-          display: "flex",
-          gap: 10,
           justifyContent: "center",
-          marginBottom: 24,
+          margin: "0 auto 24px",
         }}
       >
-        {[3, 4, 5, 6].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFreq(f)}
-            className={`btn ${freq === f ? "btn-gold" : "btn-ghost"}`}
-            style={{ minWidth: 80 }}
-          >
-            {f} Days
-          </button>
-        ))}
+        <FiActivity size={32} color="#D4AF37" />
       </div>
-      <button
-        className="btn btn-gold"
-        onClick={onGenerate}
-        disabled={generating}
-        style={{ minWidth: 200 }}
-      >
-        {generating ? "Generating..." : "Generate AI Plan"}
-      </button>
-    </div>
-  );
-}
-
-function WeekEmptyCard({ week, generating, onGenerate }) {
-  return (
-    <div className="card" style={{ textAlign: "center", padding: 60 }}>
-      <div style={{ marginBottom: 20 }}>
-        <FiCalendar size={64} color="#9e9e9e" />
-      </div>
-      <h2 style={{ fontSize: 24, marginBottom: 12 }}>
-        No Plan for <span className="text-gold">Week {week}</span>
+      <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
+        No workout plan yet
       </h2>
       <p
         style={{
           color: "#9e9e9e",
-          marginBottom: 32,
-          maxWidth: 360,
-          margin: "0 auto 32px",
+          fontSize: 14,
+          marginBottom: 36,
           lineHeight: 1.6,
         }}
       >
-        Generate this week's workouts based on your current training frequency
-        and ML-recommended split.
+        Tell us how many days you can train each week and your experience level.
+        The AI will build you a full weekly plan.
       </p>
+
+      <div style={{ marginBottom: 24, textAlign: "left" }}>
+        <p
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: "#D4AF37",
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            marginBottom: 10,
+          }}
+        >
+          Days per week
+        </p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {FREQ_OPTIONS.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setFreq(f.value)}
+              style={{
+                padding: "10px 18px",
+                borderRadius: 8,
+                border: "1px solid",
+                borderColor: freq === f.value ? "#D4AF37" : "#2a2a2a",
+                background:
+                  freq === f.value ? "rgba(212,175,55,0.1)" : "transparent",
+                color: freq === f.value ? "#D4AF37" : "#9e9e9e",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {f.value} days
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 32, textAlign: "left" }}>
+        <p
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: "#D4AF37",
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            marginBottom: 10,
+          }}
+        >
+          Experience level
+        </p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {EXPERIENCE_OPTIONS.map((e) => (
+            <button
+              key={e.value}
+              onClick={() => setExperienceLevel(e.value)}
+              style={{
+                padding: "10px 18px",
+                borderRadius: 8,
+                border: "1px solid",
+                borderColor:
+                  experienceLevel === e.value ? "#D4AF37" : "#2a2a2a",
+                background:
+                  experienceLevel === e.value
+                    ? "rgba(212,175,55,0.1)"
+                    : "transparent",
+                color: experienceLevel === e.value ? "#D4AF37" : "#9e9e9e",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {e.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <button
         className="btn btn-gold"
+        style={{ width: "100%", padding: "13px", fontSize: 15 }}
         onClick={onGenerate}
         disabled={generating}
-        style={{ minWidth: 220 }}
       >
-        {generating ? "Generating..." : `Generate Week ${week} Plan`}
+        {generating ? "Generating..." : "Generate My Plan"}
       </button>
     </div>
   );
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   WeekEmptyCard
+───────────────────────────────────────────────────────────────── */
+function WeekEmptyCard({ week, generating, onGenerate }) {
+  return (
+    <div
+      style={{
+        textAlign: "center",
+        padding: "60px 20px",
+        border: "1px dashed #242424",
+        borderRadius: 14,
+      }}
+    >
+      <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
+        Week {week} not generated yet
+      </p>
+      <p style={{ color: "#9e9e9e", fontSize: 14, marginBottom: 24 }}>
+        Generate this week's workouts to continue your plan.
+      </p>
+      <button
+        className="btn btn-gold"
+        onClick={onGenerate}
+        disabled={generating}
+      >
+        {generating ? "Generating..." : `Generate Week ${week}`}
+      </button>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   ChangePlanOverlay
+───────────────────────────────────────────────────────────────── */
 function ChangePlanOverlay({
   freq,
   setFreq,
-  mlSplit,
+  experienceLevel,
+  setExperienceLevel,
   generating,
   onConfirm,
   onCancel,
@@ -1301,106 +1737,123 @@ function ChangePlanOverlay({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.82)",
+        background: "rgba(0,0,0,0.75)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         zIndex: 1000,
-        padding: 16,
+        padding: 20,
       }}
     >
       <div
-        className="card"
-        style={{ width: "100%", maxWidth: 500, padding: "36px 32px" }}
+        style={{
+          background: "#111",
+          border: "1px solid rgba(212,175,55,0.25)",
+          borderRadius: 16,
+          padding: "32px",
+          width: "100%",
+          maxWidth: 460,
+        }}
       >
-        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
-          Change Workout Plan
-        </h2>
-        <p
-          style={{
-            color: "#9e9e9e",
-            marginBottom: 24,
-            fontSize: 14,
-            lineHeight: 1.6,
-          }}
-        >
-          Pick a new training frequency. A fresh AI plan will be generated for
-          Week 1 using the ML model — your old plan will be replaced.
+        <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>
+          Change Training Plan
+        </h3>
+        <p style={{ color: "#9e9e9e", fontSize: 14, marginBottom: 28 }}>
+          This will replace your existing plan with a new one.
         </p>
 
-        {mlSplit && (
-          <div
+        <div style={{ marginBottom: 20 }}>
+          <p
             style={{
-              padding: "10px 16px",
-              background: "rgba(212,175,55,0.08)",
-              border: "1px solid rgba(212,175,55,0.3)",
-              borderRadius: 10,
-              marginBottom: 24,
-              fontSize: 13,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#D4AF37",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              marginBottom: 10,
             }}
           >
-            <span style={{ color: "#D4AF37", fontWeight: 700 }}>
-              ML Recommended:
-            </span>
-            <span style={{ color: "#fff" }}>{mlSplit.split}</span>
-            <span style={{ color: "#9e9e9e" }}>
-              — {SPLIT_INFO[mlSplit.split]?.desc}
-            </span>
-          </div>
-        )}
-
-        <p
-          style={{
-            fontSize: 12,
-            color: "#9e9e9e",
-            marginBottom: 12,
-            textTransform: "uppercase",
-            letterSpacing: "0.6px",
-          }}
-        >
-          Days per week
-        </p>
-        <div style={{ display: "flex", gap: 10, marginBottom: 32 }}>
-          {FREQ_OPTIONS.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setFreq(f.value)}
-              className={`btn ${freq === f.value ? "btn-gold" : "btn-ghost"}`}
-              style={{ flex: 1, flexDirection: "column", padding: "12px 8px" }}
-            >
-              <div style={{ fontWeight: 700, fontSize: 14 }}>{f.label}</div>
-              <div
+            Days per week
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {FREQ_OPTIONS.map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setFreq(f.value)}
                 style={{
-                  fontSize: 11,
-                  color:
-                    freq === f.value ? "rgba(255,255,255,0.75)" : "#616161",
-                  marginTop: 3,
+                  padding: "9px 16px",
+                  borderRadius: 8,
+                  border: "1px solid",
+                  borderColor: freq === f.value ? "#D4AF37" : "#2a2a2a",
+                  background:
+                    freq === f.value ? "rgba(212,175,55,0.1)" : "transparent",
+                  color: freq === f.value ? "#D4AF37" : "#9e9e9e",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
                 }}
               >
-                {f.desc}
-              </div>
-            </button>
-          ))}
+                {f.value} days
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div style={{ display: "flex", gap: 12 }}>
+        <div style={{ marginBottom: 28 }}>
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#D4AF37",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              marginBottom: 10,
+            }}
+          >
+            Experience level
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {EXPERIENCE_OPTIONS.map((e) => (
+              <button
+                key={e.value}
+                onClick={() => setExperienceLevel(e.value)}
+                style={{
+                  padding: "9px 16px",
+                  borderRadius: 8,
+                  border: "1px solid",
+                  borderColor:
+                    experienceLevel === e.value ? "#D4AF37" : "#2a2a2a",
+                  background:
+                    experienceLevel === e.value
+                      ? "rgba(212,175,55,0.1)"
+                      : "transparent",
+                  color: experienceLevel === e.value ? "#D4AF37" : "#9e9e9e",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {e.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
           <button
             className="btn btn-ghost"
-            onClick={onCancel}
             style={{ flex: 1 }}
+            onClick={onCancel}
           >
             Cancel
           </button>
           <button
             className="btn btn-gold"
+            style={{ flex: 1 }}
             onClick={onConfirm}
             disabled={generating}
-            style={{ flex: 2 }}
           >
-            {generating ? "Generating..." : `Generate ${freq}-Day Plan`}
+            {generating ? "Generating..." : "Confirm"}
           </button>
         </div>
       </div>

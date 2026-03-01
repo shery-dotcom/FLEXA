@@ -70,6 +70,13 @@ _EXP_ENC = {
     "very_active": 2,
 }
 
+# Direct experience_level → enc (takes priority over activity_level derivation)
+_EXP_LEVEL_ENC = {
+    "beginner":     0,
+    "intermediate": 1,
+    "advanced":     2,
+}
+
 _FREQ_FROM_ACTIVITY = {
     "sedentary":   2,
     "light":       3,
@@ -85,7 +92,7 @@ _GENDER_ENC = {
 }
 
 
-def _build_features(goal_lower: str, activity_lower: str, gender_lower: str, freq: int, user_age: float) -> np.ndarray:
+def _build_features(goal_lower: str, activity_lower: str, gender_lower: str, freq: int, user_age: float, exp_enc_override: float | None = None) -> np.ndarray:
     """
     Build the 18-feature vector that matches the training script's feature engineering.
     Feature order (must match train_model.py exactly):
@@ -97,7 +104,8 @@ def _build_features(goal_lower: str, activity_lower: str, gender_lower: str, fre
       effort
     """
     goal_enc   = float(_GOAL_ENC.get(goal_lower, 1))
-    exp_enc    = float(_EXP_ENC.get(activity_lower, 1))
+    # Use explicit experience level if provided, else derive from activity
+    exp_enc    = exp_enc_override if exp_enc_override is not None else float(_EXP_ENC.get(activity_lower, 1))
     gender_enc = float(_GENDER_ENC.get(gender_lower, 1))
     freq_f     = float(freq)
     age_f      = float(user_age)
@@ -141,6 +149,7 @@ def predict_split(
     gender: str | None = None,
     age: int | None = None,
     frequency_override: int | None = None,
+    experience_level: str | None = None,
 ) -> str:
     """
     Predict the recommended workout split for a user.
@@ -152,6 +161,8 @@ def predict_split(
     gender           : "male" | "female" | None  (defaults to "male" if unknown)
     age              : integer age in years (defaults to 25 if unknown)
     frequency_override: explicit workouts-per-week (2-6); if None, inferred from activity_level
+    experience_level : "beginner" | "intermediate" | "advanced" — takes priority over activity_level
+                       for the experience encoding if provided.
 
     Returns
     -------
@@ -164,14 +175,15 @@ def predict_split(
     gender_lower   = (gender or "male").lower()
     freq           = frequency_override or _FREQ_FROM_ACTIVITY.get(activity_lower, 4)
     user_age       = float(age) if age else 25.0
+    exp_enc_override = float(_EXP_LEVEL_ENC[experience_level.lower()]) if experience_level and experience_level.lower() in _EXP_LEVEL_ENC else None
 
-    features  = _build_features(goal_lower, activity_lower, gender_lower, freq, user_age)
+    features  = _build_features(goal_lower, activity_lower, gender_lower, freq, user_age, exp_enc_override)
     pred_idx  = _model.predict(features)[0]
     split     = _label_enc.inverse_transform([pred_idx])[0]
 
     logger.debug(
-        "predict_split → goal=%s activity=%s freq=%d age=%s → %s",
-        goal_lower, activity_lower, freq, user_age, split,
+        "predict_split → goal=%s activity=%s freq=%d exp=%s age=%s → %s",
+        goal_lower, activity_lower, freq, experience_level, user_age, split,
     )
     return split
 
@@ -182,6 +194,7 @@ def predict_split_with_proba(
     gender: str | None = None,
     age: int | None = None,
     frequency_override: int | None = None,
+    experience_level: str | None = None,
 ) -> dict:
     """
     Same as predict_split but also returns class probabilities.
@@ -193,8 +206,9 @@ def predict_split_with_proba(
     gender_lower   = (gender or "male").lower()
     freq           = frequency_override or _FREQ_FROM_ACTIVITY.get(activity_lower, 4)
     user_age       = float(age) if age else 25.0
+    exp_enc_override = float(_EXP_LEVEL_ENC[experience_level.lower()]) if experience_level and experience_level.lower() in _EXP_LEVEL_ENC else None
 
-    features  = _build_features(goal_lower, activity_lower, gender_lower, freq, user_age)
+    features  = _build_features(goal_lower, activity_lower, gender_lower, freq, user_age, exp_enc_override)
     pred_idx  = _model.predict(features)[0]
     probas    = _model.predict_proba(features)[0]
     split     = _label_enc.inverse_transform([pred_idx])[0]

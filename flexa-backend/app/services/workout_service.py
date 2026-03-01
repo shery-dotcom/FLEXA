@@ -38,8 +38,10 @@ class WorkoutService:
                 activity_level=goal.activity_level,
                 gender=profile.gender,
                 age=profile.age,
+                frequency_override=data.frequency_per_week,
+                experience_level=data.experience_level,
             )
-            logger.info("ML recommended split: %s", ml_split)
+            logger.info("ML recommended split: %s (freq=%d, exp=%s)", ml_split, data.frequency_per_week, data.experience_level)
         except Exception as exc:
             logger.warning("ML predictor failed, falling back to rule-based: %s", exc)
             ml_split = None
@@ -64,6 +66,7 @@ class WorkoutService:
             frequency_per_week=data.frequency_per_week,
             week_number=week_num,
             split_type=ml_split,
+            experience_level=data.experience_level,
         )
 
         workouts = []

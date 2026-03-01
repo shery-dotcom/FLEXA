@@ -35,6 +35,7 @@ class WorkoutResponse(BaseModel):
 class WorkoutPlanRequest(BaseModel):
     frequency_per_week: int  # 3, 4, 5, 6
     week_number: int = 1      # target week to generate
+    experience_level: str = "intermediate"  # beginner, intermediate, advanced
 
 
 class WorkoutPlanResponse(BaseModel):

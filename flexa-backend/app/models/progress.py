@@ -15,6 +15,7 @@ class ProgressLog(Base):
     weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
     bmi: Mapped[float | None] = mapped_column(Float, nullable=True)
     body_fat_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    calorie_intake: Mapped[float | None] = mapped_column(Float, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

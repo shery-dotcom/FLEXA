@@ -203,7 +203,9 @@ SPLIT_TEMPLATES = {
 DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
-def determine_difficulty(bmi: float, activity_level: str) -> str:
+def determine_difficulty(bmi: float, activity_level: str, experience_level: str | None = None) -> str:
+    if experience_level in ("beginner", "intermediate", "advanced"):
+        return experience_level
     activity_scores = {"sedentary": 0, "light": 1, "moderate": 2, "active": 3, "very_active": 4}
     score = activity_scores.get(activity_level, 0)
     if score <= 1:
@@ -220,6 +222,7 @@ def generate_workout_plan(
     frequency_per_week: int,
     week_number: int = 1,
     split_type: str | None = None,
+    experience_level: str | None = None,
 ) -> List[Dict[str, Any]]:
     """
     Generate a full weekly workout plan.
@@ -228,7 +231,7 @@ def generate_workout_plan(
     ML-recommended split structure.  Otherwise falls back to the
     frequency-based templates.
     """
-    difficulty = determine_difficulty(bmi, activity_level)
+    difficulty = determine_difficulty(bmi, activity_level, experience_level)
 
     if split_type and split_type in ML_SPLIT_TEMPLATES:
         # ── ML-predicted split path ──────────────────────────────────────────

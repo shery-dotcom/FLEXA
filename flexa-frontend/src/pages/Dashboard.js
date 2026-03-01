@@ -2,6 +2,44 @@
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import toast from "react-hot-toast";
+import { useAuth } from "../context/AuthContext";
+
+/* ─── Calorie formula helpers (Mifflin-St Jeor) ────────────────── */
+const ACTIVITY_MULT = {
+  sedentary: 1.2,
+  light: 1.375,
+  moderate: 1.55,
+  active: 1.725,
+  very_active: 1.9,
+};
+
+function computeCalories(profile, goalType, activityLevel) {
+  if (!profile?.weight_kg || !profile?.height_cm || !profile?.age)
+    return [null, null];
+  const { weight_kg: w, height_cm: h, age: a, gender } = profile;
+  const bmr =
+    (gender || "male").toLowerCase() === "female"
+      ? 10 * w + 6.25 * h - 5 * a - 161
+      : 10 * w + 6.25 * h - 5 * a + 5;
+  const mult =
+    ACTIVITY_MULT[
+      (activityLevel || "moderate").toLowerCase().replace(/ /g, "_")
+    ] ?? 1.55;
+  const tdee = Math.round(bmr * mult);
+  const adj =
+    { cutting: -500, bulking: 400, recomp: -250, maintaining: 0 }[
+      (goalType || "maintaining").toLowerCase()
+    ] ?? 0;
+  return [tdee, Math.max(1200, tdee + adj)];
+}
+
+const SPLIT_DESC = {
+  "Full Body": "All muscles each session",
+  PPL: "Push / Pull / Legs",
+  "PPL x2": "Push / Pull / Legs — 6 days",
+  "Upper/Lower": "Alternating upper & lower body",
+  "Bro Split": "One muscle group per session",
+};
 
 /* ─── Daily inspiration quotes ─────────────────────────────────── */
 const QUOTES = [
@@ -163,17 +201,36 @@ function bmiColor(cat) {
 /* ═══════════════════════════════════════════════════════════════
    MAIN COMPONENT
 ═══════════════════════════════════════════════════════════════ */
+const TODAY_NAME = new Date().toLocaleDateString("en-US", { weekday: "long" });
+
 export default function Dashboard() {
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [todayWorkout, setTodayWorkout] = useState(null);
+  const [weekWorkouts, setWeekWorkouts] = useState([]);
+  const [mlSplit, setMlSplit] = useState(null);
   const navigate = useNavigate();
   const quote = getDayQuote();
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await api.get("/dashboard/");
-        setData(res.data);
+        const [dashRes, workoutRes, splitRes] = await Promise.all([
+          api.get("/dashboard/"),
+          api
+            .get("/workouts/", { params: { week: 1 } })
+            .catch(() => ({ data: [] })),
+          api.get("/workouts/my-split").catch(() => ({ data: null })),
+        ]);
+        setData(dashRes.data);
+        if (splitRes.data?.split) setMlSplit(splitRes.data);
+        const allWorkouts = workoutRes.data || [];
+        setWeekWorkouts(allWorkouts);
+        const match = allWorkouts.find(
+          (w) => w.day_of_week?.toLowerCase() === TODAY_NAME.toLowerCase(),
+        );
+        setTodayWorkout(match || null);
       } catch {
         toast.error("Could not load dashboard.");
       } finally {
@@ -205,6 +262,32 @@ export default function Dashboard() {
         </h2>
       </div>
     );
+
+  /* ── Calorie computation (backend value or client fallback) ─── */
+  const profile = user?.profile;
+  const goalType = data?.current_goal || "maintaining";
+  const actLevel = data?.activity_level || "moderate";
+  const [fallbackDaily, fallbackTarget] = computeCalories(
+    profile,
+    goalType,
+    actLevel,
+  );
+  const dailyCalories = data?.daily_calories ?? fallbackDaily;
+  const targetCalories = data?.target_calories ?? fallbackTarget;
+
+  /* ── Plan metadata derived from fetched workouts ────────────── */
+  const planFreq = weekWorkouts.filter((w) => !w.is_rest_day).length || 0;
+  const planDifficulty =
+    weekWorkouts.find((w) => !w.is_rest_day)?.difficulty || null;
+  const FULL_DAYS = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
 
   return (
     <div
@@ -350,26 +433,40 @@ export default function Dashboard() {
         />
         <StatCard
           label="Daily Calories"
-          value={
-            data.daily_calories
-              ? data.daily_calories.toLocaleString()
-              : "\u2014"
+          value={dailyCalories ? dailyCalories.toLocaleString() : "\u2014"}
+          sub={
+            dailyCalories
+              ? `TDEE \u00b7 ${fmtActivity(actLevel)}`
+              : "Complete your profile"
           }
-          sub={fmtActivity(data.activity_level)}
         />
         <StatCard
           label="Target Calories"
-          value={
-            data.target_calories
-              ? data.target_calories.toLocaleString()
-              : "\u2014"
+          value={targetCalories ? targetCalories.toLocaleString() : "\u2014"}
+          sub={
+            targetCalories && dailyCalories
+              ? targetCalories > dailyCalories
+                ? `+${(targetCalories - dailyCalories).toLocaleString()} surplus`
+                : targetCalories < dailyCalories
+                  ? `\u2212${(dailyCalories - targetCalories).toLocaleString()} deficit`
+                  : "Maintenance"
+              : "Set a fitness goal"
           }
-          sub="cal"
+          subColor={
+            targetCalories && dailyCalories
+              ? targetCalories > dailyCalories
+                ? "#4caf50"
+                : targetCalories < dailyCalories
+                  ? "#ef5350"
+                  : "#D4AF37"
+              : "#9e9e9e"
+          }
         />
       </div>
 
-      {/* ── Workout CTA (no plan) ──────────────────────────────────── */}
-      {!data.has_workout_plan && (
+      {/* ── Workout Plan Block ───────────────────────────────────────── */}
+      {!data.has_workout_plan && weekWorkouts.length === 0 ? (
+        /* No plan — show CTA */
         <div
           style={{
             background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
@@ -410,10 +507,8 @@ export default function Dashboard() {
             CREATE WORKOUT PLAN
           </button>
         </div>
-      )}
-
-      {/* ── Weekly progress (has plan) ─────────────────────────────── */}
-      {data.has_workout_plan && (
+      ) : (
+        /* Plan exists — show plan details + today's workout */
         <div
           style={{
             background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
@@ -422,45 +517,94 @@ export default function Dashboard() {
             padding: "20px 22px",
           }}
         >
+          {/* Plan header */}
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 16,
+              alignItems: "flex-start",
+              marginBottom: 12,
             }}
           >
-            <p
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: "#D4AF37",
-                letterSpacing: "1px",
-                textTransform: "uppercase",
-              }}
-            >
-              This Week
-            </p>
-            <span style={{ fontSize: 12, color: "#9e9e9e" }}>
+            <div>
+              <p
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#D4AF37",
+                  letterSpacing: "1px",
+                  textTransform: "uppercase",
+                  marginBottom: 2,
+                }}
+              >
+                Your Workout Plan
+              </p>
+              {planFreq > 0 && (
+                <p style={{ fontSize: 12, color: "#9e9e9e" }}>
+                  {planFreq} day{planFreq !== 1 ? "s" : ""}/week
+                  {planDifficulty
+                    ? ` · ${planDifficulty.charAt(0).toUpperCase() + planDifficulty.slice(1)}`
+                    : ""}
+                </p>
+              )}
+            </div>
+            <span style={{ fontSize: 12, color: "#9e9e9e", paddingTop: 2 }}>
               {data.weekly_sessions} session
               {data.weekly_sessions !== 1 ? "s" : ""} done
             </span>
           </div>
 
-          {/* Day dots – Mon-Sun */}
+          {/* ML split badge */}
+          {mlSplit?.split && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: "rgba(212,175,55,0.07)",
+                border: "1px solid rgba(212,175,55,0.25)",
+                borderRadius: 8,
+                padding: "7px 12px",
+                marginBottom: 14,
+              }}
+            >
+              <span style={{ fontSize: 11, color: "#D4AF37", fontWeight: 700 }}>
+                ML PLAN
+              </span>
+              <span
+                style={{
+                  width: 1,
+                  height: 12,
+                  background: "rgba(212,175,55,0.3)",
+                }}
+              />
+              <span style={{ fontSize: 13, color: "#fff", fontWeight: 700 }}>
+                {mlSplit.split}
+              </span>
+              <span style={{ fontSize: 12, color: "#9e9e9e", flex: 1 }}>
+                &mdash; {SPLIT_DESC[mlSplit.split] || "AI recommended"}
+              </span>
+            </div>
+          )}
+
+          {/* Day dots — Mon-Sun with workout/rest differentiation */}
           <div
             style={{
               display: "flex",
-              gap: 6,
+              gap: 5,
               justifyContent: "space-between",
-              marginBottom: 16,
+              marginBottom: 14,
             }}
           >
             {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => {
               const todayIdx = (new Date().getDay() + 6) % 7;
-              const isPast = i < todayIdx;
               const isToday = i === todayIdx;
-              const done = isPast && i < data.weekly_sessions;
+              const dayWorkout = weekWorkouts.find(
+                (w) => w.day_of_week === FULL_DAYS[i],
+              );
+              const isWorkoutDay = dayWorkout && !dayWorkout.is_rest_day;
+              const done =
+                isWorkoutDay && i < todayIdx && i < data.weekly_sessions;
               return (
                 <div
                   key={i}
@@ -469,7 +613,7 @@ export default function Dashboard() {
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    gap: 5,
+                    gap: 4,
                   }}
                 >
                   <div
@@ -481,8 +625,18 @@ export default function Dashboard() {
                         ? "rgba(212,175,55,0.25)"
                         : done
                           ? "rgba(76,175,80,0.25)"
-                          : "#1a1a1a",
-                      border: `1.5px solid ${isToday ? "#D4AF37" : done ? "#4caf50" : "#2a2a2a"}`,
+                          : isWorkoutDay
+                            ? "rgba(212,175,55,0.07)"
+                            : "#1a1a1a",
+                      border: `1.5px solid ${
+                        isToday
+                          ? "#D4AF37"
+                          : done
+                            ? "#4caf50"
+                            : isWorkoutDay
+                              ? "rgba(212,175,55,0.3)"
+                              : "#2a2a2a"
+                      }`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -499,16 +653,27 @@ export default function Dashboard() {
                         &bull;
                       </span>
                     )}
-                    {done && (
+                    {!isToday && done && (
                       <span style={{ color: "#4caf50", fontSize: 10 }}>
                         &#10003;
+                      </span>
+                    )}
+                    {!isToday && !done && isWorkoutDay && (
+                      <span
+                        style={{ color: "rgba(212,175,55,0.4)", fontSize: 9 }}
+                      >
+                        &#9679;
                       </span>
                     )}
                   </div>
                   <span
                     style={{
                       fontSize: 10,
-                      color: isToday ? "#D4AF37" : "#424242",
+                      color: isToday
+                        ? "#D4AF37"
+                        : isWorkoutDay
+                          ? "#757575"
+                          : "#333",
                       fontWeight: isToday ? 700 : 400,
                     }}
                   >
@@ -518,6 +683,152 @@ export default function Dashboard() {
               );
             })}
           </div>
+
+          {/* Today's workout preview */}
+          {todayWorkout ? (
+            todayWorkout.is_rest_day ? (
+              <div
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  borderRadius: 10,
+                  padding: "18px 16px",
+                  textAlign: "center",
+                  marginBottom: 14,
+                  border: "1px solid #1e1a12",
+                }}
+              >
+                <div style={{ fontSize: 28, marginBottom: 8 }}>&#128564;</div>
+                <p style={{ color: "#D4AF37", fontWeight: 700, fontSize: 14 }}>
+                  Rest Day
+                </p>
+                <p style={{ color: "#616161", fontSize: 12, marginTop: 4 }}>
+                  Recovery is part of the plan. Rest up!
+                </p>
+              </div>
+            ) : (
+              <div style={{ marginBottom: 14 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 10,
+                  }}
+                >
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>
+                    Today — {todayWorkout.name}
+                  </p>
+                  <div
+                    style={{ display: "flex", gap: 8, alignItems: "center" }}
+                  >
+                    {todayWorkout.duration_minutes ? (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: "#9e9e9e",
+                          background: "#1a1a1a",
+                          borderRadius: 6,
+                          padding: "3px 8px",
+                        }}
+                      >
+                        {todayWorkout.duration_minutes} min
+                      </span>
+                    ) : null}
+                    {todayWorkout.difficulty ? (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: "#D4AF37",
+                          background: "rgba(212,175,55,0.1)",
+                          borderRadius: 6,
+                          padding: "3px 8px",
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {todayWorkout.difficulty}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                >
+                  {(todayWorkout.exercises || []).slice(0, 4).map((ex, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid #1e1a12",
+                        borderRadius: 8,
+                        padding: "8px 12px",
+                      }}
+                    >
+                      <div>
+                        <p
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: "#e0e0e0",
+                          }}
+                        >
+                          {ex.name}
+                        </p>
+                        <p
+                          style={{
+                            fontSize: 11,
+                            color: "#616161",
+                            marginTop: 1,
+                          }}
+                        >
+                          {ex.muscle_group}
+                        </p>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: "#D4AF37",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {ex.sets}×{ex.reps}
+                      </span>
+                    </div>
+                  ))}
+                  {(todayWorkout.exercises || []).length > 4 && (
+                    <p
+                      style={{
+                        fontSize: 12,
+                        color: "#616161",
+                        textAlign: "center",
+                        padding: "4px 0",
+                      }}
+                    >
+                      +{todayWorkout.exercises.length - 4} more exercises
+                    </p>
+                  )}
+                </div>
+              </div>
+            )
+          ) : (
+            <div
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                borderRadius: 10,
+                padding: "14px 16px",
+                textAlign: "center",
+                marginBottom: 14,
+                border: "1px solid #1e1a12",
+              }}
+            >
+              <p style={{ color: "#616161", fontSize: 13 }}>
+                No workout scheduled for today.
+              </p>
+            </div>
+          )}
 
           <button
             className="btn btn-gold"
@@ -531,7 +842,9 @@ export default function Dashboard() {
             }}
             onClick={() => navigate("/workouts")}
           >
-            View Today&apos;s Workout
+            {todayWorkout && !todayWorkout.is_rest_day
+              ? "Start Workout"
+              : "View Full Plan"}
           </button>
         </div>
       )}

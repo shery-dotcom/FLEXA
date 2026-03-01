@@ -1,5 +1,13 @@
 import { useState, useEffect } from "react";
-import { FiBarChart2 } from "react-icons/fi";
+import {
+  FiBarChart2,
+  FiActivity,
+  FiTarget,
+  FiZap,
+  FiHeart,
+  FiAward,
+} from "react-icons/fi";
+import { useAuth } from "../context/AuthContext";
 import {
   LineChart,
   Line,
@@ -13,6 +21,110 @@ import {
 } from "recharts";
 import api from "../api/axios";
 import toast from "react-hot-toast";
+
+/* ── Fitness formula helpers ───────────────────────────────────── */
+const ACTIVITY_MULTIPLIERS = {
+  sedentary: 1.2,
+  light: 1.375,
+  moderate: 1.55,
+  active: 1.725,
+  very_active: 1.9,
+};
+
+function calcBMR(weight, height, age, gender) {
+  if (!weight || !height || !age) return null;
+  // Mifflin-St Jeor
+  const base = 10 * weight + 6.25 * height - 5 * age;
+  return gender === "female" ? Math.round(base - 161) : Math.round(base + 5);
+}
+
+function calcDEE(bmr, activityLevel) {
+  if (!bmr || !activityLevel) return null;
+  return Math.round(bmr * (ACTIVITY_MULTIPLIERS[activityLevel] || 1.2));
+}
+
+function calcCalorieTarget(dee, goalType) {
+  if (!dee) return null;
+  if (goalType === "bulking") return dee + 400;
+  if (goalType === "cutting") return dee - 500;
+  return dee; // recomp / maintenance
+}
+
+function calcMacros(calories, weight, goalType) {
+  if (!calories || !weight) return null;
+  let proteinG, fatG;
+  if (goalType === "cutting") {
+    proteinG = Math.round(weight * 2.2);
+    fatG = Math.round(weight * 0.9);
+  } else if (goalType === "bulking") {
+    proteinG = Math.round(weight * 1.8);
+    fatG = Math.round(weight * 1.0);
+  } else {
+    // recomp / maintenance
+    proteinG = Math.round(weight * 2.0);
+    fatG = Math.round(weight * 0.95);
+  }
+  const proteinCal = proteinG * 4;
+  const fatCal = fatG * 9;
+  const carbCal = Math.max(0, calories - proteinCal - fatCal);
+  const carbG = Math.round(carbCal / 4);
+  return {
+    protein: proteinG,
+    carbs: carbG,
+    fat: fatG,
+    proteinPct: Math.round((proteinCal / calories) * 100),
+    carbsPct: Math.round((carbCal / calories) * 100),
+    fatPct: Math.round((fatCal / calories) * 100),
+  };
+}
+
+function bmiColor(cat) {
+  if (!cat) return "#9e9e9e";
+  const c = cat.toLowerCase();
+  if (c.includes("underweight")) return "#64b5f6";
+  if (c.includes("normal") || c.includes("healthy")) return "#4caf50";
+  if (c.includes("overweight")) return "#ff9800";
+  return "#ef5350";
+}
+
+/* ── AI goal recommendation based on BMI ──────────────────────── */
+function aiGoalRecommendation(bmi, currentGoal) {
+  if (!bmi) return null;
+  if (bmi < 18.5)
+    return {
+      rec: "Bulking",
+      reason:
+        "You're underweight — a calorie surplus will help build healthy mass.",
+    };
+  if (bmi < 25) {
+    if (currentGoal === "bulking")
+      return {
+        rec: "Bulking / Recomp",
+        reason: "Your BMI is healthy — lean bulking or recomp both work well.",
+      };
+    if (currentGoal === "cutting")
+      return {
+        rec: "Recomp",
+        reason:
+          "You're already in a healthy range — recomp is optimal without aggressive cutting.",
+      };
+    return {
+      rec: "Recomp / Maintenance",
+      reason: "Your BMI is in the healthy range — maintain or slowly recomp.",
+    };
+  }
+  if (bmi < 30)
+    return {
+      rec: "Cutting",
+      reason:
+        "A moderate calorie deficit will help bring BMI into the healthy zone.",
+    };
+  return {
+    rec: "Cutting",
+    reason:
+      "Focus on fat loss — significant deficit with high protein will protect muscle.",
+  };
+}
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -39,29 +151,55 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Progress() {
+  const { user } = useAuth();
   const [logs, setLogs] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [monthlySummary, setMonthlySummary] = useState(null);
+  const [summaryPeriod, setSummaryPeriod] = useState("weekly"); // "weekly" | "monthly"
+  const [milestones, setMilestones] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dashData, setDashData] = useState(null);
   const [form, setForm] = useState({
     log_date: new Date().toISOString().split("T")[0],
     weight_kg: "",
     body_fat_pct: "",
+    calorie_intake: "",
     notes: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
+  const p = user?.profile; // profile shorthand
+
+  // ── Health report computed values ──
+  const bmr = calcBMR(p?.weight_kg, p?.height_cm, p?.age, p?.gender);
+  const activityLevel = dashData?.activity_level;
+  const dee = calcDEE(bmr, activityLevel);
+  const goalType = dashData?.current_goal;
+  const bmi = dashData?.bmi || p?.bmi;
+  const bmiCategory = dashData?.bmi_category || p?.bmi_category;
+  const calorieTarget =
+    dashData?.target_calories || calcCalorieTarget(dee, goalType);
+  const macros = calcMacros(calorieTarget, p?.weight_kg, goalType);
+  const aiRec = aiGoalRecommendation(bmi, goalType);
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [logsRes, summaryRes] = await Promise.all([
+      const [logsRes, summaryRes, dashRes, monthlyRes] = await Promise.all([
         api.get("/progress/logs?limit=60"),
         api.get("/progress/summary/weekly"),
+        api.get("/dashboard/").catch(() => ({ data: null })),
+        api.get("/progress/summary/monthly").catch(() => ({ data: null })),
       ]);
       const sortedLogs = logsRes.data.sort(
         (a, b) => new Date(a.log_date) - new Date(b.log_date),
       );
       setLogs(sortedLogs);
       setSummary(summaryRes.data);
+      setDashData(dashRes.data);
+      if (monthlyRes.data) setMonthlySummary(monthlyRes.data);
+      // Milestones come from dashboard response
+      if (dashRes.data?.milestones) setMilestones(dashRes.data.milestones);
     } catch {
       /* ok */
     } finally {
@@ -86,12 +224,16 @@ export default function Progress() {
         body_fat_pct: form.body_fat_pct
           ? parseFloat(form.body_fat_pct)
           : undefined,
+        calorie_intake: form.calorie_intake
+          ? parseFloat(form.calorie_intake)
+          : undefined,
       });
       toast.success("Progress logged!");
       setForm({
         log_date: new Date().toISOString().split("T")[0],
         weight_kg: "",
         body_fat_pct: "",
+        calorie_intake: "",
         notes: "",
       });
       fetchData();
@@ -109,16 +251,400 @@ export default function Progress() {
     }),
     Weight: l.weight_kg,
     BMI: l.bmi,
+    Calories: l.calorie_intake || null,
   }));
 
   return (
     <div className="page-content">
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 28, fontWeight: 800 }}>
-          Progress <span className="text-gold">Tracker</span>
+          Health <span className="text-gold">Report</span>
         </h1>
         <p style={{ color: "#9e9e9e", marginTop: 6, fontSize: 14 }}>
-          Track your weight, BMI, and body composition over time
+          Your complete fitness picture — metrics, goals & nutrition
+        </p>
+      </div>
+
+      {/* ── Health Analytics Section ──────────────────────────────── */}
+      {(bmi || bmr || dee) && (
+        <div style={{ marginBottom: 32 }}>
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#D4AF37",
+              letterSpacing: "2px",
+              textTransform: "uppercase",
+              marginBottom: 16,
+            }}
+          >
+            Body Metrics
+          </p>
+
+          {/* Row 1: BMI, BMR, DEE */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 12,
+              marginBottom: 12,
+            }}
+          >
+            <MetricCard
+              label="BMI"
+              value={bmi ? bmi.toFixed(1) : "—"}
+              sub={bmiCategory || "Not measured"}
+              subColor={bmiColor(bmiCategory)}
+              icon={<FiActivity size={16} />}
+            />
+            <MetricCard
+              label="BMR"
+              value={bmr ? bmr.toLocaleString() : "—"}
+              sub="kcal at rest"
+              icon={<FiHeart size={16} />}
+              tooltip="Basal Metabolic Rate — calories your body burns at complete rest (Mifflin-St Jeor)"
+            />
+            <MetricCard
+              label="Daily Calories"
+              value={dee ? dee.toLocaleString() : "—"}
+              sub={
+                activityLevel ? activityLevel.replace(/_/g, " ") : "kcal/day"
+              }
+              icon={<FiZap size={16} />}
+              tooltip="Total Daily Calories (TDEE) — BMR × activity multiplier"
+            />
+          </div>
+
+          {/* Row 2: Goal, AI Recommendation */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 12,
+              marginBottom: 12,
+            }}
+          >
+            <div
+              style={{
+                background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
+                border: "1px solid rgba(212,175,55,0.2)",
+                borderRadius: 14,
+                padding: "18px 18px 16px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 10,
+                }}
+              >
+                <FiTarget size={14} color="#D4AF37" />
+                <p
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#D4AF37",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.8px",
+                  }}
+                >
+                  Your Goal
+                </p>
+              </div>
+              {goalType ? (
+                <>
+                  <p
+                    style={{
+                      fontSize: 22,
+                      fontWeight: 800,
+                      color: "#fff",
+                      textTransform: "capitalize",
+                      marginBottom: 6,
+                    }}
+                  >
+                    {goalType}
+                  </p>
+                  <p style={{ fontSize: 12, color: "#9e9e9e" }}>
+                    {goalType === "bulking"
+                      ? "Calorie surplus to build muscle mass"
+                      : goalType === "cutting"
+                        ? "Calorie deficit to lose body fat"
+                        : "Simultaneous muscle gain and fat loss"}
+                  </p>
+                </>
+              ) : (
+                <p style={{ fontSize: 13, color: "#616161" }}>
+                  No goal set yet
+                </p>
+              )}
+            </div>
+
+            <div
+              style={{
+                background: "linear-gradient(135deg, #0a140a 0%, #111e0e 100%)",
+                border: "1px solid rgba(76,175,80,0.2)",
+                borderRadius: 14,
+                padding: "18px 18px 16px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 10,
+                }}
+              >
+                <span style={{ fontSize: 14 }}>🤖</span>
+                <p
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#4caf50",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.8px",
+                  }}
+                >
+                  AI Recommendation
+                </p>
+              </div>
+              {aiRec ? (
+                <>
+                  <p
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 800,
+                      color: "#4caf50",
+                      marginBottom: 6,
+                    }}
+                  >
+                    {aiRec.rec}
+                  </p>
+                  <p
+                    style={{ fontSize: 12, color: "#9e9e9e", lineHeight: 1.5 }}
+                  >
+                    {aiRec.reason}
+                  </p>
+                </>
+              ) : (
+                <p style={{ fontSize: 13, color: "#616161" }}>
+                  Complete your profile to get AI suggestions
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Row 3: Calorie Target + Macros */}
+          {calorieTarget && macros && (
+            <div
+              style={{
+                background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
+                border: "1px solid rgba(212,175,55,0.2)",
+                borderRadius: 14,
+                padding: "20px 20px 18px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  flexWrap: "wrap",
+                  gap: 12,
+                  marginBottom: 20,
+                }}
+              >
+                <div>
+                  <p
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#D4AF37",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.8px",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Daily Calorie Target
+                  </p>
+                  <p style={{ fontSize: 36, fontWeight: 900, color: "#fff" }}>
+                    {calorieTarget.toLocaleString()}
+                    <span
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 500,
+                        color: "#9e9e9e",
+                        marginLeft: 6,
+                      }}
+                    >
+                      kcal
+                    </span>
+                  </p>
+                  <p style={{ fontSize: 12, color: "#9e9e9e", marginTop: 4 }}>
+                    {goalType === "bulking"
+                      ? `+400 kcal surplus above DEE (${dee?.toLocaleString()} kcal)`
+                      : goalType === "cutting"
+                        ? `-500 kcal deficit below DEE (${dee?.toLocaleString()} kcal)`
+                        : `Maintenance — same as DEE`}
+                  </p>
+                </div>
+                {/* Macro split visual */}
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 4,
+                    height: 8,
+                    minWidth: 140,
+                    borderRadius: 4,
+                    overflow: "hidden",
+                    alignSelf: "center",
+                  }}
+                >
+                  <div
+                    style={{ flex: macros.proteinPct, background: "#D4AF37" }}
+                  />
+                  <div
+                    style={{ flex: macros.carbsPct, background: "#64b5f6" }}
+                  />
+                  <div style={{ flex: macros.fatPct, background: "#ef9a9a" }} />
+                </div>
+              </div>
+
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#9e9e9e",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.8px",
+                  marginBottom: 12,
+                }}
+              >
+                Macronutrient Breakdown
+              </p>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gap: 12,
+                }}
+              >
+                <MacroCard
+                  label="Protein"
+                  grams={macros.protein}
+                  pct={macros.proteinPct}
+                  color="#D4AF37"
+                  note="Muscle repair & growth"
+                />
+                <MacroCard
+                  label="Carbohydrates"
+                  grams={macros.carbs}
+                  pct={macros.carbsPct}
+                  color="#64b5f6"
+                  note="Energy & performance"
+                />
+                <MacroCard
+                  label="Fats"
+                  grams={macros.fat}
+                  pct={macros.fatPct}
+                  color="#ef9a9a"
+                  note="Hormones & joints"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Milestones & Achievements ─────────────────────────────── */}
+      {milestones.length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#D4AF37",
+              letterSpacing: "2px",
+              textTransform: "uppercase",
+              marginBottom: 16,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <FiAward size={14} /> Milestones Earned
+          </p>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 12,
+            }}
+          >
+            {milestones.map((m) => (
+              <div
+                key={m.id || m.title}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
+                  border: "1px solid rgba(212,175,55,0.3)",
+                  borderRadius: 12,
+                  padding: "14px 18px",
+                  minWidth: 180,
+                  flex: "1 1 180px",
+                  maxWidth: 240,
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: 20,
+                    marginBottom: 6,
+                  }}
+                >
+                  {m.milestone_type === "elite"
+                    ? "🏆"
+                    : m.milestone_type === "streak"
+                      ? "🔥"
+                      : m.milestone_type === "health"
+                        ? "💚"
+                        : m.milestone_type === "progress"
+                          ? "📉"
+                          : "⭐"}
+                </p>
+                <p
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "#D4AF37",
+                    marginBottom: 4,
+                  }}
+                >
+                  {m.title}
+                </p>
+                <p style={{ fontSize: 11, color: "#9e9e9e", lineHeight: 1.4 }}>
+                  {m.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Progress Tracker Section ───────────────────────────────── */}
+      <div style={{ marginBottom: 20 }}>
+        <p
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: "#D4AF37",
+            letterSpacing: "2px",
+            textTransform: "uppercase",
+            marginBottom: 16,
+          }}
+        >
+          Progress Tracker
         </p>
       </div>
 
@@ -169,6 +695,23 @@ export default function Progress() {
                 </div>
               </div>
               <div className="form-group">
+                <label className="form-label">Calorie Intake (kcal)</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  name="calorie_intake"
+                  placeholder={
+                    calorieTarget
+                      ? `Target: ${calorieTarget} kcal`
+                      : "e.g. 2200"
+                  }
+                  step="1"
+                  min="0"
+                  value={form.calorie_intake}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group">
                 <label className="form-label">Notes (optional)</label>
                 <input
                   className="form-input"
@@ -189,45 +732,132 @@ export default function Progress() {
             </form>
           </div>
 
-          {/* Weekly summary */}
-          {summary && (
+          {/* Summary — Weekly / Monthly toggle */}
+          {(summary || monthlySummary) && (
             <div className="card">
-              <h3 style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>
-                Weekly Summary
-              </h3>
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 10 }}
-              >
-                {summary.weight_change !== undefined && (
-                  <SummaryRow
-                    label="Weight Change"
-                    value={`${summary.weight_change > 0 ? "+" : ""}${summary.weight_change?.toFixed(1)} kg`}
-                    color={summary.weight_change < 0 ? "#4caf50" : "#ef5350"}
-                  />
-                )}
-                {summary.current_weight && (
-                  <SummaryRow
-                    label="Current Weight"
-                    value={`${summary.current_weight} kg`}
-                  />
-                )}
-                {summary.current_bmi && (
-                  <SummaryRow label="Current BMI" value={summary.current_bmi} />
-                )}
-                <SummaryRow
-                  label="Logs This Week"
-                  value={summary.logs_count || 0}
-                />
-                {summary.trend && (
-                  <SummaryRow
-                    label="Trend"
-                    value={summary.trend
-                      .replace(/_/g, " ")
-                      .replace(/\b\w/g, (c) => c.toUpperCase())}
-                    color={summary.trend === "on_track" ? "#4caf50" : "#D4AF37"}
-                  />
-                )}
+              {/* Period toggle */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                {["weekly", "monthly"].map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setSummaryPeriod(p)}
+                    style={{
+                      padding: "5px 14px",
+                      borderRadius: 20,
+                      border: "1px solid",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      textTransform: "capitalize",
+                      letterSpacing: "0.4px",
+                      background:
+                        summaryPeriod === p ? "#D4AF37" : "transparent",
+                      borderColor:
+                        summaryPeriod === p
+                          ? "#D4AF37"
+                          : "rgba(212,175,55,0.3)",
+                      color: summaryPeriod === p ? "#000" : "#9e9e9e",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    {p}
+                  </button>
+                ))}
               </div>
+
+              {/* Active period summary data */}
+              {(() => {
+                const s =
+                  summaryPeriod === "monthly" && monthlySummary
+                    ? monthlySummary
+                    : summary;
+                if (!s) return null;
+                return (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                    }}
+                  >
+                    {s.weight_change !== undefined && (
+                      <SummaryRow
+                        label="Weight Change"
+                        value={`${s.weight_change > 0 ? "+" : ""}${s.weight_change?.toFixed(1)} kg`}
+                        color={s.weight_change < 0 ? "#4caf50" : "#ef5350"}
+                      />
+                    )}
+                    {s.current_weight && (
+                      <SummaryRow
+                        label="Current Weight"
+                        value={`${s.current_weight} kg`}
+                      />
+                    )}
+                    {s.current_bmi && (
+                      <SummaryRow label="Current BMI" value={s.current_bmi} />
+                    )}
+                    <SummaryRow
+                      label={
+                        summaryPeriod === "monthly"
+                          ? "Logs This Month"
+                          : "Logs This Week"
+                      }
+                      value={s.logs_count || 0}
+                    />
+                    {s.trend && (
+                      <SummaryRow
+                        label="Trend"
+                        value={s.trend
+                          .replace(/_/g, " ")
+                          .replace(/\b\w/g, (c) => c.toUpperCase())}
+                        color={s.trend === "on_track" ? "#4caf50" : "#D4AF37"}
+                      />
+                    )}
+                    {summaryPeriod === "monthly" && s.month && (
+                      <SummaryRow label="Month" value={s.month} />
+                    )}
+
+                    {/* Stagnation alert */}
+                    {s.trend &&
+                      s.trend !== "on_track" &&
+                      s.weight_change !== undefined &&
+                      Math.abs(s.weight_change) < 0.3 && (
+                        <div
+                          style={{
+                            background: "rgba(255,152,0,0.08)",
+                            border: "1px solid rgba(255,152,0,0.3)",
+                            borderRadius: 8,
+                            padding: "10px 14px",
+                            marginTop: 8,
+                          }}
+                        >
+                          <p
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: "#ff9800",
+                              marginBottom: 4,
+                            }}
+                          >
+                            ⚠ Stagnation Detected
+                          </p>
+                          <p
+                            style={{
+                              fontSize: 11,
+                              color: "#ffcc80",
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            Your weight hasn't changed significantly this{" "}
+                            {summaryPeriod === "monthly" ? "month" : "week"}.
+                            Consider adjusting your calorie intake or training
+                            intensity.
+                          </p>
+                        </div>
+                      )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
@@ -355,6 +985,7 @@ export default function Progress() {
                           "Weight (kg)",
                           "BMI",
                           "Body Fat %",
+                          "Calories",
                           "Notes",
                         ].map((h) => (
                           <th
@@ -402,6 +1033,13 @@ export default function Progress() {
                               {l.body_fat_pct ?? "—"}
                             </td>
                             <td
+                              style={{ padding: "10px 12px", color: "#64b5f6" }}
+                            >
+                              {l.calorie_intake
+                                ? `${l.calorie_intake?.toLocaleString()} kcal`
+                                : "—"}
+                            </td>
+                            <td
                               style={{ padding: "10px 12px", color: "#9e9e9e" }}
                             >
                               {l.notes || "—"}
@@ -447,6 +1085,118 @@ function BMIRef({ color, label }) {
         style={{ width: 10, height: 10, borderRadius: 2, background: color }}
       />
       <span style={{ fontSize: 11, color: "#9e9e9e" }}>{label}</span>
+    </div>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  sub,
+  subColor = "#9e9e9e",
+  icon,
+  tooltip,
+}) {
+  return (
+    <div
+      title={tooltip}
+      style={{
+        background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
+        border: "1px solid rgba(212,175,55,0.18)",
+        borderRadius: 14,
+        padding: "16px 16px 14px",
+        cursor: tooltip ? "help" : "default",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          marginBottom: 10,
+        }}
+      >
+        <span style={{ color: "#D4AF37" }}>{icon}</span>
+        <p
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: "#D4AF37",
+            textTransform: "uppercase",
+            letterSpacing: "0.8px",
+          }}
+        >
+          {label}
+        </p>
+      </div>
+      <p
+        style={{
+          fontSize: 26,
+          fontWeight: 900,
+          color: "#fff",
+          lineHeight: 1,
+          marginBottom: 6,
+        }}
+      >
+        {value}
+      </p>
+      <p
+        style={{
+          fontSize: 11,
+          color: subColor,
+          fontWeight: 600,
+          textTransform: "capitalize",
+        }}
+      >
+        {sub}
+      </p>
+    </div>
+  );
+}
+
+function MacroCard({ label, grams, pct, color, note }) {
+  return (
+    <div
+      style={{
+        background: "rgba(255,255,255,0.03)",
+        border: `1px solid ${color}33`,
+        borderRadius: 10,
+        padding: "14px 14px 12px",
+      }}
+    >
+      <p
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color,
+          textTransform: "uppercase",
+          letterSpacing: "0.6px",
+          marginBottom: 8,
+        }}
+      >
+        {label}
+      </p>
+      <p
+        style={{
+          fontSize: 22,
+          fontWeight: 900,
+          color: "#fff",
+          marginBottom: 2,
+        }}
+      >
+        {grams}g
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 500,
+            color: "#616161",
+            marginLeft: 4,
+          }}
+        >
+          {pct}%
+        </span>
+      </p>
+      <p style={{ fontSize: 11, color: "#616161" }}>{note}</p>
     </div>
   );
 }

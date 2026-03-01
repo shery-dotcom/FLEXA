@@ -68,6 +68,15 @@ export default function Login() {
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>
+
+          <p style={{ textAlign: "right", marginTop: 12, fontSize: 13 }}>
+            <Link
+              to="/forgot-password"
+              style={{ color: "#9e9e9e", textDecoration: "none" }}
+            >
+              Forgot password?
+            </Link>
+          </p>
         </form>
 
         <div className="divider" style={{ margin: "28px 0" }} />

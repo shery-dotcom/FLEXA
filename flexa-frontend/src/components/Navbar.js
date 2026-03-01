@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -6,26 +6,29 @@ import {
   FiActivity,
   FiGrid,
   FiTrendingUp,
-  FiTarget,
   FiMenu,
   FiX,
   FiUser,
+  FiEdit2,
+  FiBookOpen,
+  FiCamera,
 } from "react-icons/fi";
 
 const NAV_LINKS = [
   { to: "/dashboard", label: "Home", icon: <FiGrid /> },
   { to: "/progress", label: "Report", icon: <FiTrendingUp /> },
   { to: "/workouts", label: "Workout", icon: <FiActivity /> },
-  { to: "/goal-setup", label: "Goals", icon: <FiTarget /> },
+  { to: "/diet-planner", label: "Diet", icon: <FiBookOpen /> },
+  { to: "/calorie-estimator", label: "Calories", icon: <FiCamera /> },
 ];
-
-const MOBILE_EXTRA = [{ to: "/profile", label: "Profile", icon: <FiUser /> }];
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const avatarRef = useRef(null);
 
   const handleLogout = () => {
     logout();
@@ -33,6 +36,53 @@ export default function Navbar() {
   };
 
   const closeMenu = () => setMenuOpen(false);
+
+  // Close avatar dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (avatarRef.current && !avatarRef.current.contains(e.target)) {
+        setAvatarOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const profilePicture = user?.profile?.profile_picture;
+  const displayName =
+    user?.profile?.username || user?.email?.split("@")[0] || "User";
+
+  const AvatarCircle = ({ size = 36 }) =>
+    profilePicture ? (
+      <img
+        src={profilePicture}
+        alt={displayName}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          objectFit: "cover",
+          border: "2px solid rgba(212,175,55,0.6)",
+          display: "block",
+        }}
+      />
+    ) : (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          background: "rgba(212,175,55,0.15)",
+          border: "2px solid rgba(212,175,55,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        <FiUser size={Math.floor(size * 0.45)} color="#D4AF37" />
+      </div>
+    );
 
   return (
     <>
@@ -59,44 +109,81 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Right side */}
+          {/* Right side – avatar dropdown */}
           <div style={styles.right}>
-            <Link
-              to="/profile"
+            <div
+              ref={avatarRef}
+              style={{ position: "relative" }}
               className="nav-email-desktop"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "6px 12px",
-                borderRadius: 8,
-                background:
-                  location.pathname === "/profile"
-                    ? "rgba(212,175,55,0.12)"
-                    : "transparent",
-                border: "1px solid",
-                borderColor:
-                  location.pathname === "/profile"
-                    ? "rgba(212,175,55,0.4)"
-                    : "#242424",
-                color: location.pathname === "/profile" ? "#D4AF37" : "#9e9e9e",
-                textDecoration: "none",
-                fontSize: 13,
-                fontWeight: 600,
-                transition: "all 0.2s",
-              }}
             >
-              <FiUser size={14} />
-              {user?.profile?.username || user?.email?.split("@")[0]}
-            </Link>
-            <button
-              onClick={handleLogout}
-              style={styles.logoutBtn}
-              title="Logout"
-              className="nav-logout-desktop"
-            >
-              <FiLogOut size={18} />
-            </button>
+              <button
+                onClick={() => setAvatarOpen((o) => !o)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "4px 8px",
+                  borderRadius: 30,
+                }}
+                title={displayName}
+              >
+                <AvatarCircle size={34} />
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#e0e0e0",
+                    maxWidth: 120,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {displayName}
+                </span>
+              </button>
+
+              {avatarOpen && (
+                <div style={styles.avatarDropdown}>
+                  <div style={styles.avatarDropdownHeader}>
+                    <AvatarCircle size={42} />
+                    <div>
+                      <p
+                        style={{
+                          color: "#D4AF37",
+                          fontWeight: 700,
+                          fontSize: 14,
+                        }}
+                      >
+                        {displayName}
+                      </p>
+                      <p style={{ color: "#616161", fontSize: 12 }}>
+                        {user?.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div style={styles.avatarDropdownDivider} />
+                  <button
+                    onClick={() => {
+                      setAvatarOpen(false);
+                      navigate("/profile");
+                    }}
+                    style={styles.avatarDropdownItem}
+                  >
+                    <FiEdit2 size={14} /> Edit Profile
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    style={{ ...styles.avatarDropdownItem, color: "#ef5350" }}
+                  >
+                    <FiLogOut size={14} /> Log Out
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Hamburger */}
             <button
@@ -115,41 +202,18 @@ export default function Navbar() {
       {menuOpen && (
         <div style={styles.drawer} className="nav-drawer">
           <div style={styles.drawerUser}>
-            <Link
-              to="/profile"
-              onClick={closeMenu}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                textDecoration: "none",
-              }}
-            >
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: "50%",
-                  background: "rgba(212,175,55,0.15)",
-                  border: "2px solid rgba(212,175,55,0.4)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <FiUser size={18} color="#D4AF37" />
-              </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <AvatarCircle size={42} />
               <div>
                 <p style={{ color: "#D4AF37", fontWeight: 700, fontSize: 14 }}>
-                  {user?.profile?.username || user?.email?.split("@")[0]}
+                  {displayName}
                 </p>
                 <p style={{ color: "#616161", fontSize: 12 }}>{user?.email}</p>
               </div>
-            </Link>
+            </div>
           </div>
           <div style={styles.drawerDivider} />
-          {[...NAV_LINKS, ...MOBILE_EXTRA].map(({ to, label, icon }) => (
+          {NAV_LINKS.map(({ to, label, icon }) => (
             <Link
               key={to}
               to={to}
@@ -163,6 +227,21 @@ export default function Navbar() {
               {label}
             </Link>
           ))}
+          <Link
+            to="/profile"
+            onClick={closeMenu}
+            style={{
+              ...styles.drawerLink,
+              ...(location.pathname === "/profile"
+                ? styles.drawerLinkActive
+                : {}),
+            }}
+          >
+            <span style={{ opacity: 0.7 }}>
+              <FiEdit2 />
+            </span>
+            Edit Profile
+          </Link>
           <div style={styles.drawerDivider} />
           <button onClick={handleLogout} style={styles.drawerLogout}>
             <FiLogOut size={16} /> Sign Out
@@ -222,18 +301,6 @@ const styles = {
     fontWeight: 700,
   },
   right: { display: "flex", alignItems: "center", gap: 12 },
-  email: { fontSize: 13, color: "#9e9e9e", fontWeight: 500 },
-  logoutBtn: {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    color: "#9e9e9e",
-    display: "flex",
-    alignItems: "center",
-    padding: 6,
-    borderRadius: 6,
-    transition: "all 0.2s",
-  },
   hamburger: {
     display: "none",
     background: "none",
@@ -244,6 +311,44 @@ const styles = {
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
+  },
+  avatarDropdown: {
+    position: "absolute",
+    top: "calc(100% + 10px)",
+    right: 0,
+    minWidth: 220,
+    background: "#141414",
+    border: "1px solid #2a2a2a",
+    borderRadius: 12,
+    boxShadow: "0 8px 32px rgba(0,0,0,0.65)",
+    zIndex: 300,
+    overflow: "hidden",
+  },
+  avatarDropdownHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "16px 16px 12px",
+  },
+  avatarDropdownDivider: {
+    height: 1,
+    background: "#1a1a1a",
+    margin: "0 0 4px",
+  },
+  avatarDropdownItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    width: "100%",
+    padding: "12px 16px",
+    background: "none",
+    border: "none",
+    color: "#e0e0e0",
+    fontSize: 14,
+    fontWeight: 500,
+    cursor: "pointer",
+    textAlign: "left",
+    transition: "background 0.15s",
   },
   drawer: {
     position: "fixed",

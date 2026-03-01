@@ -27,6 +27,21 @@ Thumbs.db
 *.swp
 *.swo
 
+# ── ML Datasets ──────────────────────────────────────────────────────────────
+# Excluded: too large for git (Food-101 = ~5 GB)
+Datasets/
+
+# ── ML Model files ────────────────────────────────────────────────────────────
+# *.pt excluded: food_classifier.pt = 90.8 MB (too close to GitHub 100 MB limit)
+# *.pkl tracked: workout_model.pkl = 4.25 MB (small, required at runtime)
+*.pt
+*.pth
+*.h5
+*.onnx
+
+# ── Virtual env (root) ────────────────────────────────────────────────────────
+.venv/
+
 # ── Misc ──────────────────────────────────────────────────────────────────────
 *.log
 *.tmp

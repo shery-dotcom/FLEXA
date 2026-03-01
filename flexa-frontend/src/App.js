@@ -10,6 +10,10 @@ import WorkoutPlanner from "./pages/WorkoutPlanner";
 import Dashboard from "./pages/Dashboard";
 import Progress from "./pages/Progress";
 import Profile from "./pages/Profile";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import DietPlanner from "./pages/DietPlanner";
+import CalorieEstimator from "./pages/CalorieEstimator";
 
 // Guard: logged in but no profile → send to profile-setup
 function OnboardingGuard({ children }) {
@@ -51,6 +55,8 @@ function App() {
           path="/register"
           element={!user ? <Register /> : <Navigate to="/dashboard" />}
         />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Onboarding routes — accessible even without profile */}
         <Route
@@ -102,6 +108,22 @@ function App() {
           element={
             <OnboardingGuard>
               <Progress />
+            </OnboardingGuard>
+          }
+        />
+        <Route
+          path="/diet-planner"
+          element={
+            <OnboardingGuard>
+              <DietPlanner />
+            </OnboardingGuard>
+          }
+        />
+        <Route
+          path="/calorie-estimator"
+          element={
+            <OnboardingGuard>
+              <CalorieEstimator />
             </OnboardingGuard>
           }
         />

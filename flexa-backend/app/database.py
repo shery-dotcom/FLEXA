@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import text
 from app.core.config import settings
 
 engine = create_async_engine(
@@ -31,6 +32,12 @@ async def get_db() -> AsyncSession:
 
 
 async def init_db():
-    """Create all tables on startup."""
+    """Create all tables on startup and apply additive column migrations."""
+    # Import all models so SQLAlchemy registers them before create_all
+    import app.models  # noqa: F401 — triggers all model imports
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # ── Idempotent column additions (PostgreSQL IF NOT EXISTS) ──────
+        await conn.execute(
+            text("ALTER TABLE progress_logs ADD COLUMN IF NOT EXISTS calorie_intake FLOAT")
+        )

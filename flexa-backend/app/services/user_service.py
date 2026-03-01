@@ -45,6 +45,7 @@ class UserService:
             weight_kg=data.weight_kg,
             bmi=bmi,
             bmi_category=bmi_category,
+            profile_picture=data.profile_picture if hasattr(data, "profile_picture") else None,
         )
         db.add(profile)
         await db.commit()

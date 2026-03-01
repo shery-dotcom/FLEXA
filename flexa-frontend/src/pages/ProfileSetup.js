@@ -44,15 +44,19 @@ export default function ProfileSetup() {
     e.preventDefault();
     setLoading(true);
     try {
+      const pendingPic =
+        localStorage.getItem("flexa_pending_profile_pic") || undefined;
       await api.post("/users/me/profile", {
         ...form,
         age: parseInt(form.age) || null,
         height_cm: parseFloat(form.height_cm) || null,
         weight_kg: parseFloat(form.weight_kg) || null,
+        profile_picture: pendingPic,
       });
+      if (pendingPic) localStorage.removeItem("flexa_pending_profile_pic");
       await refreshUser();
-      toast.success("Profile created!");
-      navigate("/goal-setup");
+      toast.success("Profile created! Now set your fitness goal.");
+      navigate("/profile");
     } catch (err) {
       toast.error(err.response?.data?.detail || "Failed to create profile.");
     } finally {

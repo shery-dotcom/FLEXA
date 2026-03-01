@@ -33,6 +33,7 @@ class ProgressService:
             weight_kg=data.weight_kg,
             bmi=bmi,
             body_fat_pct=data.body_fat_pct,
+            calorie_intake=data.calorie_intake,
             notes=data.notes,
         )
         db.add(log)

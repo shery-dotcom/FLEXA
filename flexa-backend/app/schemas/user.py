@@ -11,6 +11,7 @@ class ProfileCreate(BaseModel):
     region: Optional[str] = None
     height_cm: Optional[float] = None
     weight_kg: Optional[float] = None
+    profile_picture: Optional[str] = None
 
 
 class ProfileUpdate(BaseModel):
@@ -20,6 +21,7 @@ class ProfileUpdate(BaseModel):
     region: Optional[str] = None
     height_cm: Optional[float] = None
     weight_kg: Optional[float] = None
+    profile_picture: Optional[str] = None
 
 
 class ProfileResponse(BaseModel):
@@ -33,6 +35,7 @@ class ProfileResponse(BaseModel):
     weight_kg: Optional[float]
     bmi: Optional[float]
     bmi_category: Optional[str]
+    profile_picture: Optional[str]
     created_at: datetime
 
     class Config:

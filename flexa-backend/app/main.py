@@ -28,6 +28,7 @@ A production-ready AI-powered fitness planning system.
 ### Key Features
 - **Module 1**: JWT Authentication + Google OAuth + User Profiles
 - **Module 2**: AI Goal Setting with BMI Validation
+- **Module 3**: Personalized Diet & Calorie Planner (BMR/TDEE, Meal Recommender, Food Image AI)
 - **Module 4**: AI Workout Generator (Rule + ML Hybrid)
 - **Module 7**: Smart Dashboard with Motivation Engine
 - **Module 10**: Progress Visualization & Milestone Detection
