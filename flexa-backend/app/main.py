@@ -10,10 +10,10 @@ from app.core.config import settings
 async def lifespan(app: FastAPI):
     # Startup: initialize database tables
     await init_db()
-    print(f"✅ {settings.APP_NAME} v{settings.APP_VERSION} started")
+    print(f"[OK] {settings.APP_NAME} v{settings.APP_VERSION} started")
     yield
     # Shutdown
-    print("🔴 Server shutting down...")
+    print("[--] Server shutting down...")
 
 
 def create_app() -> FastAPI:

@@ -4,7 +4,7 @@ Write-Host "  Starting Backend + Frontend..." -ForegroundColor Yellow
 Write-Host "============================================" -ForegroundColor Yellow
 
 Write-Host "`n[1/2] Starting FastAPI backend (port 8000)..." -ForegroundColor Cyan
-Start-Process -FilePath "cmd" -ArgumentList "/k `"d:\CUI'26\FYP\Flexa\.venv\Scripts\python.exe`" -m uvicorn app.main:app --app-dir `"d:\CUI'26\FYP\Flexa\flexa-backend`" --reload --host 0.0.0.0 --port 8000" -WindowStyle Normal
+Start-Process -FilePath "cmd" -ArgumentList "/k set PYTHONIOENCODING=utf-8 && `"d:\CUI'26\FYP\Flexa\.venv\Scripts\python.exe`" -m uvicorn app.main:app --app-dir `"d:\CUI'26\FYP\Flexa\flexa-backend`" --reload --host 0.0.0.0 --port 8000" -WindowStyle Normal
 
 Write-Host "Waiting for backend to initialize..." -ForegroundColor Gray
 Start-Sleep -Seconds 4
