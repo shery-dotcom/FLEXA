@@ -381,61 +381,176 @@ function WeekGrid({ workouts, onViewWorkout }) {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-        gap: 16,
+        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+        gap: 18,
       }}
     >
       {ALL_DAYS.map((day) => {
         const workout = dayMap[day];
         const isRest = !workout || workout.is_rest_day;
         const exCount = workout?.exercises?.length || 0;
+        const muscleLabel = workout && !isRest ? getMuscleLabel(workout) : null;
+        const duration = workout?.duration_minutes || 0;
+        const difficulty = workout?.difficulty || null;
+
         return (
           <div
             key={day}
             style={{
-              background: isRest ? "rgba(255,255,255,0.02)" : "#111",
-              border: `1px solid ${isRest ? "#1a1a1a" : "#242424"}`,
-              borderRadius: 12,
-              padding: "18px 16px",
+              background: isRest
+                ? "rgba(255,255,255,0.015)"
+                : "linear-gradient(145deg, #141414 0%, #0e0e0e 100%)",
+              border: `1px solid ${isRest ? "#1a1a1a" : "#2a2a2a"}`,
+              borderRadius: 14,
+              padding: "22px 20px",
               display: "flex",
               flexDirection: "column",
-              gap: 10,
+              gap: 0,
+              minHeight: 180,
+              position: "relative",
+              overflow: "hidden",
             }}
           >
-            <p
+            {/* Accent line on left for workout days */}
+            {!isRest && (
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 3,
+                  background:
+                    "linear-gradient(180deg, #D4AF37 0%, rgba(212,175,55,0.3) 100%)",
+                  borderRadius: "14px 0 0 14px",
+                }}
+              />
+            )}
+
+            {/* Day label + difficulty pill */}
+            <div
               style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: isRest ? "#303030" : "#D4AF37",
-                textTransform: "uppercase",
-                letterSpacing: "1px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 10,
               }}
             >
-              {day}
-            </p>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: isRest ? "#303030" : "#D4AF37",
+                  textTransform: "uppercase",
+                  letterSpacing: "1.2px",
+                  margin: 0,
+                }}
+              >
+                {day}
+              </p>
+              {!isRest && difficulty && (
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color:
+                      difficulty === "advanced"
+                        ? "#ef5350"
+                        : difficulty === "intermediate"
+                          ? "#D4AF37"
+                          : "#4ec9b0",
+                    background:
+                      difficulty === "advanced"
+                        ? "rgba(239,83,80,0.1)"
+                        : difficulty === "intermediate"
+                          ? "rgba(212,175,55,0.1)"
+                          : "rgba(78,201,176,0.1)",
+                    border: `1px solid ${difficulty === "advanced" ? "#ef535033" : difficulty === "intermediate" ? "#D4AF3733" : "#4ec9b033"}`,
+                    borderRadius: 20,
+                    padding: "2px 8px",
+                    textTransform: "capitalize",
+                  }}
+                >
+                  {difficulty}
+                </span>
+              )}
+            </div>
+
+            {/* Workout name */}
             <p
               style={{
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: 700,
-                color: isRest ? "#2e2e2e" : "#e0e0e0",
+                color: isRest ? "#252525" : "#e0e0e0",
+                marginBottom: isRest ? 0 : 6,
+                lineHeight: 1.3,
               }}
             >
               {isRest ? "Rest Day" : workout.name}
             </p>
-            {!isRest && (
-              <p style={{ fontSize: 12, color: "#616161" }}>
-                {exCount} exercises
+
+            {/* Muscle groups */}
+            {!isRest && muscleLabel && (
+              <p
+                style={{
+                  fontSize: 12,
+                  color: "#616161",
+                  marginBottom: 14,
+                  lineHeight: 1.4,
+                }}
+              >
+                {muscleLabel}
               </p>
             )}
+
+            {/* Stats row */}
+            {!isRest && (
+              <div
+                style={{
+                  display: "flex",
+                  gap: 14,
+                  marginBottom: 16,
+                  marginTop: "auto",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: "#555",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  <FiActivity size={11} color="#D4AF37" />
+                  {exCount} exercises
+                </span>
+                {duration > 0 && (
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: "#555",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <FiClock size={11} color="#D4AF37" />
+                    {duration} min
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* View button */}
             {!isRest && (
               <button
                 onClick={() => onViewWorkout(workout)}
                 style={{
-                  marginTop: "auto",
-                  background: "transparent",
-                  border: "1px solid #2a2a2a",
-                  borderRadius: 8,
-                  padding: "8px 12px",
+                  background: "rgba(212,175,55,0.07)",
+                  border: "1px solid rgba(212,175,55,0.2)",
+                  borderRadius: 9,
+                  padding: "10px 14px",
                   color: "#D4AF37",
                   fontSize: 13,
                   fontWeight: 600,
@@ -444,14 +559,15 @@ function WeekGrid({ workouts, onViewWorkout }) {
                   alignItems: "center",
                   justifyContent: "space-between",
                   width: "100%",
+                  transition: "all .15s",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(212,175,55,0.5)";
-                  e.currentTarget.style.background = "rgba(212,175,55,0.06)";
+                  e.currentTarget.style.borderColor = "rgba(212,175,55,0.55)";
+                  e.currentTarget.style.background = "rgba(212,175,55,0.13)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "#2a2a2a";
-                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.borderColor = "rgba(212,175,55,0.2)";
+                  e.currentTarget.style.background = "rgba(212,175,55,0.07)";
                 }}
               >
                 View Workout <FiChevronRight size={14} />

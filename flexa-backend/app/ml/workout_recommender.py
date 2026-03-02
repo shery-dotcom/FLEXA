@@ -113,6 +113,51 @@ COOLDOWN_EXERCISES = [
     {"name": "Child's Pose", "duration": "1 min", "intensity": "low"},
 ]
 
+# ── Workout-type-specific warmup & cooldown ───────────────────────────────────
+_WARMUP_UPPER = [
+    {"name": "Light Cardio (Jog/Jump Rope)", "duration": "5 min", "intensity": "low"},
+    {"name": "Arm Circles (forward & backward)", "duration": "1 min", "intensity": "low"},
+    {"name": "Shoulder Rolls & Cross-Body Swings", "duration": "1 min", "intensity": "low"},
+]
+_WARMUP_LOWER = [
+    {"name": "Light Cardio (Jog/Jump Rope)", "duration": "5 min", "intensity": "low"},
+    {"name": "Hip Rotations", "duration": "1 min", "intensity": "low"},
+    {"name": "Leg Swings (forward & lateral)", "duration": "1 min each side", "intensity": "low"},
+]
+_WARMUP_FULL = [
+    {"name": "Light Cardio (Jog/Jump Rope)", "duration": "5 min", "intensity": "low"},
+    {"name": "Arm Circles", "duration": "1 min", "intensity": "low"},
+    {"name": "Hip Rotations & Leg Swings", "duration": "2 min", "intensity": "low"},
+]
+_COOLDOWN_UPPER = [
+    {"name": "Static Chest Stretch", "duration": "30s each side", "intensity": "low"},
+    {"name": "Shoulder Cross-Body Stretch", "duration": "30s each arm", "intensity": "low"},
+    {"name": "Tricep Overhead Stretch", "duration": "30s each arm", "intensity": "low"},
+]
+_COOLDOWN_LOWER = [
+    {"name": "Standing Quad Stretch", "duration": "30s each leg", "intensity": "low"},
+    {"name": "Seated Hamstring Stretch", "duration": "30s each leg", "intensity": "low"},
+    {"name": "Hip Flexor Lunge Stretch", "duration": "30s each leg", "intensity": "low"},
+]
+_COOLDOWN_FULL = [
+    {"name": "Child's Pose", "duration": "1–2 min", "intensity": "low"},
+    {"name": "Hamstring Stretch", "duration": "30s each leg", "intensity": "low"},
+    {"name": "Shoulder Cross-Body Stretch", "duration": "30s each arm", "intensity": "low"},
+]
+
+
+def _pick_warmup_cooldown(muscle_groups: List[str]):
+    """Return (warmup, cooldown) lists appropriate for the given muscle groups."""
+    _UPPER = {"chest", "back", "shoulders", "arms"}
+    _LOWER = {"legs", "core"}
+    has_upper = any(m in _UPPER for m in muscle_groups)
+    has_lower = any(m in _LOWER for m in muscle_groups)
+    if has_upper and has_lower:
+        return _WARMUP_FULL, _COOLDOWN_FULL
+    if has_lower:
+        return _WARMUP_LOWER, _COOLDOWN_LOWER
+    return _WARMUP_UPPER, _COOLDOWN_UPPER
+
 # ── ML-predicted split templates ─────────────────────────────────────────────
 # Keyed by split name returned by the ML predictor.
 # Each inner list is a list of days, each day a list of muscle groups.
@@ -259,14 +304,15 @@ def generate_workout_plan(
                 duration      = _estimate_duration(exercises)
                 # Build a readable day label
                 label = _split_day_label(split_type, split_day_ptr, muscle_groups)
+                warmup, cooldown = _pick_warmup_cooldown(muscle_groups)
                 workouts.append({
                     "name": label,
                     "week_number": week_number,
                     "day_of_week": day_name,
                     "is_rest_day": False,
                     "exercises": exercises,
-                    "warmup": WARMUP_EXERCISES[:3],
-                    "cooldown": COOLDOWN_EXERCISES[:3],
+                    "warmup": warmup,
+                    "cooldown": cooldown,
                     "duration_minutes": duration,
                     "difficulty": difficulty,
                     "ai_generated": True,
@@ -302,14 +348,15 @@ def generate_workout_plan(
             muscle_groups = split[split_index % len(split)]
             exercises = _get_exercises_for_groups(muscle_groups, difficulty, goal_type)
             duration = _estimate_duration(exercises)
+            warmup, cooldown = _pick_warmup_cooldown(muscle_groups)
             workouts.append({
                 "name": f"{' & '.join(mg.title() for mg in muscle_groups)} Day",
                 "week_number": week_number,
                 "day_of_week": day_name,
                 "is_rest_day": False,
                 "exercises": exercises,
-                "warmup": WARMUP_EXERCISES[:3],
-                "cooldown": COOLDOWN_EXERCISES[:3],
+                "warmup": warmup,
+                "cooldown": cooldown,
                 "duration_minutes": duration,
                 "difficulty": difficulty,
                 "ai_generated": True,

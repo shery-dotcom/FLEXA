@@ -196,6 +196,12 @@ class DietPreferenceResponse(BaseModel):
 
 # ─────────────────────────── Image Analysis ────────────────────────────────
 
+class TopPrediction(BaseModel):
+    """One entry in the top-3 alternatives returned on low-confidence images."""
+    food_name: str
+    confidence: float
+
+
 class ImageAnalysisResponse(BaseModel):
     predicted_class: str
     confidence: float
@@ -207,3 +213,6 @@ class ImageAnalysisResponse(BaseModel):
     low_confidence: bool
     matched_food: Optional[FoodSearchResult] = None
     message: str
+    # Populated when confidence < CONFIDENCE_THRESHOLD (0.60)
+    top_predictions: List[TopPrediction] = []
+    requires_confirmation: bool = False

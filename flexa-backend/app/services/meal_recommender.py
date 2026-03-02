@@ -1,14 +1,90 @@
 """
 Module 3 – Meal Recommendation Engine
-Strategy: content-based filtering on the nutrition_foods table.
-Fallback: built-in food library used when DB has no data.
+Strategy: ML-powered content-based filtering.
+  1. StandardScaler normalises the 5-dimensional macro feature space
+     [calories, protein_g, carbs_g, fat_g, fiber_g] across all 8 000+ foods.
+  2. Cosine similarity ranks candidates against the user's per-slot macro
+     target so the full macro PROFILE is matched, not just total calories.
+  3. A soft region boost (+0.15) surfaces culturally relevant meals.
+  4. Hard filters (meal_type / diet_type / allergens) are applied first so
+     ML scoring only runs on valid candidates.
+  5. Stochastic tie-breaking (random.choice over top-5) ensures variety
+     across plan regenerations.
+Fallback: built-in food library used when the DB is empty.
 """
+import re
+import ast
 import random
+import logging
+from types import SimpleNamespace
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, func
+from sqlalchemy import select, func
 from app.models.diet import NutritionFood
 from app.schemas.diet import MealSuggestion, DietPlanResponse
+from app.ml.meal_recommender_ml import get_recommender
+
+logger = logging.getLogger(__name__)
+
+# ── Food name / ingredient / allergen cleaning ─────────────────────────────
+_LEADING_NUM_RE   = re.compile(r"^\d[\d\s\-]*\b\s*")
+_FILLER_PREFIX_RE = re.compile(
+    r"^(?:"
+    r"a\s+(?:new\s+|great\s+|easy\s+|quick\s+|can\s+of[\s\w]+?(?:and|&)[\s\w]+?\s+)?"
+    r"|crazy\s+easy\s+|super\s+easy\s+|super\s+quick\s+|quick\s+and\s+easy\s+"
+    r"|easy\s+|simple\s+|world's\s+(?:best\s+|easiest\s+)?"
+    r")",
+    re.IGNORECASE,
+)
+_JUNK_SUFFIX_RE  = re.compile(
+    r"\s+\(?\s*(?:ver(?:sion)?\s*[.\d]+|#\d+|recipe)\s*\)?$",
+    re.IGNORECASE,
+)
+_MULTI_SPACE_RE  = re.compile(r"\s{2,}")
+
+
+def _clean_food_name(name: str) -> str:
+    """Normalize a raw recipe/food name into a presentable title."""
+    if not name:
+        return name
+    name = str(name).strip()
+    name = _LEADING_NUM_RE.sub("", name).strip()
+    for _ in range(2):  # apply twice for nested matches
+        name = _FILLER_PREFIX_RE.sub("", name).strip()
+    name = _JUNK_SUFFIX_RE.sub("", name).strip()
+    name = _MULTI_SPACE_RE.sub(" ", name)
+    name = name.title()
+    if len(name) > 60:
+        name = name[:57].rstrip() + "\u2026"
+    return name or "Unknown Food"
+
+
+def _clean_ingredients(raw: str) -> str:
+    """Convert Python list-repr ingredients string to a clean comma-separated list."""
+    if not raw or str(raw).strip() in ("0.0", "0", "nan", "None", ""):
+        return ""
+    raw = str(raw).strip()
+    if raw.startswith("[") and raw.endswith("]"):
+        try:
+            items = ast.literal_eval(raw)
+            if isinstance(items, list):
+                cleaned = [
+                    str(i).strip().title()
+                    for i in items
+                    if i and str(i).strip() not in ("nan", "0.0", "0", "None", "")
+                ]
+                return ", ".join(cleaned)
+        except (ValueError, SyntaxError):
+            raw = raw[1:-1].replace("'", "").replace('"', "").strip()
+    return raw
+
+
+def _clean_allergens(raw: str) -> str:
+    """Return empty string for garbage allergen values ('0.0', 'nan', etc.)."""
+    if not raw or str(raw).strip() in ("0.0", "0", "nan", "None", ""):
+        return ""
+    return str(raw).strip()
+
 
 # Tips library
 DIET_TIPS = [
@@ -180,25 +256,25 @@ BUILTIN_FOODS = [
 ]
 
 
-def _build_fake_food(d: dict) -> NutritionFood:
-    """Convert a builtin dict to a NutritionFood-like object (not persisted)."""
-    f = NutritionFood.__new__(NutritionFood)
-    f.id            = 0
-    f.food_name     = d["food_name"]
-    f.calories      = d["calories"]
-    f.protein_g     = d["protein_g"]
-    f.carbs_g       = d["carbs_g"]
-    f.fat_g         = d["fat_g"]
-    f.fiber_g       = 0.0
-    f.serving_size_g = 100.0
-    f.meal_type     = d["meal_type"]
-    f.diet_type     = d["diet_type"]
-    f.region        = d["region"]
-    f.allergens     = d["allergens"]
-    f.ingredients   = d["ingredients"]
-    f.cuisine       = d["region"]
-    f.source        = "builtin"
-    return f
+def _build_fake_food(d: dict) -> SimpleNamespace:
+    """Convert a food dict to a lightweight namespace (not an ORM object, not persisted)."""
+    return SimpleNamespace(
+        id             = d.get("id") or 0,
+        food_name      = d["food_name"],
+        calories       = float(d.get("calories") or 0),
+        protein_g      = float(d.get("protein_g") or 0),
+        carbs_g        = float(d.get("carbs_g") or 0),
+        fat_g          = float(d.get("fat_g") or 0),
+        fiber_g        = float(d.get("fiber_g") or 0),
+        serving_size_g = 100.0,
+        meal_type      = d.get("meal_type") or "any",
+        diet_type      = d.get("diet_type") or "non-vegetarian",
+        region         = d.get("region") or "general",
+        allergens      = d.get("allergens") or "",
+        ingredients    = d.get("ingredients") or "",
+        cuisine        = d.get("cuisine") or d.get("region") or "general",
+        source         = d.get("source") or "builtin",
+    )
 
 
 async def _ensure_seeded(db: AsyncSession) -> bool:
@@ -239,40 +315,68 @@ def _scale_meal(food, target_calories: float) -> MealSuggestion:
     scale = qty / 100.0
 
     return MealSuggestion(
-        id        = food.id or 0,
-        food_name = food.food_name,
-        meal_type = food.meal_type,
-        quantity_g= qty,
-        calories  = round(food.calories   * scale, 1),
-        protein_g = round(food.protein_g  * scale, 1),
-        carbs_g   = round(food.carbs_g    * scale, 1),
-        fat_g     = round(food.fat_g      * scale, 1),
-        cuisine   = getattr(food, "cuisine", None) or "general",
-        ingredients=getattr(food, "ingredients", None) or "",
-        allergens = getattr(food, "allergens", None) or "",
+        id         = food.id or 0,
+        food_name  = food.food_name,
+        meal_type  = food.meal_type,
+        quantity_g = qty,
+        calories   = round(food.calories   * scale, 1),
+        protein_g  = round(food.protein_g  * scale, 1),
+        carbs_g    = round(food.carbs_g    * scale, 1),
+        fat_g      = round(food.fat_g      * scale, 1),
+        cuisine    = getattr(food, "cuisine", None) or "general",
+        ingredients= getattr(food, "ingredients", None) or "",
+        allergens  = getattr(food, "allergens", None) or "",
     )
 
 
-def _score_food(food, region: str, target_cal: float) -> float:
-    score = 0.0
-    if food.region and region and food.region.lower() == region.lower():
-        score += 2.0
-    if hasattr(food, "cuisine") and food.cuisine and region and food.cuisine.lower() == region.lower():
-        score += 1.0
-    if food.calories and food.calories > 0:
-        proximity = 1.0 / (1.0 + abs(food.calories - target_cal) / max(target_cal, 1))
-        score += proximity
-    return score
+def _food_to_dict(food: NutritionFood) -> dict:
+    """Convert ORM row \u2192 plain dict for the ML model (applies name/ingredient/allergen cleaning)."""
+    return {
+        "id":          food.id,
+        "food_name":   _clean_food_name(food.food_name or ""),
+        "calories":    food.calories   or 0.0,
+        "protein_g":   food.protein_g  or 0.0,
+        "carbs_g":     food.carbs_g    or 0.0,
+        "fat_g":       food.fat_g      or 0.0,
+        "fiber_g":     food.fiber_g    or 0.0,
+        "meal_type":   food.meal_type  or "any",
+        "diet_type":   food.diet_type  or "non-vegetarian",
+        "allergens":   _clean_allergens(food.allergens or ""),
+        "region":      food.region     or "general",
+        "cuisine":     getattr(food, "cuisine", None) or "general",
+        "ingredients": _clean_ingredients(getattr(food, "ingredients", None) or ""),
+    }
+
+
+async def _ensure_ml_fitted(db: AsyncSession) -> None:
+    """
+    Lazily load every food from the DB into the ML recommender singleton.
+    Runs once per process; subsequent calls are no-ops.
+    """
+    rec = get_recommender()
+    if rec.is_fitted:
+        return
+
+    result = await db.execute(
+        select(NutritionFood).where(NutritionFood.calories > 0)
+    )
+    foods = result.scalars().all()
+
+    if foods:
+        rec.fit([_food_to_dict(f) for f in foods])
+        logger.info("ML recommender fitted on %d DB foods.", len(foods))
+    else:
+        # DB empty — fit on built-in library so model is still usable
+        rec.fit(BUILTIN_FOODS)
+        logger.warning("DB empty — ML recommender fitted on built-in library (%d items).", len(BUILTIN_FOODS))
 
 
 def _filter_builtin(meal_type: str, diet_types: List[str], allergies: List[str], region: str):
-    """Filter BUILTIN_FOODS and return NutritionFood-like objects."""
-    # Randomly pick one diet type from the list for variety
-    diet_type = random.choice(diet_types) if diet_types else "non-vegetarian"
-    compatible_diets = {"any", diet_type}
-    if diet_type == "non-vegetarian":
-        compatible_diets.update({"vegetarian", "vegan", "keto"})
-    elif diet_type == "vegetarian":
+    """Pure-Python hard-filter over BUILTIN_FOODS — used as last-resort fallback."""
+    compatible_diets = {"any"} | set(diet_types)
+    if "non-vegetarian" in diet_types:
+        compatible_diets.update({"vegetarian", "vegan"})
+    elif "vegetarian" in diet_types:
         compatible_diets.add("vegan")
 
     results = []
@@ -282,47 +386,11 @@ def _filter_builtin(meal_type: str, diet_types: List[str], allergies: List[str],
         if d["diet_type"] not in compatible_diets:
             continue
         if allergies:
-            allergen_str = d.get("allergens", "").lower()
-            if any(a.lower() in allergen_str for a in allergies):
+            al = d.get("allergens", "").lower()
+            if any(a.lower() in al for a in allergies if a.strip()):
                 continue
         results.append(_build_fake_food(d))
     return results
-
-
-async def _fetch_candidates(
-    db: AsyncSession,
-    meal_type: str,
-    diet_types: List[str],
-    allergies: List[str],
-    region: str,
-) -> List[NutritionFood]:
-    # Randomly pick ONE diet type from the user's chosen list for this slot.
-    # This gives a different mix on every regeneration.
-    diet_type = random.choice(diet_types) if diet_types else "non-vegetarian"
-
-    compatible = {diet_type, "any"}
-    if diet_type == "non-vegetarian":
-        compatible.update({"vegetarian", "vegan"})
-    elif diet_type == "vegetarian":
-        compatible.add("vegan")
-
-    stmt = select(NutritionFood).where(
-        or_(
-            NutritionFood.meal_type == meal_type,
-            NutritionFood.meal_type == "any",
-        ),
-        NutritionFood.diet_type.in_(list(compatible)),
-        NutritionFood.calories > 0,
-    )
-    result = await db.execute(stmt)
-    foods  = result.scalars().all()
-
-    if allergies:
-        def has_allergen(food: NutritionFood) -> bool:
-            return any(a.lower() in (food.allergens or "").lower() for a in allergies)
-        foods = [f for f in foods if not has_allergen(f)]
-
-    return list(foods)
 
 
 async def generate_meal_plan(
@@ -336,45 +404,79 @@ async def generate_meal_plan(
     allergies: Optional[List[str]] = None,
     meals_per_day: int = 3,
 ) -> DietPlanResponse:
+    """
+    ML-powered meal plan generation.
+
+    For each meal slot the function:
+    1. Computes a per-slot macro target vector (calories, protein, carbs, fat).
+    2. Calls MealRecommenderML.recommend() which:
+         a. Hard-filters by meal_type / diet_type / allergens.
+         b. Scales features with a pre-fitted StandardScaler.
+         c. Ranks all candidates by cosine similarity to the target.
+         d. Applies a soft +0.15 boost for culturally matching foods.
+    3. Randomly picks from the top-5 to add variety across regenerations.
+    4. Falls back to the built-in food library if the DB is empty.
+    """
     if diet_types is None or len(diet_types) == 0:
         diet_types = ["non-vegetarian"]
     if allergies is None:
         allergies = []
 
-    # Auto-seed the DB if empty
+    # Ensure DB has data and ML model is fitted
     await _ensure_seeded(db)
+    await _ensure_ml_fitted(db)
 
+    rec         = get_recommender()
     slot_list   = MEAL_CALORIE_SPLITS.get(meals_per_day, MEAL_CALORIE_SPLITS[3])
     plan: dict  = {"breakfast": [], "lunch": [], "dinner": [], "snack": []}
     total_cal = total_pro = total_carb = total_fat = 0.0
-    chosen_names: set = set()  # prevent same food appearing twice
+    chosen_names: set = set()   # avoid serving the same food twice in one plan
 
     for slot, fraction in slot_list:
-        slot_cal_target = calorie_target * fraction
+        # Per-slot macro targets
+        slot_cal  = calorie_target * fraction
+        slot_pro  = protein_g     * fraction
+        slot_carb = carbs_g       * fraction
+        slot_fat  = fat_g         * fraction
 
-        # 1) Try DB
-        candidates = await _fetch_candidates(db, slot, diet_types, allergies, region)
-        if not candidates:
-            candidates = await _fetch_candidates(db, "any", diet_types, allergies, region)
+        # ── ML ranking ────────────────────────────────────────────────
+        ranked_idx = rec.recommend(
+            target_calories = slot_cal,
+            target_protein_g= slot_pro,
+            target_carbs_g  = slot_carb,
+            target_fat_g    = slot_fat,
+            meal_type       = slot,
+            diet_types      = diet_types,
+            allergies       = allergies,
+            region          = region,
+            top_n           = 20,          # rank 20; we'll filter by novelty then pick
+        )
 
-        # 2) Fallback to built-in list
-        if not candidates:
-            candidates = _filter_builtin(slot, diet_types, allergies, region)
-        if not candidates:
-            candidates = _filter_builtin("any", diet_types, allergies, region)
-        if not candidates:
-            candidates = [_build_fake_food(random.choice(BUILTIN_FOODS))]
+        # Remove already-chosen foods for variety; accept duplicates as last resort
+        novel_idx = [i for i in ranked_idx if rec.get_food(i)["food_name"] not in chosen_names]
+        best_idx  = novel_idx if novel_idx else ranked_idx
 
-        # Exclude already-chosen foods to avoid repetition
-        fresh = [c for c in candidates if c.food_name not in chosen_names]
-        if not fresh:
-            fresh = candidates  # all used — allow repeats as last resort
+        if best_idx:
+            # Stochastic tie-break among the top-5 cosine-ranked candidates
+            pick_from = best_idx[:5]
+            chosen_i  = random.choice(pick_from)
+            food_dict = rec.get_food(chosen_i)
 
-        scored  = sorted(fresh, key=lambda f: _score_food(f, region, slot_cal_target / 100.0), reverse=True)
-        top_n   = scored[:min(5, len(scored))]
-        chosen  = random.choice(top_n)
-        chosen_names.add(chosen.food_name)
-        item    = _scale_meal(chosen, slot_cal_target)
+            # Re-construct a lightweight NutritionFood-like object for _scale_meal
+            food_obj = _build_fake_food(food_dict)
+            food_obj.id = food_dict.get("id") or 0
+        else:
+            # ── Hard fallback: built-in library ──────────────────────────
+            pool = _filter_builtin(slot, diet_types, allergies, region)
+            if not pool:
+                pool = _filter_builtin("any", diet_types, allergies, region)
+            if not pool:
+                pool = [_build_fake_food(random.choice(BUILTIN_FOODS))]
+            fresh = [f for f in pool if f.food_name not in chosen_names] or pool
+            food_obj = random.choice(fresh[:5])
+
+        chosen_names.add(food_obj.food_name)
+        item = _scale_meal(food_obj, slot_cal)
 
         plan[slot].append(item)
         total_cal  += item.calories
@@ -382,7 +484,7 @@ async def generate_meal_plan(
         total_carb += item.carbs_g
         total_fat  += item.fat_g
 
-    tips  = random.sample(DIET_TIPS, min(3, len(DIET_TIPS)))
+    tips = random.sample(DIET_TIPS, min(3, len(DIET_TIPS)))
 
     return DietPlanResponse(
         calorie_target  = calorie_target,

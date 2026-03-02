@@ -1,23 +1,18 @@
 /**
  * DietPlanner.js — Module 3: Personalized Diet Planner
- * Multi-step flow:
- *   Step 1 → Personal info → calculate BMR/TDEE
- *   Step 2 → Show calorie & macro targets
- *   Step 3 → Preferences (region, diet type, allergies)
- *   Step 4 → Generated meal plan
+ * 2-step flow (auto-calculates from sign-up profile):
+ *   Step 0 → Preferences (region, diet type, allergies, meals/day)
+ *   Step 1 → Generated 7-day meal plan with day tabs
  *   + Tab: Daily meal logger
  */
 import { useState, useEffect, useCallback } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import {
-  FiUser,
   FiTarget,
   FiSettings,
   FiList,
   FiPlus,
   FiTrash2,
-  FiChevronRight,
-  FiChevronLeft,
   FiRefreshCw,
   FiDroplet,
   FiSun,
@@ -34,49 +29,7 @@ import { useAuth } from "../context/AuthContext";
 
 // ──────────────────────────────────────── Constants ────────────────────────
 const GOLD = "#D4AF37";
-const STEPS = ["Your Info", "Calorie Targets", "Preferences", "Your Plan"];
-
-const ACTIVITY_OPTIONS = [
-  { value: "sedentary", label: "Sedentary", sub: "Desk job, no exercise" },
-  {
-    value: "lightly_active",
-    label: "Lightly Active",
-    sub: "Light exercise 1–3×/week",
-  },
-  {
-    value: "moderately_active",
-    label: "Moderately Active",
-    sub: "Exercise 3–5×/week",
-  },
-  {
-    value: "very_active",
-    label: "Very Active",
-    sub: "Hard exercise 6–7×/week",
-  },
-  {
-    value: "extremely_active",
-    label: "Extremely Active",
-    sub: "Physical job + 2× training",
-  },
-];
-
-const GOAL_OPTIONS = [
-  {
-    value: "fat_loss",
-    label: "Fat Loss",
-    sub: "500 kcal deficit · −0.5 kg/week",
-  },
-  {
-    value: "muscle_gain",
-    label: "Muscle Gain",
-    sub: "300 kcal surplus · lean bulk",
-  },
-  {
-    value: "maintenance",
-    label: "Maintenance",
-    sub: "Maintain current weight",
-  },
-];
+const STEPS = ["Preferences", "Your Plan"];
 
 const REGION_OPTIONS = [
   "general",
@@ -181,7 +134,28 @@ function MacroPill({ label, value, unit, color }) {
   );
 }
 
+// Parse Python list-repr ingredients string → clean comma-separated string
+function parseIngredients(raw) {
+  if (!raw || ["0.0", "0", "nan", "None"].includes(String(raw).trim()))
+    return "";
+  const s = String(raw).trim();
+  if (s.startsWith("[") && s.endsWith("]")) {
+    // strip brackets, remove quotes, split on comma-space between items
+    const inner = s.slice(1, -1);
+    const items = inner
+      .split(/,\s*(?='|"|\w)/)
+      .map((i) => i.replace(/^['"]|['"]$/g, "").trim())
+      .filter((i) => i && !["nan", "0.0", "0"].includes(i));
+    return items.map((i) => i.charAt(0).toUpperCase() + i.slice(1)).join(", ");
+  }
+  return s;
+}
+
 function MealCard({ meal, onLog }) {
+  const ingredients = parseIngredients(meal.ingredients);
+  const cuisine =
+    meal.cuisine && meal.cuisine !== "general" ? meal.cuisine : null;
+
   return (
     <div
       style={{
@@ -199,7 +173,7 @@ function MealCard({ meal, onLog }) {
           {meal.food_name}
         </div>
         <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>
-          {meal.quantity_g}g · {meal.cuisine || "general"}
+          {meal.quantity_g}g{cuisine ? ` · ${cuisine}` : ""}
         </div>
         <div
           style={{ display: "flex", gap: 10, marginTop: 6, flexWrap: "wrap" }}
@@ -217,10 +191,11 @@ function MealCard({ meal, onLog }) {
             F {meal.fat_g}g
           </span>
         </div>
-        {meal.ingredients && (
+        {ingredients && (
           <div style={{ fontSize: 10, color: "#444", marginTop: 4 }}>
-            {meal.ingredients.slice(0, 80)}
-            {meal.ingredients.length > 80 ? "…" : ""}
+            {ingredients.length > 90
+              ? ingredients.slice(0, 87) + "…"
+              : ingredients}
           </div>
         )}
       </div>
@@ -290,27 +265,21 @@ export default function DietPlanner() {
   const [step, setStep] = useState(0);
   const [tab, setTab] = useState("plan"); // plan | log
 
-  // Step 1 form
-  const [form, setForm] = useState({
-    age: "",
-    gender: "male",
-    weight_kg: "",
-    height_cm: "",
-    activity_level: "moderately_active",
-    goal: "maintenance",
-  });
-  const [calcLoading, setCalcLoading] = useState(false);
   const [targets, setTargets] = useState(null);
+  const [autoCalcLoading, setAutoCalcLoading] = useState(true);
+  const [autoCalcError, setAutoCalcError] = useState(null);
 
-  // Step 3 prefs
+  // Step 0 prefs
   const [prefs, setPrefs] = useState({
-    region: "general",
-    diet_type: ["non-vegetarian"],
+    region: "",
+    diet_type: [],
     allergies: [],
-    meals_per_day: 3,
+    meals_per_day: null,
   });
   const [planLoading, setPlanLoading] = useState(false);
-  const [plan, setPlan] = useState(null);
+  const [weeklyPlan, setWeeklyPlan] = useState(null); // [Mon..Sun] – 7 daily plans
+  const [selectedDay, setSelectedDay] = useState(0); // 0 = Monday
+  const plan = weeklyPlan ? weeklyPlan[selectedDay] : null;
 
   // Daily log tab
   const [searchQuery, setSearchQuery] = useState("");
@@ -327,32 +296,29 @@ export default function DietPlanner() {
   const [editingLog, setEditingLog] = useState(null); // { id, qty, meal_type }
   const [editSaving, setEditSaving] = useState(false);
 
-  // ── On mount: load existing diet preferences or pre-fill from profile ──────
+  // ── On mount: auto-calculate from profile + active goal ─────────────────
   useEffect(() => {
+    const GOAL_MAP = {
+      bulking: "muscle_gain",
+      cutting: "fat_loss",
+      recomp: "maintenance",
+    };
+    const ACTIVITY_MAP = {
+      sedentary: "sedentary",
+      light: "lightly_active",
+      moderate: "moderately_active",
+      active: "very_active",
+      very_active: "extremely_active",
+    };
+
     const init = async () => {
-      // 1) Try loading saved diet preferences
+      setAutoCalcLoading(true);
+      setAutoCalcError(null);
+
+      // 1) If saved diet preferences exist, restore targets and skip to prefs or plan
       try {
         const res = await api.get("/diet/preferences");
         const p = res.data;
-        // Pre-fill form with stored personal metrics
-        setForm({
-          age: p.age,
-          gender: p.gender,
-          weight_kg: p.weight_kg,
-          height_cm: p.height_cm,
-          activity_level: p.activity_level,
-          goal: p.goal,
-        });
-        // Pre-fill preferences
-        setPrefs({
-          region: p.region,
-          diet_type: Array.isArray(p.diet_type)
-            ? p.diet_type
-            : (p.diet_type || "non-vegetarian").split(",").map((s) => s.trim()),
-          allergies: p.allergies || [],
-          meals_per_day: p.meals_per_day,
-        });
-        // Restore computed targets
         setTargets({
           calorie_target: p.daily_calorie_target,
           protein_g: p.protein_target_g,
@@ -361,32 +327,76 @@ export default function DietPlanner() {
           water_ml: p.water_target_ml,
           bmr: p.bmr,
           tdee: p.tdee,
-          summary: `Based on your ${p.goal.replace("_", " ")} goal and ${p.activity_level.replace("_", " ")} lifestyle.`,
         });
-        // Skip step 0 – user already went through this
-        setStep(1);
+        setPrefs({
+          region: p.region || "",
+          diet_type: Array.isArray(p.diet_type)
+            ? p.diet_type
+            : (p.diet_type || "")
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean),
+          allergies: p.allergies || [],
+          meals_per_day: p.meals_per_day || null,
+        });
+        const savedWeeklyPlan = localStorage.getItem("flexa_diet_weekly_plan");
+        if (savedWeeklyPlan) {
+          try {
+            setWeeklyPlan(JSON.parse(savedWeeklyPlan));
+            setSelectedDay(0);
+            setStep(1);
+          } catch {
+            setStep(0);
+          }
+        } else {
+          setStep(0);
+        }
+        setAutoCalcLoading(false);
         return;
       } catch {
-        // 404 = no preferences yet — fall back to profile data
+        // 404 — no preferences yet; continue to auto-calculate
       }
 
-      // 2) No saved preferences: pre-fill what we know from the user profile
-      const profile = user?.profile;
-      if (profile) {
-        setForm((f) => ({
-          ...f,
-          age: profile.age ?? f.age,
-          gender: profile.gender ?? f.gender,
-          weight_kg: profile.weight_kg ?? f.weight_kg,
-          height_cm: profile.height_cm ?? f.height_cm,
-        }));
-        if (profile.region) {
-          setPrefs((p) => ({ ...p, region: profile.region }));
+      // 2) Auto-calculate from profile + active goal
+      try {
+        const [meRes, goalRes] = await Promise.all([
+          api.get("/users/me"),
+          api.get("/goals/active"),
+        ]);
+        const profile = meRes.data.profile;
+        const goal = goalRes.data;
+        if (
+          !profile?.age ||
+          !profile?.weight_kg ||
+          !profile?.height_cm ||
+          !profile?.gender
+        ) {
+          setAutoCalcError(
+            "Please complete your profile setup before using the diet planner.",
+          );
+          setAutoCalcLoading(false);
+          return;
         }
+        const calcRes = await api.post("/diet/calculate-calories", {
+          age: profile.age,
+          gender: profile.gender,
+          weight_kg: profile.weight_kg,
+          height_cm: profile.height_cm,
+          activity_level:
+            ACTIVITY_MAP[goal.activity_level] || "moderately_active",
+          goal: GOAL_MAP[goal.goal_type] || "maintenance",
+        });
+        setTargets(calcRes.data);
+        setStep(0);
+      } catch {
+        setAutoCalcError(
+          "Set up your profile and fitness goal before using the diet planner.",
+        );
       }
+      setAutoCalcLoading(false);
     };
     init();
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Fetch daily summary ────────────────────────────────────────────────
   const fetchSummary = useCallback(async () => {
@@ -464,51 +474,46 @@ export default function DietPlanner() {
     }
   };
 
-  // ── Step 1: Calculate calories ─────────────────────────────────────────
-  const handleCalculate = async () => {
-    const { age, weight_kg, height_cm } = form;
-    if (!age || !weight_kg || !height_cm) {
-      toast.error("Please fill in age, weight and height.");
-      return;
-    }
-    setCalcLoading(true);
-    try {
-      const res = await api.post("/diet/calculate-calories", {
-        ...form,
-        age: parseInt(age),
-        weight_kg: parseFloat(weight_kg),
-        height_cm: parseFloat(height_cm),
-      });
-      setTargets(res.data);
-      setStep(1);
-      toast.success("Calorie targets calculated!");
-    } catch (e) {
-      toast.error(e.response?.data?.detail || "Calculation failed.");
-    } finally {
-      setCalcLoading(false);
-    }
-  };
-
-  // ── Step 4: Generate plan ──────────────────────────────────────────────
+  // ── Step 0 → 1: Generate plan (7-day) ─────────────────────────────────
   const handleGeneratePlan = async () => {
     if (!targets) return;
+    if (!prefs.region) {
+      toast.error("Please select a cuisine region.");
+      return;
+    }
+    if (!prefs.diet_type || prefs.diet_type.length === 0) {
+      toast.error("Please select at least one diet type.");
+      return;
+    }
+    if (!prefs.meals_per_day) {
+      toast.error("Please select meals per day.");
+      return;
+    }
     setPlanLoading(true);
+    const toastId = "plan-gen";
+    toast.loading("Building your 7-day meal plan…", { id: toastId });
     try {
-      const res = await api.post("/diet/generate-plan", {
+      const body = {
         calorie_target: targets.calorie_target,
         protein_g: targets.protein_g,
         carbs_g: targets.carbs_g,
         fat_g: targets.fat_g,
         ...prefs,
-      });
-      setPlan(res.data);
-      setStep(3);
-      toast.success("Meal plan generated!");
-    } catch (e) {
-      toast.error(
-        e.response?.data?.detail ||
-          "Plan generation failed. Seed the nutrition DB first.",
+      };
+      // 7 parallel calls → different stochastic tie-breaks per day
+      const results = await Promise.all(
+        Array.from({ length: 7 }, () => api.post("/diet/generate-plan", body)),
       );
+      const plans = results.map((r) => r.data);
+      setWeeklyPlan(plans);
+      setSelectedDay(0);
+      setStep(1);
+      localStorage.setItem("flexa_diet_weekly_plan", JSON.stringify(plans));
+      toast.success("7-day meal plan ready!", { id: toastId });
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Plan generation failed.", {
+        id: toastId,
+      });
     } finally {
       setPlanLoading(false);
     }
@@ -601,380 +606,36 @@ export default function DietPlanner() {
         ))}
       </div>
 
-      {/* ── Step 0: Personal Info ── */}
-      {step === 0 && (
-        <div style={{ maxWidth: 560, margin: "0 auto" }}>
-          <h2 style={{ color: GOLD, marginBottom: 8, fontSize: 22 }}>
-            Your Personal Info
-          </h2>
-          <p style={{ color: "#666", marginBottom: 28, fontSize: 13 }}>
-            Used to calculate your Basal Metabolic Rate (Mifflin-St Jeor
-            formula).
-          </p>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 16,
-              marginBottom: 16,
-            }}
-          >
-            {[
-              { key: "age", label: "Age", placeholder: "25", type: "number" },
-              {
-                key: "weight_kg",
-                label: "Weight (kg)",
-                placeholder: "70",
-                type: "number",
-              },
-              {
-                key: "height_cm",
-                label: "Height (cm)",
-                placeholder: "175",
-                type: "number",
-              },
-            ].map(({ key, label, placeholder, type }) => (
-              <div
-                key={key}
-                style={{ gridColumn: key === "height_cm" ? "1 / -1" : "auto" }}
-              >
-                <label
-                  style={{
-                    fontSize: 12,
-                    color: "#888",
-                    display: "block",
-                    marginBottom: 6,
-                  }}
-                >
-                  {label}
-                </label>
-                <input
-                  type={type}
-                  placeholder={placeholder}
-                  value={form[key]}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, [key]: e.target.value }))
-                  }
-                  style={{
-                    width: "100%",
-                    background: "#111",
-                    border: "1px solid #282828",
-                    borderRadius: 8,
-                    padding: "10px 14px",
-                    color: "#e0e0e0",
-                    fontSize: 14,
-                    boxSizing: "border-box",
-                    outline: "none",
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* Gender */}
-          <div style={{ marginBottom: 20 }}>
-            <label
-              style={{
-                fontSize: 12,
-                color: "#888",
-                display: "block",
-                marginBottom: 8,
-              }}
-            >
-              Gender
-            </label>
-            <div style={{ display: "flex", gap: 10 }}>
-              {["male", "female"].map((g) => (
-                <button
-                  key={g}
-                  onClick={() => setForm((f) => ({ ...f, gender: g }))}
-                  style={{
-                    flex: 1,
-                    padding: "10px 0",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    background: form.gender === g ? `${GOLD}22` : "#111",
-                    border: `1px solid ${form.gender === g ? GOLD : "#282828"}`,
-                    color: form.gender === g ? GOLD : "#666",
-                    fontWeight: 600,
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {g}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Activity */}
-          <div style={{ marginBottom: 20 }}>
-            <label
-              style={{
-                fontSize: 12,
-                color: "#888",
-                display: "block",
-                marginBottom: 8,
-              }}
-            >
-              Activity Level
-            </label>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {ACTIVITY_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() =>
-                    setForm((f) => ({ ...f, activity_level: opt.value }))
-                  }
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    padding: "10px 14px",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    background:
-                      form.activity_level === opt.value ? `${GOLD}18` : "#111",
-                    border: `1px solid ${form.activity_level === opt.value ? GOLD : "#222"}`,
-                    textAlign: "left",
-                  }}
-                >
-                  <span
-                    style={{
-                      color: form.activity_level === opt.value ? GOLD : "#ccc",
-                      fontWeight: 600,
-                      fontSize: 13,
-                    }}
-                  >
-                    {opt.label}
-                  </span>
-                  <span style={{ color: "#555", fontSize: 11, marginTop: 2 }}>
-                    {opt.sub}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Goal */}
-          <div style={{ marginBottom: 28 }}>
-            <label
-              style={{
-                fontSize: 12,
-                color: "#888",
-                display: "block",
-                marginBottom: 8,
-              }}
-            >
-              Goal
-            </label>
-            <div style={{ display: "flex", gap: 10 }}>
-              {GOAL_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setForm((f) => ({ ...f, goal: opt.value }))}
-                  style={{
-                    flex: 1,
-                    padding: "10px 10px 8px",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    background: form.goal === opt.value ? `${GOLD}22` : "#111",
-                    border: `1px solid ${form.goal === opt.value ? GOLD : "#222"}`,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 3,
-                  }}
-                >
-                  <span
-                    style={{
-                      color: form.goal === opt.value ? GOLD : "#ccc",
-                      fontWeight: 700,
-                      fontSize: 12,
-                    }}
-                  >
-                    {opt.label}
-                  </span>
-                  <span
-                    style={{ color: "#555", fontSize: 10, textAlign: "center" }}
-                  >
-                    {opt.sub}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button
-            onClick={handleCalculate}
-            disabled={calcLoading}
-            style={{
-              width: "100%",
-              padding: "14px 24px",
-              background: GOLD,
-              color: "#000",
-              border: "none",
-              borderRadius: 10,
-              fontSize: 15,
-              fontWeight: 700,
-              cursor: calcLoading ? "not-allowed" : "pointer",
-              opacity: calcLoading ? 0.7 : 1,
-            }}
-          >
-            {calcLoading ? "Calculating…" : "Calculate My Targets →"}
-          </button>
-        </div>
-      )}
-
-      {/* ── Step 1: Calorie Targets ── */}
-      {step === 1 && targets && (
-        <div style={{ maxWidth: 560, margin: "0 auto" }}>
-          <h2 style={{ color: GOLD, marginBottom: 6, fontSize: 22 }}>
-            Your Calorie Targets
-          </h2>
-          <p style={{ color: "#666", fontSize: 13, marginBottom: 24 }}>
-            {targets.summary}
-          </p>
-
-          {/* BMR / TDEE / Target */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
-              gap: 12,
-              marginBottom: 24,
-            }}
-          >
-            {[
-              {
-                label: "BMR",
-                value: Math.round(targets.bmr),
-                sub: "kcal/day at rest",
-              },
-              {
-                label: "TDEE",
-                value: Math.round(targets.tdee),
-                sub: "with activity",
-              },
-              {
-                label: "TARGET",
-                value: Math.round(targets.calorie_target),
-                sub: "your daily goal",
-              },
-            ].map(({ label, value, sub }) => (
-              <div
-                key={label}
-                style={{
-                  background: "#111",
-                  border: `1px solid ${label === "TARGET" ? GOLD + "66" : "#222"}`,
-                  borderRadius: 12,
-                  padding: "16px 12px",
-                  textAlign: "center",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 28,
-                    fontWeight: 800,
-                    color: label === "TARGET" ? GOLD : "#e0e0e0",
-                  }}
-                >
-                  {value}
-                </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: GOLD,
-                    fontWeight: 600,
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  {label}
-                </div>
-                <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>
-                  {sub}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Macros */}
-          <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-            <MacroPill
-              label="Protein"
-              value={`${targets.protein_g}g`}
-              unit="kcal/g×4"
-              color="#4ec9b0"
-            />
-            <MacroPill
-              label="Carbs"
-              value={`${targets.carbs_g}g`}
-              unit="kcal/g×4"
-              color="#ce9178"
-            />
-            <MacroPill
-              label="Fats"
-              value={`${targets.fat_g}g`}
-              unit="kcal/g×9"
-              color="#dcdcaa"
-            />
-          </div>
-
-          {/* Water */}
-          <div
-            style={{
-              background: "rgba(78,201,176,0.06)",
-              border: "1px solid rgba(78,201,176,0.15)",
-              borderRadius: 12,
-              padding: "12px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              marginBottom: 28,
-            }}
-          >
-            <FiDroplet color="#4ec9b0" size={18} />
-            <span style={{ color: "#4ec9b0", fontWeight: 600 }}>
-              Drink {(targets.water_ml / 1000).toFixed(1)}L of water daily
-            </span>
-          </div>
-
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              onClick={() => setStep(0)}
-              style={{
-                flex: 1,
-                padding: "12px 0",
-                background: "transparent",
-                border: "1px solid #333",
-                borderRadius: 10,
-                color: "#888",
-                cursor: "pointer",
-              }}
-            >
-              <FiChevronLeft size={14} style={{ marginRight: 4 }} /> Back
-            </button>
-            <button
-              onClick={() => setStep(2)}
-              style={{
-                flex: 2,
-                padding: "12px 0",
-                background: GOLD,
-                color: "#000",
-                border: "none",
-                borderRadius: 10,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              Set Preferences →
-            </button>
+      {/* ── Loading / Error state while auto-calculating ── */}
+      {autoCalcLoading && (
+        <div style={{ textAlign: "center", padding: "60px 0", color: "#666" }}>
+          <div style={{ fontSize: 14 }}>
+            Calculating your targets from your profile…
           </div>
         </div>
       )}
 
-      {/* ── Step 2: Preferences ── */}
-      {step === 2 && (
+      {!autoCalcLoading && autoCalcError && (
+        <div
+          style={{
+            maxWidth: 480,
+            margin: "0 auto",
+            background: "rgba(239,68,68,0.08)",
+            border: "1px solid rgba(239,68,68,0.25)",
+            borderRadius: 12,
+            padding: "24px 20px",
+            textAlign: "center",
+          }}
+        >
+          <div style={{ color: "#ef4444", fontWeight: 600, marginBottom: 8 }}>
+            Profile Incomplete
+          </div>
+          <div style={{ color: "#888", fontSize: 13 }}>{autoCalcError}</div>
+        </div>
+      )}
+
+      {/* ── Step 0: Preferences ── */}
+      {!autoCalcLoading && !autoCalcError && step === 0 && (
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
           <h2 style={{ color: GOLD, marginBottom: 8, fontSize: 22 }}>
             Your Food Preferences
@@ -1150,44 +811,29 @@ export default function DietPlanner() {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              onClick={() => setStep(1)}
-              style={{
-                flex: 1,
-                padding: "12px 0",
-                background: "transparent",
-                border: "1px solid #333",
-                borderRadius: 10,
-                color: "#888",
-                cursor: "pointer",
-              }}
-            >
-              <FiChevronLeft size={14} style={{ marginRight: 4 }} /> Back
-            </button>
-            <button
-              onClick={handleGeneratePlan}
-              disabled={planLoading}
-              style={{
-                flex: 2,
-                padding: "12px 0",
-                background: GOLD,
-                color: "#000",
-                border: "none",
-                borderRadius: 10,
-                fontWeight: 700,
-                cursor: "pointer",
-                opacity: planLoading ? 0.7 : 1,
-              }}
-            >
-              {planLoading ? "Generating…" : "Generate My Plan →"}
-            </button>
-          </div>
+          <button
+            onClick={handleGeneratePlan}
+            disabled={planLoading}
+            style={{
+              width: "100%",
+              padding: "14px 0",
+              background: GOLD,
+              color: "#000",
+              border: "none",
+              borderRadius: 10,
+              fontWeight: 700,
+              cursor: planLoading ? "not-allowed" : "pointer",
+              opacity: planLoading ? 0.7 : 1,
+              fontSize: 15,
+            }}
+          >
+            {planLoading ? "Generating…" : "Generate My Plan →"}
+          </button>
         </div>
       )}
 
-      {/* ── Step 3: Meal Plan ── */}
-      {step === 3 && plan && (
+      {/* ── Step 1: Meal Plan ── */}
+      {!autoCalcLoading && !autoCalcError && step === 1 && plan && (
         <div>
           {/* Header */}
           <div
@@ -1195,36 +841,114 @@ export default function DietPlanner() {
               display: "flex",
               justifyContent: "space-between",
               alignItems: "flex-start",
-              marginBottom: 24,
+              marginBottom: 20,
+              flexWrap: "wrap",
+              gap: 12,
             }}
           >
             <div>
               <h2 style={{ color: GOLD, fontSize: 22, marginBottom: 4 }}>
-                Your Daily Meal Plan
+                Your 7-Day Meal Plan
               </h2>
               <p style={{ color: "#666", fontSize: 12 }}>
                 Total: {plan.total_calories} kcal · P {plan.total_protein_g}g ·
                 C {plan.total_carbs_g}g · F {plan.total_fat_g}g
               </p>
             </div>
-            <button
-              onClick={handleGeneratePlan}
-              disabled={planLoading}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                background: "rgba(212,175,55,0.1)",
-                border: `1px solid ${GOLD}44`,
-                borderRadius: 8,
-                padding: "8px 14px",
-                color: GOLD,
-                cursor: "pointer",
-              }}
-            >
-              <FiRefreshCw size={13} /> Regenerate
-            </button>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                onClick={() => {
+                  setPrefs({
+                    region: "",
+                    diet_type: [],
+                    allergies: [],
+                    meals_per_day: null,
+                  });
+                  localStorage.removeItem("flexa_diet_weekly_plan");
+                  setWeeklyPlan(null);
+                  setStep(0);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid #333",
+                  borderRadius: 8,
+                  padding: "8px 14px",
+                  color: "#aaa",
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                <FiSettings size={13} /> Change Plan
+              </button>
+              <button
+                onClick={handleGeneratePlan}
+                disabled={planLoading}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "rgba(212,175,55,0.1)",
+                  border: `1px solid ${GOLD}44`,
+                  borderRadius: 8,
+                  padding: "8px 14px",
+                  color: GOLD,
+                  cursor: planLoading ? "not-allowed" : "pointer",
+                  opacity: planLoading ? 0.6 : 1,
+                  fontSize: 13,
+                }}
+              >
+                <FiRefreshCw size={13} /> Regenerate
+              </button>
+            </div>
           </div>
+
+          {/* Day selector — Mon through Sun */}
+          {(() => {
+            const DAY_LABELS = [
+              "Mon",
+              "Tue",
+              "Wed",
+              "Thu",
+              "Fri",
+              "Sat",
+              "Sun",
+            ];
+            return (
+              <div
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  marginBottom: 20,
+                  overflowX: "auto",
+                  paddingBottom: 4,
+                }}
+              >
+                {DAY_LABELS.map((d, i) => (
+                  <button
+                    key={d}
+                    onClick={() => setSelectedDay(i)}
+                    style={{
+                      padding: "7px 14px",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      background: selectedDay === i ? GOLD : "#111",
+                      color: selectedDay === i ? "#000" : "#666",
+                      border: `1px solid ${selectedDay === i ? GOLD : "#282828"}`,
+                      fontWeight: selectedDay === i ? 700 : 400,
+                      fontSize: 12,
+                      transition: "all .2s",
+                    }}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
 
           {/* Water reminder */}
           <div
@@ -1320,22 +1044,28 @@ export default function DietPlanner() {
             </div>
           )}
 
-          <button
-            onClick={() => setStep(0)}
-            style={{
-              marginTop: 24,
-              width: "100%",
-              padding: "12px 0",
-              background: "transparent",
-              border: "1px solid #333",
-              borderRadius: 10,
-              color: "#666",
-              cursor: "pointer",
-              fontSize: 13,
-            }}
-          >
-            ← Recalculate with Different Info
-          </button>
+          {/* Bottom actions */}
+          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            <button
+              onClick={() => {
+                localStorage.removeItem("flexa_diet_weekly_plan");
+                setWeeklyPlan(null);
+                setStep(0);
+              }}
+              style={{
+                flex: 1,
+                padding: "12px 0",
+                background: "transparent",
+                border: "1px solid #2a2a2a",
+                borderRadius: 10,
+                color: "#555",
+                cursor: "pointer",
+                fontSize: 12,
+              }}
+            >
+              ← Recalculate from Scratch
+            </button>
+          </div>
         </div>
       )}
     </div>

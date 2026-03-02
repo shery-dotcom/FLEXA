@@ -17,12 +17,12 @@ Endpoints:
 import os
 from datetime import date, datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, UploadFile, File, Query, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, delete
 
-from app.database import get_db
+from app.database import get_db, AsyncSessionLocal
 from app.dependencies import get_current_user
 from app.models.user import User
 from app.models.diet import NutritionFood, UserDietPreference, DailyMealLog, ImageAnalysisLog
@@ -31,17 +31,51 @@ from app.schemas.diet import (
     DietPlanRequest, DietPlanResponse,
     MealLogCreate, MealLogResponse, DailySummaryResponse,
     FoodSearchResult, DietPreferenceUpdate, DietPreferenceResponse,
-    ImageAnalysisResponse, MealSuggestion,
+    ImageAnalysisResponse, MealSuggestion, TopPrediction,
 )
 from app.services.calorie_engine import run_calorie_calculator
 from app.services.meal_recommender import generate_meal_plan
 from app.services.diet_service import get_current_reminders
-from app.ml.food_classifier import predict_from_image_bytes, map_prediction_to_nutrition
+from app.ml.food_classifier import predict_from_image_bytes, predict_top3_from_image_bytes, map_prediction_to_nutrition
+from app.core.cache import cache_get, cache_set, cache_delete
+from app.core.rate_limit import limiter
 
 router = APIRouter(prefix="/diet", tags=["Module 3 – Diet & Calorie Planner"])
 
 # Max image upload size: 10 MB
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
+
+# Confidence below which the top-3 alternatives are returned for user confirmation
+CONFIDENCE_THRESHOLD = 0.60
+
+
+# ─────────────────────────────── Background task helpers ───────────────────────────────
+
+async def _update_diet_preferences(user_id, req: DietPlanRequest) -> None:
+    """
+    Background task: persist diet preference filter settings without
+    blocking the meal-plan HTTP response.
+    """
+    async with AsyncSessionLocal() as db:
+        stmt = select(UserDietPreference).where(UserDietPreference.user_id == user_id)
+        r = await db.execute(stmt)
+        pref = r.scalar_one_or_none()
+        if pref is None:
+            pref = UserDietPreference(user_id=user_id)
+            db.add(pref)
+        pref.region        = req.region
+        pref.diet_type     = ",".join(req.diet_type) if isinstance(req.diet_type, list) else req.diet_type
+        pref.allergies     = req.allergies
+        pref.meals_per_day = req.meals_per_day
+        await db.commit()
+
+
+async def _save_image_analysis_log(log_data: dict) -> None:
+    """Background task: persist the image-analysis audit row after the response is sent."""
+    async with AsyncSessionLocal() as db:
+        log = ImageAnalysisLog(**log_data)
+        db.add(log)
+        await db.commit()
 
 
 # ───────────────────────────────────────────────────────────────────────────
@@ -95,28 +129,21 @@ async def calculate_calories(
 @router.post("/generate-plan", response_model=DietPlanResponse)
 async def generate_diet_plan(
     req: DietPlanRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
     Generate a one-day meal plan using content-based filtering.
     Respects region, diet type, allergens, and calorie target.
-    Call /calculate-calories first to get calorie_target and macros.
+    Preference updates are persisted via a BackgroundTask so the plan
+    is returned without waiting for the DB write to complete.
     """
-    # Update preferences with latest filter settings
+    # Read-only: fetch stored water target
     stmt = select(UserDietPreference).where(UserDietPreference.user_id == current_user.id)
     r = await db.execute(stmt)
     pref = r.scalar_one_or_none()
-
-    if pref is None:
-        pref = UserDietPreference(user_id=current_user.id)
-        db.add(pref)
-
-    pref.region        = req.region
-    pref.diet_type     = ",".join(req.diet_type) if isinstance(req.diet_type, list) else req.diet_type
-    pref.allergies     = req.allergies
-    pref.meals_per_day = req.meals_per_day
-    await db.commit()
+    water_ml = (pref.water_target_ml or 2500.0) if pref else 2500.0
 
     plan = await generate_meal_plan(
         db=db,
@@ -129,8 +156,10 @@ async def generate_diet_plan(
         allergies=req.allergies,
         meals_per_day=req.meals_per_day,
     )
-    # Inject water target from stored preference
-    plan.water_ml = pref.water_target_ml or 2500.0
+    plan.water_ml = water_ml
+
+    # Persist filter preference changes after the response is returned (non-blocking)
+    background_tasks.add_task(_update_diet_preferences, current_user.id, req)
     return plan
 
 
@@ -225,6 +254,9 @@ async def log_meal(
     db.add(log)
     await db.commit()
     await db.refresh(log)
+
+    # Invalidate today's cached daily summary so the next GET reflects the new entry
+    await cache_delete(f"daily_summary:{current_user.id}:{date.today().isoformat()}")
     return log
 
 
@@ -261,6 +293,7 @@ async def delete_meal_log(
         raise HTTPException(status_code=404, detail="Log not found.")
     await db.delete(log)
     await db.commit()
+    await cache_delete(f"daily_summary:{current_user.id}:{date.today().isoformat()}")
 
 
 class MealLogUpdate(BaseModel):
@@ -310,6 +343,7 @@ async def update_meal_log(
 
     await db.commit()
     await db.refresh(log)
+    await cache_delete(f"daily_summary:{current_user.id}:{date.today().isoformat()}")
     return log
 
 
@@ -324,10 +358,17 @@ async def get_daily_summary(
     current_user: User = Depends(get_current_user),
 ):
     target_date = date.fromisoformat(log_date) if log_date else date.today()
+    cache_key   = f"daily_summary:{current_user.id}:{target_date.isoformat()}"
+
+    # ── Cache hit: return immediately without touching the DB ─────────────────────────
+    cached = await cache_get(cache_key)
+    if cached is not None:
+        return DailySummaryResponse(**cached)
+
+    # ── Cache miss: compute from DB ───────────────────────────────────────────────
     day_start = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0)
     day_end   = datetime(target_date.year, target_date.month, target_date.day, 23, 59, 59)
 
-    # Get logs for the day
     stmt = (
         select(DailyMealLog)
         .where(
@@ -340,7 +381,6 @@ async def get_daily_summary(
     r = await db.execute(stmt)
     logs = r.scalars().all()
 
-    # Get targets from preferences
     pref_stmt = select(UserDietPreference).where(UserDietPreference.user_id == current_user.id)
     pr = await db.execute(pref_stmt)
     pref = pr.scalar_one_or_none()
@@ -356,7 +396,7 @@ async def get_daily_summary(
     total_carb = sum((l.carbs_consumed_g    or 0.0) for l in logs)
     total_fat  = sum((l.fat_consumed_g      or 0.0) for l in logs)
 
-    return DailySummaryResponse(
+    result = DailySummaryResponse(
         date=target_date.isoformat(),
         calorie_target=cal_target,
         calories_consumed=round(total_cal, 1),
@@ -371,6 +411,10 @@ async def get_daily_summary(
         calorie_remaining=round(cal_target - total_cal, 1),
         on_track=(total_cal <= cal_target * 1.05),
     )
+
+    # Store for 30 s; invalidated automatically by log-meal / delete / edit operations
+    await cache_set(cache_key, result.model_dump(), ttl=30)
+    return result
 
 
 # ───────────────────────────────────────────────────────────────────────────
@@ -429,19 +473,23 @@ async def get_reminders(
 # ───────────────────────────────────────────────────────────────────────────
 
 @router.post("/upload-meal-image", response_model=ImageAnalysisResponse)
+@limiter.limit("5/minute")
 async def upload_meal_image(
+    request: Request,
+    background_tasks: BackgroundTasks,
     image: UploadFile = File(..., description="JPEG or PNG food image"),
     portion_g: float = Query(150.0, ge=10, le=2000, description="Estimated portion weight in grams"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Upload a food image → AI predicts food class → maps to USDA nutrition DB
-    → returns estimated calories and macros for the given portion size.
+    Upload a food image → AI predicts food class → maps to nutrition DB.
 
-    If the model is not yet trained, returns a low-confidence fallback.
+    Rate limited: 5 requests / minute per IP (ResNet-50 inference is CPU-heavy).
+    When model confidence < 60%, top-3 alternatives are returned so the user
+    can confirm the correct food before macros are logged.
+    Audit log is persisted asynchronously (BackgroundTask) for faster response.
     """
-    # Validate file type
     content_type = image.content_type or ""
     if not content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image (JPEG/PNG).")
@@ -450,34 +498,35 @@ async def upload_meal_image(
     if len(image_bytes) > MAX_IMAGE_SIZE:
         raise HTTPException(status_code=413, detail="Image too large. Max 10 MB.")
 
-    # Run inference
-    predicted_class, confidence = predict_from_image_bytes(image_bytes)
-    low_confidence = confidence < 0.50
+    # ── Inference: always fetch top-3; primary = first entry ────────────────────────
+    top3            = predict_top3_from_image_bytes(image_bytes)
+    predicted_class = top3[0]["food_name"]
+    confidence      = top3[0]["confidence"]
+    low_confidence  = confidence < CONFIDENCE_THRESHOLD
+    requires_conf   = low_confidence
 
-    # Map to nutrition DB
+    # ── Nutrition lookup on primary prediction ──────────────────────────────
     nutrition = await map_prediction_to_nutrition(predicted_class, db, portion_g)
 
-    cal = nutrition["calories"]   if nutrition else round(portion_g * 1.5, 1)
-    pro = nutrition["protein_g"]  if nutrition else round(portion_g * 0.10, 1)
+    cal  = nutrition["calories"]  if nutrition else round(portion_g * 1.5,  1)
+    pro  = nutrition["protein_g"] if nutrition else round(portion_g * 0.10, 1)
     carb = nutrition["carbs_g"]   if nutrition else round(portion_g * 0.20, 1)
-    fat = nutrition["fat_g"]      if nutrition else round(portion_g * 0.05, 1)
+    fat  = nutrition["fat_g"]     if nutrition else round(portion_g * 0.05, 1)
 
-    # Persist analysis log
-    log = ImageAnalysisLog(
-        user_id=current_user.id,
-        image_filename=image.filename or "upload",
-        predicted_class=predicted_class,
-        confidence=confidence,
-        portion_g=portion_g,
-        estimated_calories=cal,
-        estimated_protein_g=pro,
-        estimated_carbs_g=carb,
-        estimated_fat_g=fat,
-    )
-    db.add(log)
-    await db.commit()
+    # ── Persist audit log after the response is sent (non-blocking) ──────────────
+    background_tasks.add_task(_save_image_analysis_log, {
+        "user_id":             current_user.id,
+        "image_filename":      image.filename or "upload",
+        "predicted_class":     predicted_class,
+        "confidence":          confidence,
+        "portion_g":           portion_g,
+        "estimated_calories":  cal,
+        "estimated_protein_g": pro,
+        "estimated_carbs_g":   carb,
+        "estimated_fat_g":     fat,
+    })
 
-    # Build matched food response
+    # ── Matched food row (for UI food card) ───────────────────────────────────
     matched = None
     if nutrition and nutrition.get("food_id"):
         stmt = select(NutritionFood).where(NutritionFood.id == nutrition["food_id"])
@@ -485,6 +534,15 @@ async def upload_meal_image(
         food_row = fres.scalar_one_or_none()
         if food_row:
             matched = FoodSearchResult.model_validate(food_row)
+
+    # ── User-facing message ──────────────────────────────────────────────────────
+    if requires_conf:
+        msg = (
+            f"⚠️ Low confidence ({confidence:.0%}). "
+            "Please confirm the food from the options below."
+        )
+    else:
+        msg = f"✅ Detected: {predicted_class.title()} ({confidence:.0%} confidence)"
 
     return ImageAnalysisResponse(
         predicted_class=predicted_class,
@@ -496,9 +554,7 @@ async def upload_meal_image(
         estimated_fat_g=fat,
         low_confidence=low_confidence,
         matched_food=matched,
-        message=(
-            "⚠️ Low confidence prediction. Please verify manually."
-            if low_confidence
-            else f"✅ Detected: {predicted_class.title()} ({confidence:.0%} confidence)"
-        ),
+        message=msg,
+        top_predictions=[TopPrediction(**p) for p in top3] if requires_conf else [],
+        requires_confirmation=requires_conf,
     )

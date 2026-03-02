@@ -1,8 +1,10 @@
 """
 Flexa – Module 3: Food Image Classifier
 ========================================
-Architecture : ResNet-50 (ImageNet pretrained) + Dropout(0.3) + Linear(2048→101)
-Dataset      : Food-101  (75 750 train / 25 250 test, official split from JSON)
+Architecture : ResNet-50 (ImageNet pretrained) + Dropout(0.3) + Linear(2048→N)
+Datasets     : Food-101  (75 750 train / 25 250 test, official split from JSON)
+               Pakistani Food Images (folder-based, 80/20 random split)
+               Vegetables & Fruits   (folder-based, 80/20 random split)
 Training     : Phase 1 – head only (frozen backbone), Phase 2 – layer3+layer4 unfrozen
 Output       : flexa-backend/models/food_classifier.pt
               flexa-backend/models/food_class_map.json   (idx → class label)
@@ -12,15 +14,16 @@ Usage:
     python scripts/train_food_classifier.py
 
 Notes:
-    - With NVIDIA GPU training takes ≈ 20-40 min total
-    - Best val accuracy expected: 75–82% top-1 on Food-101
+    - With NVIDIA GPU training takes ≈ 40-70 min total for combined dataset
     - The FC architecture here MUST match food_classifier.py exactly:
-        model.fc = nn.Sequential(nn.Dropout(0.3), nn.Linear(2048, 101))
+        model.fc = nn.Sequential(nn.Dropout(0.3), nn.Linear(2048, NUM_CLASSES))
+    - NUM_CLASSES is determined automatically from all three datasets combined
 """
 import os
 import sys
 import json
 import time
+import random
 from pathlib import Path
 
 # ─── Paths ─────────────────────────────────────────────────────────────────
@@ -28,6 +31,8 @@ ROOT       = Path(__file__).resolve().parents[2]
 DATA_DIR   = ROOT / "Datasets" / "food-101"
 IMAGES_DIR = DATA_DIR / "images"
 META_DIR   = DATA_DIR / "meta"
+PAK_IMAGES_DIR  = ROOT / "Datasets" / "Pakistani Food Images"
+VEG_IMAGES_DIR  = ROOT / "Datasets" / "Vegetables & Fruits"
 MODEL_DIR  = Path(__file__).resolve().parents[1] / "models"
 MODEL_PATH = MODEL_DIR / "food_classifier.pt"
 MAP_PATH   = MODEL_DIR / "food_class_map.json"
@@ -41,34 +46,133 @@ BATCH_SIZE      = 64
 LR_HEAD         = 1e-3
 LR_FINETUNE     = 1e-4
 IMG_SIZE        = 224
-NUM_CLASSES     = 101
 NUM_WORKERS     = 4      # set to 0 if multiprocessing crashes on Windows
+RANDOM_SEED     = 42
 
 
 # ────────────────────────────────────────────────────────────────────────────
-# Custom Dataset using Food-101's official JSON split
+# Helper: discover all classes across all 3 datasets (sorted for determinism)
+# ────────────────────────────────────────────────────────────────────────────
+def _discover_all_classes() -> dict:
+    """
+    Returns a global class_to_idx dict built from ALL three datasets.
+    Class names are normalised: underscores→spaces, lower-cased.
+    Returns {class_name: global_index}
+    """
+    all_classes = set()
+
+    # Food-101 via JSON
+    if (META_DIR / "train.json").exists():
+        with open(META_DIR / "train.json") as f:
+            f101 = json.load(f)
+        for c in f101.keys():
+            all_classes.add(c.replace("_", " ").lower())
+
+    # Folder-based datasets
+    for base_dir in (PAK_IMAGES_DIR, VEG_IMAGES_DIR):
+        if base_dir.exists():
+            for folder in base_dir.iterdir():
+                if folder.is_dir():
+                    all_classes.add(folder.name.replace("_", " ").lower())
+
+    sorted_classes = sorted(all_classes)
+    return {c: i for i, c in enumerate(sorted_classes)}
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Dataset: Food-101 (uses official JSON split)
 # ────────────────────────────────────────────────────────────────────────────
 class Food101Dataset:
     """
     Reads train.json or test.json from Food-101/meta/.
     JSON format: { "class_name": ["class_name/image_id", ...], ... }
+    Uses the GLOBAL class→idx mapping.
     """
-    def __init__(self, split: str, transform=None):
+    def __init__(self, split: str, global_class_to_idx: dict, transform=None):
         assert split in ("train", "test")
         json_path = META_DIR / f"{split}.json"
         with open(json_path) as f:
             split_data = json.load(f)
 
-        # Sorted so class→idx mapping is deterministic
-        self.classes      = sorted(split_data.keys())
-        self.class_to_idx = {c: i for i, c in enumerate(self.classes)}
-
         self.paths  = []
         self.labels = []
         for cls, img_ids in split_data.items():
-            idx = self.class_to_idx[cls]
+            cls_norm = cls.replace("_", " ").lower()
+            idx = global_class_to_idx[cls_norm]
             for img_id in img_ids:
-                self.paths.append(IMAGES_DIR / f"{img_id}.jpg")
+                path = IMAGES_DIR / f"{img_id}.jpg"
+                if path.exists():
+                    self.paths.append(path)
+                    self.labels.append(idx)
+
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.paths)
+
+    def __getitem__(self, i):
+        from PIL import Image
+        img = Image.open(self.paths[i]).convert("RGB")
+        if self.transform:
+            img = self.transform(img)
+        return img, self.labels[i]
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Dataset: Folder-based (Pakistani Food Images & Vegetables & Fruits)
+# ────────────────────────────────────────────────────────────────────────────
+class FolderImageDataset:
+    """
+    Generic dataset for folder-organised image datasets:
+        root/
+          class_a/  *.jpg *.png …
+          class_b/  …
+    Supports train/test split by index using a seeded shuffle.
+    Uses the GLOBAL class→idx mapping.
+    """
+    VAL_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+
+    def __init__(
+        self,
+        root: Path,
+        global_class_to_idx: dict,
+        split: str = "train",       # "train" | "test"
+        val_ratio: float = 0.20,
+        seed: int = RANDOM_SEED,
+        transform=None,
+    ):
+        assert split in ("train", "test")
+        rng = random.Random(seed)
+
+        self.paths  = []
+        self.labels = []
+
+        for folder in sorted(root.iterdir()):
+            if not folder.is_dir():
+                continue
+            cls_norm = folder.name.replace("_", " ").lower()
+            if cls_norm not in global_class_to_idx:
+                continue
+            idx = global_class_to_idx[cls_norm]
+
+            images = sorted(
+                p for p in folder.iterdir()
+                if p.suffix.lower() in self.VAL_EXTENSIONS
+            )
+            if not images:
+                continue
+
+            shuffled = images[:]
+            rng.shuffle(shuffled)
+            split_at = max(1, int(len(shuffled) * val_ratio))
+
+            if split == "test":
+                chosen = shuffled[:split_at]
+            else:
+                chosen = shuffled[split_at:]
+
+            for p in chosen:
+                self.paths.append(p)
                 self.labels.append(idx)
 
         self.transform = transform
@@ -82,6 +186,30 @@ class Food101Dataset:
         if self.transform:
             img = self.transform(img)
         return img, self.labels[i]
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Combined Dataset: merges multiple dataset objects into one
+# ────────────────────────────────────────────────────────────────────────────
+class CombinedDataset:
+    def __init__(self, datasets: list):
+        self.datasets = datasets
+        self._lengths = [len(d) for d in datasets]
+        self._offsets = []
+        offset = 0
+        for l in self._lengths:
+            self._offsets.append(offset)
+            offset += l
+        self._total = offset
+
+    def __len__(self):
+        return self._total
+
+    def __getitem__(self, i):
+        for ds, offset, length in zip(self.datasets, self._offsets, self._lengths):
+            if i < offset + length:
+                return ds[i - offset]
+        raise IndexError(f"Index {i} out of range")
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -171,9 +299,20 @@ def main():
     if torch.cuda.is_available():
         print(f"[INFO] GPU     : {torch.cuda.get_device_name(0)}")
 
-    if not IMAGES_DIR.exists():
-        print(f"[ERROR] Food-101 images not found at {IMAGES_DIR}")
-        sys.exit(1)
+    # ── Discover ALL classes across three datasets ───────────────────────
+    print("[INFO] Discovering classes from all three datasets …")
+    global_class_to_idx = _discover_all_classes()
+    NUM_CLASSES = len(global_class_to_idx)
+    idx_to_class = {str(v): k for k, v in global_class_to_idx.items()}
+    print(f"[INFO] Total classes: {NUM_CLASSES}")
+    print(f"       Food-101 active: {IMAGES_DIR.exists()}")
+    print(f"       Pakistani Food Images active: {PAK_IMAGES_DIR.exists()}")
+    print(f"       Vegetables & Fruits active: {VEG_IMAGES_DIR.exists()}")
+
+    # Save class map immediately so inference can work even during training
+    with open(MAP_PATH, "w") as f:
+        json.dump(idx_to_class, f, indent=2)
+    print(f"[INFO] Class map saved → {MAP_PATH}  ({NUM_CLASSES} classes)")
 
     # ── Transforms ──────────────────────────────────────────────────────
     train_tf = transforms.Compose([
@@ -191,17 +330,49 @@ def main():
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
     ])
 
-    # ── Datasets (official Food-101 split) ──────────────────────────────
-    print("[INFO] Loading Food-101 official train/test split …")
-    train_ds = Food101Dataset("train", transform=train_tf)
-    val_ds   = Food101Dataset("test",  transform=val_tf)
-    print(f"[INFO] Train: {len(train_ds):,} | Val: {len(val_ds):,} | Classes: {len(train_ds.classes)}")
+    # ── Build individual datasets ─────────────────────────────────────────
+    train_parts, val_parts = [], []
 
-    # Save class map now so inference works even before training ends
-    idx_to_class = {str(v): k for k, v in train_ds.class_to_idx.items()}
-    with open(MAP_PATH, "w") as f:
-        json.dump(idx_to_class, f, indent=2)
-    print(f"[INFO] Class map saved → {MAP_PATH}")
+    # Food-101
+    if IMAGES_DIR.exists() and (META_DIR / "train.json").exists():
+        print("[INFO] Loading Food-101 …")
+        f101_train = Food101Dataset("train", global_class_to_idx, transform=train_tf)
+        f101_val   = Food101Dataset("test",  global_class_to_idx, transform=val_tf)
+        train_parts.append(f101_train)
+        val_parts.append(f101_val)
+        print(f"       Food-101 train: {len(f101_train):,} | val: {len(f101_val):,}")
+    else:
+        print(f"[WARN] Food-101 images not found at {IMAGES_DIR} — skipping.")
+
+    # Pakistani Food Images
+    if PAK_IMAGES_DIR.exists():
+        print("[INFO] Loading Pakistani Food Images …")
+        pak_train = FolderImageDataset(PAK_IMAGES_DIR, global_class_to_idx, "train", transform=train_tf)
+        pak_val   = FolderImageDataset(PAK_IMAGES_DIR, global_class_to_idx, "test",  transform=val_tf)
+        train_parts.append(pak_train)
+        val_parts.append(pak_val)
+        print(f"       Pakistani train: {len(pak_train):,} | val: {len(pak_val):,}")
+    else:
+        print(f"[WARN] Pakistani Food Images not found at {PAK_IMAGES_DIR} — skipping.")
+
+    # Vegetables & Fruits
+    if VEG_IMAGES_DIR.exists():
+        print("[INFO] Loading Vegetables & Fruits …")
+        veg_train = FolderImageDataset(VEG_IMAGES_DIR, global_class_to_idx, "train", transform=train_tf)
+        veg_val   = FolderImageDataset(VEG_IMAGES_DIR, global_class_to_idx, "test",  transform=val_tf)
+        train_parts.append(veg_train)
+        val_parts.append(veg_val)
+        print(f"       Veg & Fruit train: {len(veg_train):,} | val: {len(veg_val):,}")
+    else:
+        print(f"[WARN] Vegetables & Fruits not found at {VEG_IMAGES_DIR} — skipping.")
+
+    if not train_parts:
+        print("[ERROR] No dataset directories found. Aborting.")
+        sys.exit(1)
+
+    train_ds = CombinedDataset(train_parts)
+    val_ds   = CombinedDataset(val_parts)
+    print(f"\n[INFO] Combined — Train: {len(train_ds):,} | Val: {len(val_ds):,} | Classes: {NUM_CLASSES}")
 
     train_loader = DataLoader(
         train_ds, batch_size=BATCH_SIZE, shuffle=True,
@@ -213,7 +384,7 @@ def main():
     )
 
     # ── Model ────────────────────────────────────────────────────────────
-    print("[INFO] Building ResNet-50 (ImageNet pretrained, frozen backbone) …")
+    print(f"\n[INFO] Building ResNet-50 (ImageNet pretrained, frozen backbone, {NUM_CLASSES} classes) …")
     model = build_model(NUM_CLASSES, freeze_backbone=True).to(device)
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"[INFO] Trainable params: {trainable:,}")
@@ -265,6 +436,7 @@ def main():
     print(f"\n{'='*60}")
     print(f" TRAINING COMPLETE")
     print(f" Best Val Accuracy : {best_val:.2f}%")
+    print(f" Total Classes     : {NUM_CLASSES}")
     print(f" Model             : {MODEL_PATH}")
     print(f" Class map         : {MAP_PATH}")
     print(f"{'='*60}")

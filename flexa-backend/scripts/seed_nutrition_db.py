@@ -31,6 +31,8 @@ from app.models.diet import NutritionFood, Base
 USDA_CLEAN   = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "usda_clean.csv"))
 FOODCOM_CLEAN = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "foodcom_clean.csv"))
 PAK_MEALS    = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "Datasets", "pakistani_meals.csv"))
+PAK_FOOD_IMG = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "Datasets", "pakistani_food_nutrition.csv"))
+VEG_FRUIT    = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "Datasets", "vegetables_fruits_nutrition.csv"))
 USDA_LIMIT   = 5000   # keep DB manageable
 FOODCOM_LIMIT = 3000  # Food.com supplement
 
@@ -140,11 +142,62 @@ async def seed():
     else:
         print(f"[WARN] Pakistani meals CSV not found: {PAK_MEALS}")
 
-    # ── 4. Write to DB ─────────────────────────────────────────────────────
+    # ── 4. Pakistani Food Images Nutrition ─────────────────────────────────
+    if os.path.exists(PAK_FOOD_IMG):
+        pfi = pd.read_csv(PAK_FOOD_IMG).fillna("")
+        before = len(rows)
+        for _, r in pfi.iterrows():
+            rows.append(NutritionFood(
+                food_name      = str(r.get("food_name", "")).strip()[:500],
+                calories       = float(r.get("calories",  0)),
+                protein_g      = float(r.get("protein_g", 0)),
+                carbs_g        = float(r.get("carbs_g",   0)),
+                fat_g          = float(r.get("fat_g",     0)),
+                fiber_g        = float(r.get("fiber_g",   0)),
+                serving_size_g = float(r.get("serving_size_g", 100)),
+                meal_type      = str(r.get("meal_type", "any")).strip() or "any",
+                cuisine        = str(r.get("cuisine",   "pakistani")).strip() or "pakistani",
+                diet_type      = str(r.get("diet_type", "vegetarian")).strip() or "vegetarian",
+                allergens      = str(r.get("allergens",  "")).strip(),
+                ingredients    = "",
+                region         = str(r.get("region",    "pakistan")).strip(),
+                source         = "custom",
+            ))
+        print(f"[INFO] Loaded {len(rows) - before} Pakistani Food Images nutrition rows.")
+    else:
+        print(f"[WARN] Pakistani Food Images nutrition CSV not found: {PAK_FOOD_IMG}")
+
+    # ── 5. Vegetables & Fruits Nutrition ───────────────────────────────────
+    if os.path.exists(VEG_FRUIT):
+        vf = pd.read_csv(VEG_FRUIT).fillna("")
+        before = len(rows)
+        for _, r in vf.iterrows():
+            rows.append(NutritionFood(
+                food_name      = str(r.get("food_name", "")).strip()[:500],
+                calories       = float(r.get("calories",  0)),
+                protein_g      = float(r.get("protein_g", 0)),
+                carbs_g        = float(r.get("carbs_g",   0)),
+                fat_g          = float(r.get("fat_g",     0)),
+                fiber_g        = float(r.get("fiber_g",   0)),
+                serving_size_g = float(r.get("serving_size_g", 100)),
+                meal_type      = str(r.get("meal_type", "snack")).strip() or "snack",
+                cuisine        = str(r.get("cuisine",   "general")).strip() or "general",
+                diet_type      = str(r.get("diet_type", "vegan")).strip() or "vegan",
+                allergens      = str(r.get("allergens",  "")).strip(),
+                ingredients    = "",
+                region         = str(r.get("region",    "general")).strip() or "general",
+                source         = "custom",
+            ))
+        print(f"[INFO] Loaded {len(rows) - before} Vegetables & Fruits nutrition rows.")
+    else:
+        print(f"[WARN] Vegetables & Fruits nutrition CSV not found: {VEG_FRUIT}")
+
+    # ── 6. Write to DB ─────────────────────────────────────────────────────
     print(f"[INFO] Seeding {len(rows)} total rows …")
     async with SessionLocal() as db:
-        # Clear existing data
-        await db.execute(delete(NutritionFood))
+        # Clear existing data — use TRUNCATE CASCADE to handle FK references
+        # (e.g. daily_meal_logs.food_id → nutrition_foods.id)
+        await db.execute(text("TRUNCATE TABLE nutrition_foods RESTART IDENTITY CASCADE"))
         await db.commit()
 
         # Bulk insert in chunks

@@ -1,9 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from app.database import init_db
 from app.api.v1.router import router
 from app.core.config import settings
+from app.core.rate_limit import limiter
+from app.core.cache import close_redis
 
 
 @asynccontextmanager
@@ -12,13 +16,15 @@ async def lifespan(app: FastAPI):
     await init_db()
     print(f"[OK] {settings.APP_NAME} v{settings.APP_VERSION} started")
     yield
-    # Shutdown
+    # Shutdown: release Redis connection
+    await close_redis()
     print("[--] Server shutting down...")
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
+        # slowapi rate-limit error handler registered below
         version=settings.APP_VERSION,
         description="""
 ## Flexa AI Fitness Planner API
@@ -40,6 +46,10 @@ Use JWT Bearer tokens. Get tokens via `/api/v1/auth/login`.
         docs_url="/docs",
         redoc_url="/redoc",
     )
+
+    # Rate limiting
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     # CORS - allow React frontend
     app.add_middleware(

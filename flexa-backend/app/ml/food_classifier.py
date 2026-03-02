@@ -22,50 +22,80 @@ from typing import Optional, Tuple
 logger = logging.getLogger(__name__)
 
 # Paths
-MODEL_DIR   = Path(__file__).resolve().parents[2] / "models"
-MODEL_PATH  = MODEL_DIR / "food_classifier.pt"
-MAP_PATH    = MODEL_DIR / "food_class_map.json"    # idx → class label (written by training)
-CLASSES_TXT = Path(__file__).resolve().parents[3] / "Datasets" / "food-101" / "meta" / "classes.txt"
+MODEL_DIR        = Path(__file__).resolve().parents[2] / "models"
+MODEL_PATH       = MODEL_DIR / "food_classifier.pt"
+MAP_PATH         = MODEL_DIR / "food_class_map.json"    # idx → class label (written by training)
+CLASSES_TXT      = Path(__file__).resolve().parents[3] / "Datasets" / "food-101" / "meta" / "classes.txt"
+PAK_IMAGES_DIR   = Path(__file__).resolve().parents[3] / "Datasets" / "Pakistani Food Images"
+VEG_IMAGES_DIR   = Path(__file__).resolve().parents[3] / "Datasets" / "Vegetables & Fruits"
 
 # Standard portion size assumption (grams) when no explicit weight is given
 DEFAULT_PORTION_G = 150.0
 
-# ─────────────────── Load Food-101 class labels ────────────────────────────
+# ─────────────────── Load all class labels (combined datasets) ──────────────
 
-def load_food101_classes() -> list:
-    """Read Food-101 class labels from classes.txt (101 entries, one per line)."""
+def load_all_classes() -> list:
+    """
+    Build combined class list from all three dataset sources:
+      1. Food-101 classes.txt
+      2. Pakistani Food Images folder names
+      3. Vegetables & Fruits folder names
+    Returns sorted list matching the training script's _discover_all_classes().
+    """
+    all_classes: set = set()
+
+    # Food-101
     if CLASSES_TXT.exists():
         with open(CLASSES_TXT, "r") as f:
-            return [line.strip().replace("_", " ") for line in f if line.strip()]
-    # Minimal fallback subset
-    return [
-        "apple pie", "baby back ribs", "baklava", "beef carpaccio",
-        "beef tartare", "beet salad", "beignets", "bibimbap",
-        "bread pudding", "breakfast burrito", "bruschetta", "caesar salad",
-        "cannoli", "caprese salad", "carrot cake", "ceviche", "cheesecake",
-        "cheese plate", "chicken curry", "chicken quesadilla", "chicken wings",
-        "chocolate cake", "chocolate mousse", "churros", "clam chowder",
-        "club sandwich", "crab cakes", "creme brulee", "croque madame",
-        "cup cakes", "deviled eggs", "donuts", "dumplings", "edamame",
-        "eggs benedict", "escargots", "falafel", "filet mignon",
-        "fish and chips", "foie gras", "french fries", "french onion soup",
-        "french toast", "fried calamari", "fried rice", "frozen yogurt",
-        "garlic bread", "gnocchi", "greek salad", "grilled cheese sandwich",
-        "grilled salmon", "guacamole", "gyoza", "hamburger", "hot and sour soup",
-        "hot dog", "huevos rancheros", "hummus", "ice cream", "lasagna",
-        "lobster bisque", "lobster roll sandwich", "macaroni and cheese",
-        "macarons", "miso soup", "mussels", "nachos", "omelette",
-        "onion rings", "oysters", "pad thai", "paella", "pancakes",
-        "panna cotta", "peking duck", "pho", "pizza", "pork chop",
-        "poutine", "prime rib", "pulled pork sandwich", "ramen",
-        "ravioli", "red velvet cake", "risotto", "samosa", "sashimi",
-        "scallops", "seaweed salad", "shrimp and grits", "spaghetti bolognese",
-        "spaghetti carbonara", "spring rolls", "steak", "strawberry shortcake",
-        "sushi", "tacos", "takoyaki", "tiramisu", "tuna tartare", "waffles",
-    ]
+            for line in f:
+                name = line.strip().replace("_", " ").lower()
+                if name:
+                    all_classes.add(name)
+
+    # Pakistani Food Images
+    if PAK_IMAGES_DIR.exists():
+        for folder in PAK_IMAGES_DIR.iterdir():
+            if folder.is_dir():
+                all_classes.add(folder.name.replace("_", " ").lower())
+
+    # Vegetables & Fruits
+    if VEG_IMAGES_DIR.exists():
+        for folder in VEG_IMAGES_DIR.iterdir():
+            if folder.is_dir():
+                all_classes.add(folder.name.replace("_", " ").lower())
+
+    # Fallback: Food-101 minimal subset
+    if not all_classes:
+        all_classes = {
+            "apple pie", "baby back ribs", "baklava", "beef carpaccio",
+            "beef tartare", "beet salad", "beignets", "bibimbap",
+            "bread pudding", "breakfast burrito", "bruschetta", "caesar salad",
+            "cannoli", "caprese salad", "carrot cake", "ceviche", "cheesecake",
+            "cheese plate", "chicken curry", "chicken quesadilla", "chicken wings",
+            "chocolate cake", "chocolate mousse", "churros", "clam chowder",
+            "club sandwich", "crab cakes", "creme brulee", "croque madame",
+            "cup cakes", "deviled eggs", "donuts", "dumplings", "edamame",
+            "eggs benedict", "escargots", "falafel", "filet mignon",
+            "fish and chips", "foie gras", "french fries", "french onion soup",
+            "french toast", "fried calamari", "fried rice", "frozen yogurt",
+            "garlic bread", "gnocchi", "greek salad", "grilled cheese sandwich",
+            "grilled salmon", "guacamole", "gyoza", "hamburger", "hot and sour soup",
+            "hot dog", "huevos rancheros", "hummus", "ice cream", "lasagna",
+            "lobster bisque", "lobster roll sandwich", "macaroni and cheese",
+            "macarons", "miso soup", "mussels", "nachos", "omelette",
+            "onion rings", "oysters", "pad thai", "paella", "pancakes",
+            "panna cotta", "peking duck", "pho", "pizza", "pork chop",
+            "poutine", "prime rib", "pulled pork sandwich", "ramen",
+            "ravioli", "red velvet cake", "risotto", "samosa", "sashimi",
+            "scallops", "seaweed salad", "shrimp and grits", "spaghetti bolognese",
+            "spaghetti carbonara", "spring rolls", "steak", "strawberry shortcake",
+            "sushi", "tacos", "takoyaki", "tiramisu", "tuna tartare", "waffles",
+        }
+
+    return sorted(all_classes)
 
 
-FOOD101_CLASSES = load_food101_classes()
+ALL_CLASSES = load_all_classes()
 
 # ───────────────────── Class map (idx → label) from training ────────────────
 # Loaded lazily once the model is loaded; falls back to the ordered list.
@@ -76,8 +106,8 @@ def _load_class_map() -> dict:
     if MAP_PATH.exists():
         with open(MAP_PATH) as f:
             return json.load(f)
-    # Fallback: build from sorted classes.txt (matches training's sorted() call)
-    return {str(i): c for i, c in enumerate(sorted(FOOD101_CLASSES))}
+    # Fallback: build from sorted combined classes (matches training's sorted() call)
+    return {str(i): c for i, c in enumerate(ALL_CLASSES)}
 
 
 # ───────────────────── Model loading (lazy singleton) ──────────────────────
@@ -115,7 +145,10 @@ def _try_load_model():
             _model_loaded = True
             return
 
-        num_classes = 101   # Food-101
+        # Determine num_classes dynamically from the saved class map
+        class_map = _load_class_map()
+        num_classes = len(class_map) if class_map else len(ALL_CLASSES)
+        logger.info("Loading model with %d output classes", num_classes)
 
         # Build architecture EXACTLY as in train_food_classifier.py
         model = resnet50(weights=None)
@@ -174,7 +207,7 @@ def predict_from_image_bytes(image_bytes: bytes) -> Tuple[str, float]:
             confidence, class_idx = probs.max(dim=1)
 
         idx   = str(class_idx.item())
-        label = _idx_to_class.get(idx, FOOD101_CLASSES[int(idx)] if int(idx) < len(FOOD101_CLASSES) else "unknown food")
+        label = _idx_to_class.get(idx, ALL_CLASSES[int(idx)] if int(idx) < len(ALL_CLASSES) else "unknown food")
         # Food-101 labels use underscores — convert to spaces
         label = label.replace("_", " ")
         conf  = round(float(confidence.item()), 4)
@@ -183,6 +216,49 @@ def predict_from_image_bytes(image_bytes: bytes) -> Tuple[str, float]:
     except Exception as e:
         logger.error("Image inference error: %s", e)
         return "unknown food", 0.0
+
+
+def predict_top3_from_image_bytes(image_bytes: bytes) -> list:
+    """
+    Run inference and return the top-3 class predictions sorted by confidence.
+    Returns a list of {"food_name": str, "confidence": float} dicts.
+    Falls back to [{"food_name": "unknown food", "confidence": 0.0}] when the
+    model is not loaded.
+    """
+    _try_load_model()
+
+    if _model is None:
+        return [{"food_name": "unknown food", "confidence": 0.0}]
+
+    try:
+        import torch
+        from PIL import Image
+
+        img    = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        tensor = _transform(img).unsqueeze(0).to(_device)  # type: ignore
+
+        with torch.no_grad():
+            logits = _model(tensor)
+            probs  = torch.softmax(logits, dim=1)[0]   # shape: [num_classes]
+
+        k = min(3, int(probs.shape[0]))
+        top_conf, top_idx = torch.topk(probs, k=k, dim=0)
+
+        results = []
+        for conf_t, idx_t in zip(top_conf, top_idx):
+            idx   = str(idx_t.item())
+            label = _idx_to_class.get(
+                idx,
+                ALL_CLASSES[int(idx)] if int(idx) < len(ALL_CLASSES) else "unknown food",
+            )
+            label = label.replace("_", " ")
+            results.append({"food_name": label, "confidence": round(float(conf_t.item()), 4)})
+
+        return results
+
+    except Exception as e:
+        logger.error("Top-3 inference error: %s", e)
+        return [{"food_name": "unknown food", "confidence": 0.0}]
 
 
 # ─────────────────── Nutrition mapping ─────────────────────────────────────
