@@ -6,7 +6,7 @@ const BASE_URL =
 const api = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
-  timeout: 15000,
+  timeout: 90000, // 90s — LLM responses can take 10-30s
 });
 
 // Attach access token to every request

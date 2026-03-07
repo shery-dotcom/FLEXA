@@ -15,6 +15,7 @@ Flow:
 from __future__ import annotations
 import os
 import uuid
+import asyncio
 import logging
 from datetime import date
 from typing import Any
@@ -38,11 +39,11 @@ logger = logging.getLogger(__name__)
 _GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
-def _groq_client() -> groq_sdk.Groq:
+def _get_api_key() -> str:
     api_key = settings.GROQ_API_KEY or os.getenv("GROQ_API_KEY")
     if not api_key:
         raise RuntimeError("GROQ_API_KEY is not configured. Set it in flexa-backend/.env")
-    return groq_sdk.Groq(api_key=api_key)
+    return api_key
 
 
 async def _get_user_profile(db: AsyncSession, user_id: uuid.UUID) -> dict[str, Any]:
@@ -95,11 +96,11 @@ async def process_message(
     # 2. Intent classification
     intent = classify_intent(user_message)
 
-    # 3. RAG retrieval (non-blocking — returns "" if index not built yet)
-    rag_context = rag_mod.retrieve(user_message, top_k=5, intent=intent)
-
-    # 4. Memory window
-    history = await memory_mod.fetch_window(db, user_id)
+    # 3+4. Run RAG (CPU-bound, off-thread) and memory fetch in parallel
+    rag_context, history = await asyncio.gather(
+        asyncio.to_thread(rag_mod.retrieve, user_message, 3, intent),
+        memory_mod.fetch_window(db, user_id),
+    )
 
     # 5. Avatar refresh (updates streak, BMI class)
     avatar_state = await avatar_mod.refresh_avatar_from_progress(db, user_id)
@@ -131,13 +132,13 @@ async def process_message(
         days_inactive=days_inactive,
     )
 
-    # 8. Groq LLM call
+    # 8. Groq LLM call — use AsyncGroq so the event loop isn't blocked
     try:
-        client = _groq_client()
-        completion = client.chat.completions.create(
+        async_client = groq_sdk.AsyncGroq(api_key=_get_api_key())
+        completion = await async_client.chat.completions.create(
             model=_GROQ_MODEL,
             messages=messages,
-            max_tokens=512,
+            max_tokens=380,
             temperature=0.7,
         )
         reply = completion.choices[0].message.content.strip()
