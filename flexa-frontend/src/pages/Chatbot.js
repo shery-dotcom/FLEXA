@@ -136,7 +136,7 @@ export default function Chatbot() {
               id: "welcome",
               role: "assistant",
               content:
-                "Hey! I'm FLEXOR 💪 — your AI fitness companion. Ask me anything about workouts, nutrition, or your personal goals. آپ اردو میں بھی بات کر سکتے ہیں!",
+                "Hey! I'm FLEXOR 💪 — your personal fitness companion. Ask me anything about workouts, nutrition, or your personal goals. آپ اردو میں بھی بات کر سکتے ہیں!",
               timestamp: new Date().toISOString(),
               language: "en",
             },
@@ -276,7 +276,7 @@ export default function Chatbot() {
         <div style={styles.headerLeft}>
           <TbRobot size={24} color="#D4AF37" />
           <span style={styles.headerTitle}>FLEXOR</span>
-          <span style={styles.headerSub}>AI Fitness Companion</span>
+          <span style={styles.headerSub}>Fitness Companion</span>
         </div>
         <div style={styles.headerActions}>
           <button

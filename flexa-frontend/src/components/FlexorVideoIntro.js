@@ -3,29 +3,46 @@ import React, { useEffect, useRef, useState } from "react";
 const STORAGE_KEY = "flexor_video_intro_done";
 
 /**
- * FlexorVideoIntro — plays the FLEXOR intro video the very first time
- * the user opens the Chatbot / FLEXOR section.
- * After the user skips or the video ends, the modal is permanently dismissed
- * via localStorage.
+ * FlexorVideoIntro — shows the FLEXOR intro modal.
+ *
+ * Self-showing mode (default): shows the first time the user opens the Chatbot.
+ * Controlled mode: pass `show` prop (bool) and `onClose` callback to control from parent.
+ *   - When `show` becomes true, the modal appears regardless of localStorage.
+ *   - On dismiss, `onClose()` is called and the localStorage key is set.
  */
-export default function FlexorVideoIntro() {
+export default function FlexorVideoIntro({ show: showProp, onClose }) {
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const videoRef = useRef(null);
 
+  // Self-showing mode: auto-show on first visit (only when no controlled prop)
   useEffect(() => {
-    if (!localStorage.getItem(STORAGE_KEY)) {
+    if (showProp === undefined && !localStorage.getItem(STORAGE_KEY)) {
       const t = setTimeout(() => setVisible(true), 600);
       return () => clearTimeout(t);
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Controlled mode: show when `show` prop becomes true
+  useEffect(() => {
+    if (showProp === true) {
+      setLeaving(false);
+      const t = setTimeout(() => setVisible(true), 300);
+      return () => clearTimeout(t);
+    } else if (showProp === false) {
+      setVisible(false);
+      setLeaving(false);
+    }
+  }, [showProp]);
 
   const dismiss = () => {
     setLeaving(true);
     if (videoRef.current) videoRef.current.pause();
     setTimeout(() => {
       setVisible(false);
+      setLeaving(false);
       localStorage.setItem(STORAGE_KEY, "1");
+      if (onClose) onClose();
     }, 420);
   };
 
@@ -113,7 +130,7 @@ export default function FlexorVideoIntro() {
                 textTransform: "uppercase",
               }}
             >
-              AI FITNESS COMPANION
+              FITNESS COMPANION
             </div>
             <div
               style={{

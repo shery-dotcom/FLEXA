@@ -474,6 +474,9 @@ def _food_to_dict(food: NutritionFood) -> dict:
 async def _ensure_ml_fitted(db: AsyncSession) -> None:
     """
     Lazily load every food from the DB into the ML recommender singleton.
+    Always merges BUILTIN_FOODS alongside DB foods so Pakistani and other
+    regional foods have full variety even when the DB was seeded from limited
+    CSV data.
     Runs once per process; subsequent calls are no-ops.
     """
     rec = get_recommender()
@@ -486,8 +489,20 @@ async def _ensure_ml_fitted(db: AsyncSession) -> None:
     foods = result.scalars().all()
 
     if foods:
-        rec.fit([_food_to_dict(f) for f in foods])
-        logger.info("ML recommender fitted on %d DB foods.", len(foods))
+        db_dicts = [_food_to_dict(f) for f in foods]
+        # Merge BUILTIN_FOODS to ensure rich variety for all regions.
+        # Deduplicate by lowercase name — DB entries take precedence.
+        existing_names = {d["food_name"].lower() for d in db_dicts}
+        extras = [
+            f for f in BUILTIN_FOODS
+            if f["food_name"].lower() not in existing_names
+        ]
+        merged = db_dicts + extras
+        rec.fit(merged)
+        logger.info(
+            "ML recommender fitted on %d DB foods + %d built-in extras (%d total).",
+            len(db_dicts), len(extras), len(merged),
+        )
     else:
         # DB empty — fit on built-in library so model is still usable
         rec.fit(BUILTIN_FOODS)

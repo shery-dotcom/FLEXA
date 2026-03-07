@@ -670,7 +670,7 @@ export default function Profile() {
                 )}
                 {goal.ml_score !== null && (
                   <InfoRow
-                    label="AI Score"
+                    label="Goal Score"
                     value={
                       <span style={{ color: "#D4AF37", fontWeight: 700 }}>
                         {Math.round(goal.ml_score * 100)}%

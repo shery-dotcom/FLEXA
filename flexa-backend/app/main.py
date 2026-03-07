@@ -8,12 +8,15 @@ from app.api.v1.router import router
 from app.core.config import settings
 from app.core.rate_limit import limiter
 from app.core.cache import close_redis
+from app.ml.meal_recommender_ml import get_recommender
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: initialize database tables
     await init_db()
+    # Invalidate ML meal recommender so it refits with merged BUILTIN_FOODS on first request
+    get_recommender().invalidate()
     print(f"[OK] {settings.APP_NAME} v{settings.APP_VERSION} started")
     yield
     # Shutdown: release Redis connection

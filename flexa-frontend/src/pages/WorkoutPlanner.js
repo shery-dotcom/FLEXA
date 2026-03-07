@@ -271,7 +271,7 @@ export default function WorkoutPlanner() {
             >
               <FiBarChart2 size={14} color="#D4AF37" />
               <span style={{ color: "#D4AF37", fontWeight: 700 }}>
-                ML Recommended:
+                Recommended:
               </span>
               <span style={{ color: "#e0e0e0" }}>{mlSplit.split}</span>
               <span style={{ color: "#616161", fontSize: 12 }}>
@@ -1865,7 +1865,7 @@ function EmptyState({
         }}
       >
         Tell us how many days you can train each week and your experience level.
-        The AI will build you a full weekly plan.
+        We'll build you a full weekly plan.
       </p>
 
       <div style={{ marginBottom: 24, textAlign: "left" }}>

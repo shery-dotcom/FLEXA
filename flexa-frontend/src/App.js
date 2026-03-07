@@ -15,6 +15,7 @@ import ResetPassword from "./pages/ResetPassword";
 import DietPlanner from "./pages/DietPlanner";
 import CalorieEstimator from "./pages/CalorieEstimator";
 import Chatbot from "./pages/Chatbot";
+import GoogleAuthSuccess from "./pages/GoogleAuthSuccess";
 
 // Guard: logged in but no profile → send to profile-setup
 function OnboardingGuard({ children }) {
@@ -58,6 +59,7 @@ function App() {
         />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
 
         {/* Onboarding routes — accessible even without profile */}
         <Route

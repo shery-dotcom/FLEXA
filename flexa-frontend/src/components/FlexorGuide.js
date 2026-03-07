@@ -25,7 +25,7 @@ const GUIDE_MESSAGES = {
     emoji: "🏋️",
     title: "Workout Planner",
     lines: [
-      "Your AI-powered workout plan is right here.",
+      "Your personalized workout plan is right here.",
       "Each day shows exercises, sets, and reps tailored to your goal and fitness level.",
       "Mark sessions done to keep your streak alive — don't break the chain! 🔥",
     ],

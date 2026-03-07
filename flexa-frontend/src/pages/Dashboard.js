@@ -293,12 +293,9 @@ export default function Dashboard() {
   return (
     <div
       style={{
-        maxWidth: 520,
+        maxWidth: 1280,
         margin: "0 auto",
-        padding: "16px 16px 40px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 14,
+        padding: "20px 24px 48px",
       }}
     >
       <FlexorGuide pageKey="dashboard" />
@@ -466,6 +463,11 @@ export default function Dashboard() {
         />
       </div>
 
+      </div>{/* end LEFT COLUMN */}
+
+      {/* ═══ RIGHT COLUMN ═════════════════════════════════════════ */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+
       {/* ── Workout Plan Block ───────────────────────────────────────── */}
       {!data.has_workout_plan && weekWorkouts.length === 0 ? (
         /* No plan — show CTA */
@@ -571,7 +573,7 @@ export default function Dashboard() {
               }}
             >
               <span style={{ fontSize: 11, color: "#D4AF37", fontWeight: 700 }}>
-                ML PLAN
+                YOUR PLAN
               </span>
               <span
                 style={{
@@ -584,7 +586,7 @@ export default function Dashboard() {
                 {mlSplit.split}
               </span>
               <span style={{ fontSize: 12, color: "#9e9e9e", flex: 1 }}>
-                &mdash; {SPLIT_DESC[mlSplit.split] || "AI recommended"}
+                &mdash; {SPLIT_DESC[mlSplit.split] || "Personalized plan"}
               </span>
             </div>
           )}
@@ -905,6 +907,9 @@ export default function Dashboard() {
           unit="sessions"
         />
       </div>
+
+      </div>{/* end RIGHT COLUMN */}
+      </div>{/* end two-column grid */}
     </div>
   );
 }

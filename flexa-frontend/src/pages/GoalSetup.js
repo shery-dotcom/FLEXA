@@ -41,7 +41,6 @@ export default function GoalSetup() {
   const navigate = useNavigate();
   const [goalType, setGoalType] = useState("");
   const [activity, setActivity] = useState("");
-  const [targetWeight, setTargetWeight] = useState("");
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
 
@@ -56,10 +55,9 @@ export default function GoalSetup() {
       const res = await api.post("/goals/", {
         goal_type: goalType,
         activity_level: activity,
-        target_weight_kg: targetWeight ? parseFloat(targetWeight) : undefined,
       });
       setReport(res.data.ai_report);
-      toast.success("Goal set! AI report generated.");
+      toast.success("Goal set! Health report ready.");
     } catch (err) {
       toast.error(err.response?.data?.detail || "Failed to set goal.");
     } finally {
@@ -77,7 +75,7 @@ export default function GoalSetup() {
           Set Your <span className="text-gold">Goal</span>
         </h1>
         <p style={{ color: "#9e9e9e", marginTop: 8, fontSize: 14 }}>
-          Step 2 — AI will validate your goal against your BMI
+          Step 2 — We'll personalize your plan based on your goal
         </p>
       </div>
 
@@ -180,26 +178,13 @@ export default function GoalSetup() {
             ))}
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Target Weight (kg) — optional</label>
-            <input
-              className="form-input"
-              type="number"
-              placeholder="e.g. 80"
-              value={targetWeight}
-              onChange={(e) => setTargetWeight(e.target.value)}
-              min="30"
-              max="300"
-            />
-          </div>
-
           <button
             type="submit"
             className="btn btn-gold"
             style={{ width: "100%", marginTop: 8 }}
             disabled={loading}
           >
-            {loading ? "Generating AI Report..." : "Generate AI Health Report"}
+            {loading ? "Generating Report..." : "Generate My Health Report"}
           </button>
         </form>
       ) : (
@@ -224,7 +209,7 @@ function AIReportCard({ report, onContinue }) {
           marginBottom: 24,
         }}
       >
-        <h2 style={{ fontSize: 20, fontWeight: 700 }}>AI Health Report</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 700 }}>Your Health Report</h2>
         <span
           className={`badge ${report.is_valid ? "badge-green" : "badge-red"}`}
         >
@@ -244,7 +229,7 @@ function AIReportCard({ report, onContinue }) {
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">AI Score</div>
+          <div className="stat-label">Goal Score</div>
           <div className="stat-value">
             {(report.ml_score * 100).toFixed(0)}%
           </div>

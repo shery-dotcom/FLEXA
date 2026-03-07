@@ -14,6 +14,7 @@ import {
   FiCamera,
 } from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
+import FlexorVideoIntro from "./FlexorVideoIntro";
 
 const NAV_LINKS = [
   { to: "/dashboard", label: "Home", icon: <FiGrid /> },
@@ -30,6 +31,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [showFlexorIntro, setShowFlexorIntro] = useState(false);
   const avatarRef = useRef(null);
 
   const handleLogout = () => {
@@ -38,6 +40,16 @@ export default function Navbar() {
   };
 
   const closeMenu = () => setMenuOpen(false);
+
+  const handleFlexorClick = (e) => {
+    e.preventDefault();
+    closeMenu();
+    if (!localStorage.getItem("flexor_video_intro_done")) {
+      setShowFlexorIntro(true);
+    } else {
+      navigate("/chatbot");
+    }
+  };
 
   // Close avatar dropdown on outside click
   useEffect(() => {
@@ -97,18 +109,34 @@ export default function Navbar() {
 
           {/* Desktop Links */}
           <div style={styles.links} className="nav-desktop-links">
-            {NAV_LINKS.map(({ to, label, icon }) => (
-              <Link
-                key={to}
-                to={to}
-                style={{
-                  ...styles.link,
-                  ...(location.pathname === to ? styles.activeLink : {}),
-                }}
-              >
-                {icon} {label}
-              </Link>
-            ))}
+            {NAV_LINKS.map(({ to, label, icon }) =>
+              to === "/chatbot" ? (
+                <button
+                  key={to}
+                  onClick={handleFlexorClick}
+                  style={{
+                    ...styles.link,
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    ...(location.pathname === to ? styles.activeLink : {}),
+                  }}
+                >
+                  {icon} {label}
+                </button>
+              ) : (
+                <Link
+                  key={to}
+                  to={to}
+                  style={{
+                    ...styles.link,
+                    ...(location.pathname === to ? styles.activeLink : {}),
+                  }}
+                >
+                  {icon} {label}
+                </Link>
+              ),
+            )}
           </div>
 
           {/* Right side – avatar dropdown */}
@@ -215,20 +243,39 @@ export default function Navbar() {
             </div>
           </div>
           <div style={styles.drawerDivider} />
-          {NAV_LINKS.map(({ to, label, icon }) => (
-            <Link
-              key={to}
-              to={to}
-              onClick={closeMenu}
-              style={{
-                ...styles.drawerLink,
-                ...(location.pathname === to ? styles.drawerLinkActive : {}),
-              }}
-            >
-              <span style={{ opacity: 0.7 }}>{icon}</span>
-              {label}
-            </Link>
-          ))}
+          {NAV_LINKS.map(({ to, label, icon }) =>
+            to === "/chatbot" ? (
+              <button
+                key={to}
+                onClick={handleFlexorClick}
+                style={{
+                  ...styles.drawerLink,
+                  background: "none",
+                  border: "none",
+                  width: "100%",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  ...(location.pathname === to ? styles.drawerLinkActive : {}),
+                }}
+              >
+                <span style={{ opacity: 0.7 }}>{icon}</span>
+                {label}
+              </button>
+            ) : (
+              <Link
+                key={to}
+                to={to}
+                onClick={closeMenu}
+                style={{
+                  ...styles.drawerLink,
+                  ...(location.pathname === to ? styles.drawerLinkActive : {}),
+                }}
+              >
+                <span style={{ opacity: 0.7 }}>{icon}</span>
+                {label}
+              </Link>
+            ),
+          )}
           <Link
             to="/profile"
             onClick={closeMenu}
@@ -253,6 +300,15 @@ export default function Navbar() {
 
       {/* Backdrop */}
       {menuOpen && <div style={styles.backdrop} onClick={closeMenu} />}
+
+      {/* FLEXOR intro video — shown first time FLEXOR nav link is clicked */}
+      <FlexorVideoIntro
+        show={showFlexorIntro}
+        onClose={() => {
+          setShowFlexorIntro(false);
+          navigate("/chatbot");
+        }}
+      />
     </>
   );
 }

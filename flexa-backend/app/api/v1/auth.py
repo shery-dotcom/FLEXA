@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.services.auth_service import AuthService
@@ -42,11 +43,12 @@ async def google_auth_redirect():
         f"&redirect_uri={settings.GOOGLE_REDIRECT_URI}"
         "&scope=openid%20email%20profile"
         "&access_type=offline"
+        "&prompt=select_account"
     )
-    return {"auth_url": google_auth_url}
+    return RedirectResponse(url=google_auth_url)
 
 
-@router.get("/google/callback", response_model=TokenResponse)
+@router.get("/google/callback")
 async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
     import httpx
     from app.core.config import settings
@@ -73,4 +75,13 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
         )
         user_info = user_info_response.json()
 
-    return await AuthService.google_login_or_create(db, user_info)
+    tokens = await AuthService.google_login_or_create(db, user_info)
+
+    # Redirect browser back to React with tokens in query string
+    frontend_url = settings.FRONTEND_URL
+    redirect_url = (
+        f"{frontend_url}/auth/google/success"
+        f"?access_token={tokens.access_token}"
+        f"&refresh_token={tokens.refresh_token}"
+    )
+    return RedirectResponse(url=redirect_url)
