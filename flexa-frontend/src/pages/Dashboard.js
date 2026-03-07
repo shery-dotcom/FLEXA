@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
+import FlexorGuide from "../components/FlexorGuide";
 
 /* ─── Calorie formula helpers (Mifflin-St Jeor) ────────────────── */
 const ACTIVITY_MULT = {
@@ -300,6 +301,7 @@ export default function Dashboard() {
         gap: 14,
       }}
     >
+      <FlexorGuide pageKey="dashboard" />
       {/* ── Welcome Banner ─────────────────────────────────────────── */}
       <div
         style={{

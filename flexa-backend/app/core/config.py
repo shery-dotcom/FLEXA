@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
 
+    # AI / LLM
+    GROQ_API_KEY: Optional[str] = None
+
     class Config:
         env_file = str(_ENV_FILE)
         case_sensitive = True

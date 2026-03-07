@@ -13,6 +13,7 @@ import {
   FiBookOpen,
   FiCamera,
 } from "react-icons/fi";
+import { TbRobot } from "react-icons/tb";
 
 const NAV_LINKS = [
   { to: "/dashboard", label: "Home", icon: <FiGrid /> },
@@ -20,6 +21,7 @@ const NAV_LINKS = [
   { to: "/workouts", label: "Workout", icon: <FiActivity /> },
   { to: "/diet-planner", label: "Diet", icon: <FiBookOpen /> },
   { to: "/calorie-estimator", label: "Calories", icon: <FiCamera /> },
+  { to: "/chatbot", label: "FLEXOR", icon: <TbRobot /> },
 ];
 
 export default function Navbar() {

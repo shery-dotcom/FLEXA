@@ -45,6 +45,13 @@ PAKISTANI_SUBREGIONS = frozenset({
     "punjabi", "sindhi", "balochi", "kashmiri", "pashtun", "karachi", "coastal",
 })
 
+# Continental is treated as an alias for "general"
+CONTINENTAL_ALIASES = frozenset({"continental", "general"})
+# Asian sub-types
+ASIAN_SUBREGIONS = frozenset({"asian", "east_asian", "chinese", "japanese", "thai"})
+# Mediterranean sub-types
+MEDITERRANEAN_SUBREGIONS = frozenset({"mediterranean", "middle_eastern", "greek", "italian"})
+
 
 class MealRecommenderML:
     """
@@ -155,10 +162,18 @@ class MealRecommenderML:
 
         # ── Pass 1: regional-only candidates ─────────────────────────────────
         region_lower = (region or "").lower().strip()
-        # For Pakistani sub-regions also match foods tagged "pakistani"
-        alt_regions: set = {"pakistani"} if region_lower in PAKISTANI_SUBREGIONS else set()
+        # Build alt_regions for extended matching
+        alt_regions: set = set()
+        if region_lower in PAKISTANI_SUBREGIONS:
+            alt_regions = {"pakistani"}
+        elif region_lower in CONTINENTAL_ALIASES:
+            alt_regions = set(CONTINENTAL_ALIASES)
+        elif region_lower in ASIAN_SUBREGIONS:
+            alt_regions = set(ASIAN_SUBREGIONS)
+        elif region_lower in MEDITERRANEAN_SUBREGIONS:
+            alt_regions = set(MEDITERRANEAN_SUBREGIONS)
 
-        if region_lower and region_lower != "general":
+        if region_lower and region_lower not in CONTINENTAL_ALIASES:
             regional_idx = [
                 i for i, f in enumerate(self._foods)
                 if self._passes_hard_filter(f, meal_type, compatible_diets, allergies)
@@ -229,10 +244,24 @@ class MealRecommenderML:
         combined = (
             (food.get("region") or "").lower() + " " +
             (food.get("cuisine") or "").lower()
-        )
+        ).strip()
+
         if region in combined:
             return True
-        return any(alt in combined for alt in alt_regions)
+        if any(alt in combined for alt in alt_regions):
+            return True
+
+        # Treat "continental" and "general" as interchangeable
+        if region in CONTINENTAL_ALIASES and any(a in combined for a in CONTINENTAL_ALIASES):
+            return True
+        # Asian sub-region matching
+        if region in ASIAN_SUBREGIONS and any(a in combined for a in ASIAN_SUBREGIONS):
+            return True
+        # Mediterranean sub-region matching
+        if region in MEDITERRANEAN_SUBREGIONS and any(a in combined for a in MEDITERRANEAN_SUBREGIONS):
+            return True
+
+        return False
 
     @staticmethod
     def _build_matrix(foods: List[dict]) -> np.ndarray:

@@ -56,7 +56,7 @@ export default function ProfileSetup() {
       if (pendingPic) localStorage.removeItem("flexa_pending_profile_pic");
       await refreshUser();
       toast.success("Profile created! Now set your fitness goal.");
-      navigate("/profile");
+      navigate("/goal-setup");
     } catch (err) {
       toast.error(err.response?.data?.detail || "Failed to create profile.");
     } finally {

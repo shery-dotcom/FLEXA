@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import FlexorGuide from "../components/FlexorGuide";
 import {
   FiActivity,
   FiArrowLeft,
@@ -235,6 +236,7 @@ export default function WorkoutPlanner() {
   /* ── Plan view ── */
   return (
     <div className="page-content">
+      <FlexorGuide pageKey="workouts" />
       {/* Header */}
       <div
         style={{
@@ -879,11 +881,24 @@ function DayDetailView({ workout, onBack, onStart }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   ActiveWorkoutView — live set tracker
+   ActiveWorkoutView — live set tracker (with warmup & cooldown)
 ───────────────────────────────────────────────────────────────── */
 function ActiveWorkoutView({ workout, onBack, onComplete }) {
   const exercises = (workout.exercises || []).filter(Boolean);
+  const warmupList = workout.warmup || [];
+  const cooldownList = workout.cooldown || [];
   const total = exercises.length;
+
+  // phase: "warmup" → "exercise" → "cooldown" → "done"
+  const [phase, setPhase] = useState(
+    warmupList.length > 0 ? "warmup" : "exercise",
+  );
+  const [warmupChecked, setWarmupChecked] = useState(() =>
+    Array(warmupList.length).fill(false),
+  );
+  const [cooldownChecked, setCooldownChecked] = useState(() =>
+    Array(cooldownList.length).fill(false),
+  );
 
   const [currentIdx, setCurrentIdx] = useState(0);
   const [setRows, setSetRows] = useState(() => makeDefaultSets(exercises[0]));
@@ -892,15 +907,10 @@ function ActiveWorkoutView({ workout, onBack, onComplete }) {
   const [restRunning, setRestRunning] = useState(false);
   const [restMax, setRestMax] = useState(0);
   const [completing, setCompleting] = useState(false);
-  const [mandatoryWait, setMandatoryWait] = useState(0); // forced rest between sets
-  const [completeBlockWait, setCompleteBlockWait] = useState(0); // forced rest before next exercise
-  const [warnMsgIdx, setWarnMsgIdx] = useState(0);
 
   const sessionRef = useRef(null);
   const restRef = useRef(null);
-  const mandatoryRef = useRef(null);
-  const completeBlockRef = useRef(null);
-  const lastSetDoneAt = useRef(null); // timestamp of last set completion
+  const lastSetDoneAt = useRef(null);
 
   useEffect(() => {
     sessionRef.current = setInterval(() => setSessionSec((s) => s + 1), 1000);
@@ -931,37 +941,8 @@ function ActiveWorkoutView({ workout, onBack, onComplete }) {
     return () => clearInterval(restRef.current);
   }, [restRunning]);
 
-  // Clear timers on unmount
-  useEffect(
-    () => () => {
-      clearInterval(mandatoryRef.current);
-      clearInterval(completeBlockRef.current);
-    },
-    [],
-  );
-
-  const WARN_MESSAGES = [
-    {
-      title: "Slow down — you\'re rushing!",
-      sub: "Your muscles need time to recover between exercises.",
-    },
-    {
-      title: "Grab some water.",
-      sub: "Hydration is just as important as the reps.",
-    },
-    {
-      title: "Take a breath.",
-      sub: "Let your heart rate settle before the next movement.",
-    },
-    {
-      title: "Quality over speed.",
-      sub: "Rushing through won\'t build strength — controlled reps do.",
-    },
-    {
-      title: "Rest is part of training.",
-      sub: "Skipping rest increases injury risk. Wait it out.",
-    },
-  ];
+  // Clear session timer on unmount
+  useEffect(() => () => clearInterval(sessionRef.current), []);
 
   const goToExercise = (idx) => {
     setCurrentIdx(idx);
@@ -969,10 +950,6 @@ function ActiveWorkoutView({ workout, onBack, onComplete }) {
     clearInterval(restRef.current);
     setRestRunning(false);
     setRestSec(0);
-    clearInterval(mandatoryRef.current);
-    setMandatoryWait(0);
-    clearInterval(completeBlockRef.current);
-    setCompleteBlockWait(0);
     lastSetDoneAt.current = null;
     window.scrollTo({ top: 0 });
   };
@@ -980,15 +957,12 @@ function ActiveWorkoutView({ workout, onBack, onComplete }) {
   const ex = exercises[currentIdx];
   const isLast = currentIdx === total - 1;
 
-  const MANDATORY_SEC = 30;
-
   const updateRow = (idx, field, val) =>
     setSetRows((rows) =>
       rows.map((r, i) => (i === idx ? { ...r, [field]: val } : r)),
     );
 
   const toggleRowDone = (idx) => {
-    // Un-doing a set — always allowed
     const currentRow = setRows[idx];
     if (currentRow?.done) {
       setSetRows((rows) =>
@@ -996,29 +970,6 @@ function ActiveWorkoutView({ workout, onBack, onComplete }) {
       );
       return;
     }
-
-    // Check mandatory minimum wait between sets
-    if (lastSetDoneAt.current !== null) {
-      const elapsed = Math.floor((Date.now() - lastSetDoneAt.current) / 1000);
-      const remaining = MANDATORY_SEC - elapsed;
-      if (remaining > 0) {
-        // Start / refresh the mandatory wait countdown
-        clearInterval(mandatoryRef.current);
-        setMandatoryWait(remaining);
-        mandatoryRef.current = setInterval(() => {
-          setMandatoryWait((s) => {
-            if (s <= 1) {
-              clearInterval(mandatoryRef.current);
-              return 0;
-            }
-            return s - 1;
-          });
-        }, 1000);
-        return; // block the tick
-      }
-    }
-
-    // Mark done and record timestamp
     lastSetDoneAt.current = Date.now();
     setSetRows((rows) =>
       rows.map((r, i) => {
@@ -1037,41 +988,398 @@ function ActiveWorkoutView({ workout, onBack, onComplete }) {
   const addSet = () =>
     setSetRows((rows) => [...rows, { weight: "", reps: "", done: false }]);
 
-  const triggerCompleteBlock = (remaining) => {
-    clearInterval(completeBlockRef.current);
-    const nextMsgIdx = Math.floor(Math.random() * WARN_MESSAGES.length);
-    setWarnMsgIdx(nextMsgIdx);
-    setCompleteBlockWait(remaining);
-    completeBlockRef.current = setInterval(() => {
-      setCompleteBlockWait((s) => {
-        if (s <= 1) {
-          clearInterval(completeBlockRef.current);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-  };
-
   const handleCompleteExercise = async () => {
-    // Block if user is rushing — require at least MANDATORY_SEC since last set was done
-    if (lastSetDoneAt.current !== null) {
-      const elapsed = Math.floor((Date.now() - lastSetDoneAt.current) / 1000);
-      const remaining = MANDATORY_SEC - elapsed;
-      if (remaining > 0) {
-        triggerCompleteBlock(remaining);
-        return;
-      }
-    }
     if (isLast) {
-      setCompleting(true);
+      // Transition to cooldown if available, else done
       clearInterval(sessionRef.current);
-      await onComplete();
-      setCompleting(false);
+      if (cooldownList.length > 0) {
+        setPhase("cooldown");
+      } else {
+        setPhase("done");
+        setCompleting(true);
+        await onComplete();
+        setCompleting(false);
+      }
     } else {
       goToExercise(currentIdx + 1);
     }
   };
+
+  const handleFinishCooldown = async () => {
+    setCompleting(true);
+    clearInterval(sessionRef.current);
+    await onComplete();
+    setCompleting(false);
+    setPhase("done");
+  };
+
+  /* ── Warmup phase ── */
+  if (phase === "warmup") {
+    const allChecked = warmupChecked.every(Boolean);
+    return (
+      <div className="page-content" style={{ maxWidth: 680, margin: "0 auto" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 28,
+          }}
+        >
+          <button
+            onClick={onBack}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#9e9e9e",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 14,
+              padding: 0,
+            }}
+          >
+            <FiArrowLeft size={16} /> Back
+          </button>
+          <div
+            style={{
+              fontFamily: "monospace",
+              fontSize: 14,
+              fontWeight: 700,
+              color: "#D4AF37",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <FiClock size={14} /> {fmtTime(sessionSec)}
+          </div>
+        </div>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              background: "rgba(76,175,80,0.1)",
+              border: "1px solid rgba(76,175,80,0.3)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 14px",
+            }}
+          >
+            <FiActivity size={26} color="#4caf50" />
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>
+            Warm-Up
+          </h2>
+          <p style={{ color: "#9e9e9e", fontSize: 13 }}>
+            Complete each warm-up activity before starting your workout
+          </p>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            marginBottom: 32,
+          }}
+        >
+          {warmupList.map((item, i) => (
+            <button
+              key={i}
+              onClick={() =>
+                setWarmupChecked((prev) =>
+                  prev.map((v, j) => (j === i ? !v : v)),
+                )
+              }
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                padding: "14px 18px",
+                background: warmupChecked[i] ? "rgba(76,175,80,0.07)" : "#111",
+                border: `1px solid ${warmupChecked[i] ? "rgba(76,175,80,0.3)" : "#1e1e1e"}`,
+                borderRadius: 10,
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+            >
+              <div
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: "50%",
+                  border: `2px solid ${warmupChecked[i] ? "#4caf50" : "#333"}`,
+                  background: warmupChecked[i]
+                    ? "rgba(76,175,80,0.2)"
+                    : "transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  transition: "all 0.2s",
+                }}
+              >
+                {warmupChecked[i] && <FiCheck size={13} color="#4caf50" />}
+              </div>
+              <div style={{ flex: 1 }}>
+                <span
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: warmupChecked[i] ? "#9e9e9e" : "#e0e0e0",
+                    textDecoration: warmupChecked[i] ? "line-through" : "none",
+                  }}
+                >
+                  {item.name || item}
+                </span>
+                {item.duration && (
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      color: "#616161",
+                      marginTop: 2,
+                    }}
+                  >
+                    {item.duration}
+                  </span>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+        <button
+          className="btn btn-gold"
+          style={{
+            width: "100%",
+            padding: "14px",
+            fontSize: 15,
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
+          onClick={() => setPhase("exercise")}
+        >
+          {allChecked ? "Start Training →" : "Skip Warm-Up & Start →"}
+        </button>
+      </div>
+    );
+  }
+
+  /* ── Cooldown phase ── */
+  if (phase === "cooldown") {
+    const allChecked = cooldownChecked.every(Boolean);
+    return (
+      <div className="page-content" style={{ maxWidth: 680, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              background: "rgba(212,175,55,0.1)",
+              border: "1px solid rgba(212,175,55,0.25)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 14px",
+            }}
+          >
+            <FiActivity size={26} color="#D4AF37" />
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>
+            Cool-Down
+          </h2>
+          <p style={{ color: "#9e9e9e", fontSize: 13 }}>
+            Great work! Finish with these cool-down activities
+          </p>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            marginBottom: 32,
+          }}
+        >
+          {cooldownList.map((item, i) => (
+            <button
+              key={i}
+              onClick={() =>
+                setCooldownChecked((prev) =>
+                  prev.map((v, j) => (j === i ? !v : v)),
+                )
+              }
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                padding: "14px 18px",
+                background: cooldownChecked[i]
+                  ? "rgba(212,175,55,0.06)"
+                  : "#111",
+                border: `1px solid ${cooldownChecked[i] ? "rgba(212,175,55,0.25)" : "#1e1e1e"}`,
+                borderRadius: 10,
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+            >
+              <div
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: "50%",
+                  border: `2px solid ${cooldownChecked[i] ? "#D4AF37" : "#333"}`,
+                  background: cooldownChecked[i]
+                    ? "rgba(212,175,55,0.15)"
+                    : "transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  transition: "all 0.2s",
+                }}
+              >
+                {cooldownChecked[i] && <FiCheck size={13} color="#D4AF37" />}
+              </div>
+              <div style={{ flex: 1 }}>
+                <span
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: cooldownChecked[i] ? "#9e9e9e" : "#e0e0e0",
+                    textDecoration: cooldownChecked[i]
+                      ? "line-through"
+                      : "none",
+                  }}
+                >
+                  {item.name || item}
+                </span>
+                {item.duration && (
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      color: "#616161",
+                      marginTop: 2,
+                    }}
+                  >
+                    {item.duration}
+                  </span>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+        <button
+          className="btn btn-gold"
+          style={{
+            width: "100%",
+            padding: "14px",
+            fontSize: 15,
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            opacity: completing ? 0.5 : 1,
+            cursor: completing ? "not-allowed" : "pointer",
+          }}
+          onClick={handleFinishCooldown}
+          disabled={completing}
+        >
+          {completing
+            ? "Saving..."
+            : allChecked
+              ? "Complete Workout ✓"
+              : "Skip & Complete Workout"}
+        </button>
+      </div>
+    );
+  }
+
+  /* ── Done / summary phase ── */
+  if (phase === "done") {
+    return (
+      <div
+        className="page-content"
+        style={{
+          maxWidth: 680,
+          margin: "0 auto",
+          textAlign: "center",
+          paddingTop: 20,
+        }}
+      >
+        <div
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: "50%",
+            background: "rgba(76,175,80,0.1)",
+            border: "2px solid rgba(76,175,80,0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 24px",
+          }}
+        >
+          <FiCheck size={32} color="#4caf50" />
+        </div>
+        <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 8 }}>
+          Workout Complete!
+        </h2>
+        <p style={{ color: "#9e9e9e", fontSize: 14, marginBottom: 32 }}>
+          Excellent session — every rep counts.
+        </p>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 24,
+            marginBottom: 40,
+          }}
+        >
+          <div style={{ textAlign: "center" }}>
+            <p
+              style={{
+                fontSize: 28,
+                fontWeight: 800,
+                color: "#D4AF37",
+                fontFamily: "monospace",
+              }}
+            >
+              {fmtTime(sessionSec)}
+            </p>
+            <p style={{ fontSize: 12, color: "#616161", marginTop: 4 }}>
+              Total time
+            </p>
+          </div>
+          <div style={{ width: 1, background: "#1e1e1e" }} />
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontSize: 28, fontWeight: 800, color: "#D4AF37" }}>
+              {total}
+            </p>
+            <p style={{ fontSize: 12, color: "#616161", marginTop: 4 }}>
+              Exercises
+            </p>
+          </div>
+        </div>
+        <button
+          className="btn btn-gold"
+          style={{ padding: "13px 36px", fontSize: 15, fontWeight: 700 }}
+          onClick={onBack}
+        >
+          Back to Plan
+        </button>
+      </div>
+    );
+  }
 
   if (!ex) return null;
 
@@ -1191,74 +1499,6 @@ function ActiveWorkoutView({ workout, onBack, onComplete }) {
           )}
         </div>
       </div>
-
-      {/* Mandatory rest warning */}
-      {mandatoryWait > 0 && (
-        <div
-          style={{
-            background: "rgba(239,83,80,0.07)",
-            border: "1px solid rgba(239,83,80,0.35)",
-            borderRadius: 10,
-            padding: "14px 18px",
-            marginBottom: 20,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 8,
-            }}
-          >
-            <div>
-              <p
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "#ef5350",
-                  marginBottom: 2,
-                }}
-              >
-                Slow down — rest before your next set
-              </p>
-              <p style={{ fontSize: 12, color: "#9e9e9e" }}>
-                Minimum 30 s between sets to avoid injury
-              </p>
-            </div>
-            <span
-              style={{
-                fontFamily: "monospace",
-                fontSize: 26,
-                fontWeight: 800,
-                color: "#ef5350",
-                minWidth: 54,
-                textAlign: "right",
-              }}
-            >
-              {String(mandatoryWait).padStart(2, "0")}s
-            </span>
-          </div>
-          <div
-            style={{
-              background: "#1a1a1a",
-              borderRadius: 4,
-              height: 5,
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                width: `${((MANDATORY_SEC - mandatoryWait) / MANDATORY_SEC) * 100}%`,
-                height: "100%",
-                background: "#ef5350",
-                borderRadius: 4,
-                transition: "width 1s linear",
-              }}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Rest timer */}
       {restRunning && (
@@ -1486,80 +1726,7 @@ function ActiveWorkoutView({ workout, onBack, onComplete }) {
         <FiPlus size={14} /> Add Set
       </button>
 
-      {/* Complete block warning */}
-      {completeBlockWait > 0 &&
-        (() => {
-          const msg = WARN_MESSAGES[warnMsgIdx];
-          return (
-            <div
-              style={{
-                background: "rgba(239,83,80,0.07)",
-                border: "1px solid rgba(239,83,80,0.35)",
-                borderRadius: 10,
-                padding: "16px 18px",
-                marginBottom: 14,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  marginBottom: 10,
-                }}
-              >
-                <div style={{ flex: 1, paddingRight: 12 }}>
-                  <p
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: "#ef5350",
-                      marginBottom: 4,
-                    }}
-                  >
-                    {msg.title}
-                  </p>
-                  <p
-                    style={{ fontSize: 12, color: "#9e9e9e", lineHeight: 1.5 }}
-                  >
-                    {msg.sub}
-                  </p>
-                </div>
-                <span
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: 28,
-                    fontWeight: 800,
-                    color: "#ef5350",
-                    flexShrink: 0,
-                  }}
-                >
-                  {String(completeBlockWait).padStart(2, "0")}s
-                </span>
-              </div>
-              <div
-                style={{
-                  background: "#1a1a1a",
-                  borderRadius: 4,
-                  height: 4,
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    width: `${((MANDATORY_SEC - completeBlockWait) / MANDATORY_SEC) * 100}%`,
-                    height: "100%",
-                    background: "#ef5350",
-                    borderRadius: 4,
-                    transition: "width 1s linear",
-                  }}
-                />
-              </div>
-            </div>
-          );
-        })()}
-
-      {/* Complete / Finish */}
+      {/* Complete / Next */}
       <button
         className="btn btn-gold"
         style={{
@@ -1571,25 +1738,32 @@ function ActiveWorkoutView({ workout, onBack, onComplete }) {
           alignItems: "center",
           justifyContent: "center",
           gap: 8,
-          opacity: completing || completeBlockWait > 0 ? 0.45 : 1,
-          cursor:
-            completing || completeBlockWait > 0 ? "not-allowed" : "pointer",
+          opacity: completing ? 0.45 : 1,
+          cursor: completing ? "not-allowed" : "pointer",
         }}
         onClick={handleCompleteExercise}
-        disabled={completing || completeBlockWait > 0}
+        disabled={completing}
       >
         {completing
           ? "Saving..."
-          : completeBlockWait > 0
-            ? `Wait ${completeBlockWait}s...`
-            : isLast
-              ? "Complete Workout"
-              : `Complete Exercise  →  ${exercises[currentIdx + 1]?.name}`}
+          : isLast
+            ? cooldownList.length > 0
+              ? "Finish & Cool Down →"
+              : "Complete Workout ✓"
+            : `Next: ${exercises[currentIdx + 1]?.name} →`}
       </button>
 
-      {/* Exercise nav list */}
+      {/* Dot navigation */}
       {total > 1 && (
-        <div style={{ marginTop: 28 }}>
+        <div
+          style={{
+            marginTop: 28,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
           <p
             style={{
               fontSize: 11,
@@ -1597,70 +1771,47 @@ function ActiveWorkoutView({ workout, onBack, onComplete }) {
               color: "#424242",
               textTransform: "uppercase",
               letterSpacing: "1px",
-              marginBottom: 10,
             }}
           >
-            All Exercises
+            Exercises
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              justifyContent: "center",
+            }}
+          >
             {exercises.map((e, i) => (
               <button
                 key={i}
                 onClick={() => i !== currentIdx && goToExercise(i)}
+                title={e.name}
                 style={{
-                  background:
-                    i === currentIdx ? "rgba(212,175,55,0.08)" : "transparent",
-                  border: `1px solid ${i === currentIdx ? "rgba(212,175,55,0.2)" : "#1a1a1a"}`,
-                  borderRadius: 8,
-                  padding: "10px 14px",
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  border: `2px solid ${i === currentIdx ? "#D4AF37" : "#2a2a2a"}`,
+                  background: i === currentIdx ? "#D4AF37" : "transparent",
+                  color: i === currentIdx ? "#000" : "#424242",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: i === currentIdx ? "default" : "pointer",
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
-                  cursor: i === currentIdx ? "default" : "pointer",
-                  textAlign: "left",
+                  justifyContent: "center",
+                  transition: "all 0.2s",
+                  flexShrink: 0,
                 }}
               >
-                <span
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: "50%",
-                    background:
-                      i === currentIdx ? "#D4AF37" : "rgba(255,255,255,0.04)",
-                    border: "1px solid",
-                    borderColor: i === currentIdx ? "#D4AF37" : "#2a2a2a",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: i === currentIdx ? "#000" : "#424242",
-                    flexShrink: 0,
-                  }}
-                >
-                  {i + 1}
-                </span>
-                <span
-                  style={{
-                    fontSize: 13,
-                    color: i === currentIdx ? "#e0e0e0" : "#616161",
-                    fontWeight: i === currentIdx ? 600 : 400,
-                  }}
-                >
-                  {e.name}
-                </span>
-                <span
-                  style={{
-                    marginLeft: "auto",
-                    fontSize: 12,
-                    color: i === currentIdx ? "#D4AF37" : "#2a2a2a",
-                  }}
-                >
-                  {e.sets}×{e.reps}
-                </span>
+                {i + 1}
               </button>
             ))}
           </div>
+          <p style={{ fontSize: 12, color: "#616161" }}>
+            {exercises[currentIdx]?.name}
+          </p>
         </div>
       )}
     </div>

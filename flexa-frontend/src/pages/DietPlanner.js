@@ -26,20 +26,17 @@ import {
 } from "react-icons/fi";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import FlexorGuide from "../components/FlexorGuide";
 
 // ──────────────────────────────────────── Constants ────────────────────────
 const GOLD = "#D4AF37";
 const STEPS = ["Preferences", "Your Plan"];
 
 const REGION_OPTIONS = [
-  "general",
-  "punjabi",
-  "sindhi",
-  "balochi",
-  "kashmiri",
-  "pashtun",
-  "karachi",
-  "coastal",
+  { value: "pakistani", label: "Pakistani" },
+  { value: "general", label: "Continental" },
+  { value: "asian", label: "Asian" },
+  { value: "mediterranean", label: "Mediterranean" },
 ];
 
 const DIET_TYPE_OPTIONS = [
@@ -260,6 +257,7 @@ function MacroBar({ label, consumed, target, color }) {
 }
 
 // ──────────────────────────────────────── Main Component ───────────────────
+
 export default function DietPlanner() {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
@@ -659,20 +657,20 @@ export default function DietPlanner() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {REGION_OPTIONS.map((r) => (
                 <button
-                  key={r}
-                  onClick={() => setPrefs((p) => ({ ...p, region: r }))}
+                  key={r.value}
+                  onClick={() => setPrefs((p) => ({ ...p, region: r.value }))}
                   style={{
-                    padding: "7px 14px",
+                    padding: "7px 20px",
                     borderRadius: 20,
                     cursor: "pointer",
-                    background: prefs.region === r ? `${GOLD}22` : "#111",
-                    border: `1px solid ${prefs.region === r ? GOLD : "#282828"}`,
-                    color: prefs.region === r ? GOLD : "#777",
-                    fontSize: 12,
-                    textTransform: "capitalize",
+                    background: prefs.region === r.value ? `${GOLD}22` : "#111",
+                    border: `1px solid ${prefs.region === r.value ? GOLD : "#282828"}`,
+                    color: prefs.region === r.value ? GOLD : "#777",
+                    fontSize: 13,
+                    fontWeight: prefs.region === r.value ? 600 : 400,
                   }}
                 >
-                  {r}
+                  {r.label}
                 </button>
               ))}
             </div>
@@ -1463,6 +1461,7 @@ export default function DietPlanner() {
         fontFamily: "'Inter', sans-serif",
       }}
     >
+      <FlexorGuide pageKey="diet" />
       <Toaster
         position="top-right"
         toastOptions={{ style: { background: "#1a1a1a", color: "#e0e0e0" } }}

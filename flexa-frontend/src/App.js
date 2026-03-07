@@ -14,6 +14,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import DietPlanner from "./pages/DietPlanner";
 import CalorieEstimator from "./pages/CalorieEstimator";
+import Chatbot from "./pages/Chatbot";
 
 // Guard: logged in but no profile → send to profile-setup
 function OnboardingGuard({ children }) {
@@ -124,6 +125,14 @@ function App() {
           element={
             <OnboardingGuard>
               <CalorieEstimator />
+            </OnboardingGuard>
+          }
+        />
+        <Route
+          path="/chatbot"
+          element={
+            <OnboardingGuard>
+              <Chatbot />
             </OnboardingGuard>
           }
         />

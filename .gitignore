@@ -48,3 +48,4 @@ Datasets/
 ~$*
 
 flexa-backend/data/*.csv
+flexa-backend/data/faiss/

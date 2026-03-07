@@ -10,14 +10,13 @@ import toast, { Toaster } from "react-hot-toast";
 import {
   FiCamera,
   FiUpload,
-  FiAlertTriangle,
   FiCheckCircle,
-  FiDroplet,
   FiRefreshCw,
   FiPlusCircle,
   FiInfo,
 } from "react-icons/fi";
 import api from "../api/axios";
+import FlexorGuide from "../components/FlexorGuide";
 
 const GOLD = "#D4AF37";
 
@@ -45,47 +44,8 @@ function MacroTile({ label, value, unit, color }) {
   );
 }
 
-// ─────────────────────────── Progress Bar ──────────────────────────────────
-function ConfidenceBar({ confidence }) {
-  const pct = Math.round(confidence * 100);
-  const color = pct >= 70 ? "#4ec9b0" : pct >= 40 ? GOLD : "#ef4444";
-  return (
-    <div style={{ marginTop: 6 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          fontSize: 11,
-          color: "#888",
-          marginBottom: 3,
-        }}
-      >
-        <span>AI Confidence</span>
-        <span style={{ color, fontWeight: 700 }}>{pct}%</span>
-      </div>
-      <div
-        style={{
-          height: 5,
-          background: "#1a1a1a",
-          borderRadius: 4,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            height: "100%",
-            width: `${pct}%`,
-            background: color,
-            borderRadius: 4,
-            transition: "width .6s ease",
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
 // ─────────────────────────── Main Component ────────────────────────────────
+
 export default function CalorieEstimator() {
   const fileRef = useRef(null);
   const [preview, setPreview] = useState(null);
@@ -168,7 +128,7 @@ export default function CalorieEstimator() {
         food_name: result.predicted_class,
         meal_type: mealType,
         quantity_g: portionG,
-        notes: `AI estimated from image (${Math.round(result.confidence * 100)}% confidence)`,
+        notes: `AI estimated from image (portion: ${portionG}g)`,
       });
       setLogged(true);
       toast.success("Meal logged to your diary!");
@@ -189,6 +149,7 @@ export default function CalorieEstimator() {
         fontFamily: "'Inter', sans-serif",
       }}
     >
+      <FlexorGuide pageKey="calories" />
       <Toaster
         position="top-right"
         toastOptions={{ style: { background: "#1a1a1a", color: "#e0e0e0" } }}
@@ -419,42 +380,11 @@ export default function CalorieEstimator() {
           <div
             style={{
               background: "#0d0d0d",
-              border: `1px solid ${result.low_confidence ? "#ef4444" : GOLD}33`,
+              border: `1px solid ${GOLD}33`,
               borderRadius: 16,
               padding: "24px 20px",
             }}
           >
-            {/* Status message */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 18,
-                padding: "10px 14px",
-                borderRadius: 10,
-                background: result.low_confidence
-                  ? "rgba(239,68,68,0.08)"
-                  : "rgba(212,175,55,0.08)",
-                border: `1px solid ${result.low_confidence ? "#ef444433" : GOLD + "33"}`,
-              }}
-            >
-              {result.low_confidence ? (
-                <FiAlertTriangle size={16} color="#ef4444" />
-              ) : (
-                <FiCheckCircle size={16} color={GOLD} />
-              )}
-              <span
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: result.low_confidence ? "#ef4444" : GOLD,
-                }}
-              >
-                {result.message}
-              </span>
-            </div>
-
             {/* Predicted class */}
             <div style={{ marginBottom: 18 }}>
               <div
@@ -470,15 +400,14 @@ export default function CalorieEstimator() {
               </div>
               <div
                 style={{
-                  fontSize: 24,
+                  fontSize: 26,
                   fontWeight: 800,
-                  color: "#e0e0e0",
+                  color: GOLD,
                   textTransform: "capitalize",
                 }}
               >
-                {result.predicted_class}
+                {result.predicted_class.replace(/_/g, " ")}
               </div>
-              <ConfidenceBar confidence={result.confidence} />
             </div>
 
             {/* Macros */}
@@ -521,30 +450,6 @@ export default function CalorieEstimator() {
                 />
               </div>
             </div>
-
-            {/* Matched food from DB */}
-            {result.matched_food && (
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.02)",
-                  border: "1px solid #1a1a1a",
-                  borderRadius: 10,
-                  padding: "10px 14px",
-                  marginBottom: 16,
-                  fontSize: 11,
-                  color: "#666",
-                }}
-              >
-                <span style={{ color: "#888" }}>Matched in DB: </span>
-                <span style={{ color: "#aaa" }}>
-                  {result.matched_food.food_name}
-                </span>
-                <span style={{ color: "#555" }}>
-                  {" "}
-                  (USDA · {result.matched_food.calories} kcal/100g)
-                </span>
-              </div>
-            )}
 
             {/* Log this meal */}
             <div
@@ -643,7 +548,7 @@ export default function CalorieEstimator() {
             "Use one food item per photo for highest accuracy.",
             "Good lighting and clear angles improve predictions.",
             "Adjust portion slider before estimating.",
-            "If confidence is low, manually log using the Diet Planner search.",
+            "If the prediction looks wrong, manually log using the Diet Planner search.",
             "AI is trained on Food-101 (101 classes) — international + Pakistani dishes map via DB.",
           ].map((tip, i) => (
             <div
