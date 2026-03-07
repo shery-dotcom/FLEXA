@@ -41,3 +41,7 @@ async def init_db():
         await conn.execute(
             text("ALTER TABLE progress_logs ADD COLUMN IF NOT EXISTS calorie_intake FLOAT")
         )
+        # Widen profile_picture column to TEXT to support base64 data URLs
+        await conn.execute(
+            text("ALTER TABLE profiles ALTER COLUMN profile_picture TYPE TEXT")
+        )

@@ -362,554 +362,599 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Daily Motivation ───────────────────────────────────────── */}
+      {/* ── Two-column desktop layout ──────────────────────────────── */}
       <div
         style={{
-          background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
-          border: "1px solid rgba(212,175,55,0.2)",
-          borderRadius: 14,
-          padding: "22px 22px 20px",
+          display: "grid",
+          gridTemplateColumns: "minmax(0,1fr) 420px",
+          gap: 20,
+          marginTop: 16,
+          alignItems: "start",
         }}
       >
-        <p
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: "#D4AF37",
-            letterSpacing: "2px",
-            textTransform: "uppercase",
-            marginBottom: 14,
-            textAlign: "center",
-          }}
-        >
-          &#10022; Daily Motivation &#10022;
-        </p>
-        <p
-          style={{
-            fontSize: 15,
-            fontStyle: "italic",
-            color: "#f0f0f0",
-            lineHeight: 1.65,
-            textAlign: "center",
-            marginBottom: 14,
-            fontWeight: 500,
-          }}
-        >
-          &ldquo;{quote.text}&rdquo;
-        </p>
-        <p
-          style={{
-            textAlign: "center",
-            color: "#D4AF37",
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          &mdash; {quote.author}
-        </p>
-      </div>
-
-      {/* ── 2×2 Stats Grid ─────────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <StatCard
-          label="Current Goal"
-          value={fmtGoal(data.current_goal)}
-          sub={
-            data.current_goal === "cutting"
-              ? "Calorie Deficit"
-              : data.current_goal === "bulking"
-                ? "Calorie Surplus"
-                : data.current_goal === "recomp"
-                  ? "Body Recomp"
-                  : "Maintenance"
-          }
-        />
-        <StatCard
-          label="BMI"
-          value={data.bmi ? data.bmi.toFixed(2) : "\u2014"}
-          sub={data.bmi_category || "Not measured"}
-          subColor={bmiColor(data.bmi_category)}
-        />
-        <StatCard
-          label="Daily Calories"
-          value={dailyCalories ? dailyCalories.toLocaleString() : "\u2014"}
-          sub={
-            dailyCalories
-              ? `TDEE \u00b7 ${fmtActivity(actLevel)}`
-              : "Complete your profile"
-          }
-        />
-        <StatCard
-          label="Target Calories"
-          value={targetCalories ? targetCalories.toLocaleString() : "\u2014"}
-          sub={
-            targetCalories && dailyCalories
-              ? targetCalories > dailyCalories
-                ? `+${(targetCalories - dailyCalories).toLocaleString()} surplus`
-                : targetCalories < dailyCalories
-                  ? `\u2212${(dailyCalories - targetCalories).toLocaleString()} deficit`
-                  : "Maintenance"
-              : "Set a fitness goal"
-          }
-          subColor={
-            targetCalories && dailyCalories
-              ? targetCalories > dailyCalories
-                ? "#4caf50"
-                : targetCalories < dailyCalories
-                  ? "#ef5350"
-                  : "#D4AF37"
-              : "#9e9e9e"
-          }
-        />
-      </div>
-
-      </div>{/* end LEFT COLUMN */}
-
-      {/* ═══ RIGHT COLUMN ═════════════════════════════════════════ */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-
-      {/* ── Workout Plan Block ───────────────────────────────────────── */}
-      {!data.has_workout_plan && weekWorkouts.length === 0 ? (
-        /* No plan — show CTA */
-        <div
-          style={{
-            background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
-            border: "1px solid rgba(212,175,55,0.2)",
-            borderRadius: 14,
-            padding: "32px 22px 28px",
-            textAlign: "center",
-          }}
-        >
-          <div style={{ fontSize: 42, marginBottom: 14, lineHeight: 1 }}>
-            &#127947;
-          </div>
-          <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>
-            No Workout Plan Yet
-          </h3>
-          <p
-            style={{
-              color: "#9e9e9e",
-              fontSize: 13,
-              marginBottom: 24,
-              lineHeight: 1.6,
-            }}
-          >
-            Create a personalized workout plan to get started
-          </p>
-          <button
-            className="btn btn-gold"
-            style={{
-              width: "100%",
-              padding: "14px 0",
-              fontSize: 14,
-              fontWeight: 800,
-              letterSpacing: "1px",
-              borderRadius: 10,
-            }}
-            onClick={() => navigate("/workouts")}
-          >
-            CREATE WORKOUT PLAN
-          </button>
-        </div>
-      ) : (
-        /* Plan exists — show plan details + today's workout */
-        <div
-          style={{
-            background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
-            border: "1px solid rgba(212,175,55,0.2)",
-            borderRadius: 14,
-            padding: "20px 22px",
-          }}
-        >
-          {/* Plan header */}
+        {/* ── LEFT COLUMN ───────────────────────────────────────────── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* ── Daily Motivation ───────────────────────────────────────── */}
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              marginBottom: 12,
-            }}
-          >
-            <div>
-              <p
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "#D4AF37",
-                  letterSpacing: "1px",
-                  textTransform: "uppercase",
-                  marginBottom: 2,
-                }}
-              >
-                Your Workout Plan
-              </p>
-              {planFreq > 0 && (
-                <p style={{ fontSize: 12, color: "#9e9e9e" }}>
-                  {planFreq} day{planFreq !== 1 ? "s" : ""}/week
-                  {planDifficulty
-                    ? ` · ${planDifficulty.charAt(0).toUpperCase() + planDifficulty.slice(1)}`
-                    : ""}
-                </p>
-              )}
-            </div>
-            <span style={{ fontSize: 12, color: "#9e9e9e", paddingTop: 2 }}>
-              {data.weekly_sessions} session
-              {data.weekly_sessions !== 1 ? "s" : ""} done
-            </span>
-          </div>
-
-          {/* ML split badge */}
-          {mlSplit?.split && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                background: "rgba(212,175,55,0.07)",
-                border: "1px solid rgba(212,175,55,0.25)",
-                borderRadius: 8,
-                padding: "7px 12px",
-                marginBottom: 14,
-              }}
-            >
-              <span style={{ fontSize: 11, color: "#D4AF37", fontWeight: 700 }}>
-                YOUR PLAN
-              </span>
-              <span
-                style={{
-                  width: 1,
-                  height: 12,
-                  background: "rgba(212,175,55,0.3)",
-                }}
-              />
-              <span style={{ fontSize: 13, color: "#fff", fontWeight: 700 }}>
-                {mlSplit.split}
-              </span>
-              <span style={{ fontSize: 12, color: "#9e9e9e", flex: 1 }}>
-                &mdash; {SPLIT_DESC[mlSplit.split] || "Personalized plan"}
-              </span>
-            </div>
-          )}
-
-          {/* Day dots — Mon-Sun with workout/rest differentiation */}
-          <div
-            style={{
-              display: "flex",
-              gap: 5,
-              justifyContent: "space-between",
-              marginBottom: 14,
-            }}
-          >
-            {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => {
-              const todayIdx = (new Date().getDay() + 6) % 7;
-              const isToday = i === todayIdx;
-              const dayWorkout = weekWorkouts.find(
-                (w) => w.day_of_week === FULL_DAYS[i],
-              );
-              const isWorkoutDay = dayWorkout && !dayWorkout.is_rest_day;
-              const done =
-                isWorkoutDay && i < todayIdx && i < data.weekly_sessions;
-              return (
-                <div
-                  key={i}
-                  style={{
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "100%",
-                      aspectRatio: "1",
-                      borderRadius: 6,
-                      background: isToday
-                        ? "rgba(212,175,55,0.25)"
-                        : done
-                          ? "rgba(76,175,80,0.25)"
-                          : isWorkoutDay
-                            ? "rgba(212,175,55,0.07)"
-                            : "#1a1a1a",
-                      border: `1.5px solid ${
-                        isToday
-                          ? "#D4AF37"
-                          : done
-                            ? "#4caf50"
-                            : isWorkoutDay
-                              ? "rgba(212,175,55,0.3)"
-                              : "#2a2a2a"
-                      }`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    {isToday && (
-                      <span
-                        style={{
-                          color: "#D4AF37",
-                          fontWeight: 900,
-                          fontSize: 12,
-                        }}
-                      >
-                        &bull;
-                      </span>
-                    )}
-                    {!isToday && done && (
-                      <span style={{ color: "#4caf50", fontSize: 10 }}>
-                        &#10003;
-                      </span>
-                    )}
-                    {!isToday && !done && isWorkoutDay && (
-                      <span
-                        style={{ color: "rgba(212,175,55,0.4)", fontSize: 9 }}
-                      >
-                        &#9679;
-                      </span>
-                    )}
-                  </div>
-                  <span
-                    style={{
-                      fontSize: 10,
-                      color: isToday
-                        ? "#D4AF37"
-                        : isWorkoutDay
-                          ? "#757575"
-                          : "#333",
-                      fontWeight: isToday ? 700 : 400,
-                    }}
-                  >
-                    {d}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Today's workout preview */}
-          {todayWorkout ? (
-            todayWorkout.is_rest_day ? (
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.03)",
-                  borderRadius: 10,
-                  padding: "18px 16px",
-                  textAlign: "center",
-                  marginBottom: 14,
-                  border: "1px solid #1e1a12",
-                }}
-              >
-                <div style={{ fontSize: 28, marginBottom: 8 }}>&#128564;</div>
-                <p style={{ color: "#D4AF37", fontWeight: 700, fontSize: 14 }}>
-                  Rest Day
-                </p>
-                <p style={{ color: "#616161", fontSize: 12, marginTop: 4 }}>
-                  Recovery is part of the plan. Rest up!
-                </p>
-              </div>
-            ) : (
-              <div style={{ marginBottom: 14 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: 10,
-                  }}
-                >
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>
-                    Today — {todayWorkout.name}
-                  </p>
-                  <div
-                    style={{ display: "flex", gap: 8, alignItems: "center" }}
-                  >
-                    {todayWorkout.duration_minutes ? (
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: "#9e9e9e",
-                          background: "#1a1a1a",
-                          borderRadius: 6,
-                          padding: "3px 8px",
-                        }}
-                      >
-                        {todayWorkout.duration_minutes} min
-                      </span>
-                    ) : null}
-                    {todayWorkout.difficulty ? (
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: "#D4AF37",
-                          background: "rgba(212,175,55,0.1)",
-                          borderRadius: 6,
-                          padding: "3px 8px",
-                          textTransform: "capitalize",
-                        }}
-                      >
-                        {todayWorkout.difficulty}
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
-                >
-                  {(todayWorkout.exercises || []).slice(0, 4).map((ex, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        background: "rgba(255,255,255,0.03)",
-                        border: "1px solid #1e1a12",
-                        borderRadius: 8,
-                        padding: "8px 12px",
-                      }}
-                    >
-                      <div>
-                        <p
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 600,
-                            color: "#e0e0e0",
-                          }}
-                        >
-                          {ex.name}
-                        </p>
-                        <p
-                          style={{
-                            fontSize: 11,
-                            color: "#616161",
-                            marginTop: 1,
-                          }}
-                        >
-                          {ex.muscle_group}
-                        </p>
-                      </div>
-                      <span
-                        style={{
-                          fontSize: 12,
-                          color: "#D4AF37",
-                          fontWeight: 700,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {ex.sets}×{ex.reps}
-                      </span>
-                    </div>
-                  ))}
-                  {(todayWorkout.exercises || []).length > 4 && (
-                    <p
-                      style={{
-                        fontSize: 12,
-                        color: "#616161",
-                        textAlign: "center",
-                        padding: "4px 0",
-                      }}
-                    >
-                      +{todayWorkout.exercises.length - 4} more exercises
-                    </p>
-                  )}
-                </div>
-              </div>
-            )
-          ) : (
-            <div
-              style={{
-                background: "rgba(255,255,255,0.03)",
-                borderRadius: 10,
-                padding: "14px 16px",
-                textAlign: "center",
-                marginBottom: 14,
-                border: "1px solid #1e1a12",
-              }}
-            >
-              <p style={{ color: "#616161", fontSize: 13 }}>
-                No workout scheduled for today.
-              </p>
-            </div>
-          )}
-
-          <button
-            className="btn btn-gold"
-            style={{
-              width: "100%",
-              padding: "12px 0",
-              fontSize: 13,
-              fontWeight: 700,
-              letterSpacing: "0.5px",
-              borderRadius: 10,
-            }}
-            onClick={() => navigate("/workouts")}
-          >
-            {todayWorkout && !todayWorkout.is_rest_day
-              ? "Start Workout"
-              : "View Full Plan"}
-          </button>
-        </div>
-      )}
-
-      {/* ── Today's Tasks ──────────────────────────────────────────── */}
-      {data.today_tasks?.length > 0 && (
-        <div
-          style={{
-            background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
-            border: "1px solid rgba(212,175,55,0.2)",
-            borderRadius: 14,
-            padding: "20px 22px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 16,
+              background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
+              border: "1px solid rgba(212,175,55,0.2)",
+              borderRadius: 14,
+              padding: "22px 22px 20px",
             }}
           >
             <p
               style={{
-                fontSize: 13,
+                fontSize: 11,
                 fontWeight: 700,
                 color: "#D4AF37",
-                letterSpacing: "1px",
+                letterSpacing: "2px",
                 textTransform: "uppercase",
+                marginBottom: 14,
+                textAlign: "center",
               }}
             >
-              Today&apos;s Tasks
+              &#10022; Daily Motivation &#10022;
             </p>
-            <span style={{ fontSize: 11, color: "#616161" }}>
-              {data.today_tasks.filter((t) => t.is_completed).length}/
-              {data.today_tasks.length} done
-            </span>
+            <p
+              style={{
+                fontSize: 15,
+                fontStyle: "italic",
+                color: "#f0f0f0",
+                lineHeight: 1.65,
+                textAlign: "center",
+                marginBottom: 14,
+                fontWeight: 500,
+              }}
+            >
+              &ldquo;{quote.text}&rdquo;
+            </p>
+            <p
+              style={{
+                textAlign: "center",
+                color: "#D4AF37",
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+            >
+              &mdash; {quote.author}
+            </p>
           </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {data.today_tasks.map((task) => (
-              <TaskRow key={task.id} task={task} />
-            ))}
+
+          {/* ── 2×2 Stats Grid ─────────────────────────────────────────── */}
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+          >
+            <StatCard
+              label="Current Goal"
+              value={fmtGoal(data.current_goal)}
+              sub={
+                data.current_goal === "cutting"
+                  ? "Calorie Deficit"
+                  : data.current_goal === "bulking"
+                    ? "Calorie Surplus"
+                    : data.current_goal === "recomp"
+                      ? "Body Recomp"
+                      : "Maintenance"
+              }
+            />
+            <StatCard
+              label="BMI"
+              value={data.bmi ? data.bmi.toFixed(2) : "\u2014"}
+              sub={data.bmi_category || "Not measured"}
+              subColor={bmiColor(data.bmi_category)}
+            />
+            <StatCard
+              label="Daily Calories"
+              value={dailyCalories ? dailyCalories.toLocaleString() : "\u2014"}
+              sub={
+                dailyCalories
+                  ? `TDEE \u00b7 ${fmtActivity(actLevel)}`
+                  : "Complete your profile"
+              }
+            />
+            <StatCard
+              label="Target Calories"
+              value={
+                targetCalories ? targetCalories.toLocaleString() : "\u2014"
+              }
+              sub={
+                targetCalories && dailyCalories
+                  ? targetCalories > dailyCalories
+                    ? `+${(targetCalories - dailyCalories).toLocaleString()} surplus`
+                    : targetCalories < dailyCalories
+                      ? `\u2212${(dailyCalories - targetCalories).toLocaleString()} deficit`
+                      : "Maintenance"
+                  : "Set a fitness goal"
+              }
+              subColor={
+                targetCalories && dailyCalories
+                  ? targetCalories > dailyCalories
+                    ? "#4caf50"
+                    : targetCalories < dailyCalories
+                      ? "#ef5350"
+                      : "#D4AF37"
+                  : "#9e9e9e"
+              }
+            />
           </div>
         </div>
-      )}
+        {/* end LEFT COLUMN */}
 
-      {/* ── All-time strip ─────────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <MiniStatCard
-          label="Total Sessions"
-          value={data.total_workouts_completed}
-        />
-        <MiniStatCard
-          label="This Week"
-          value={data.weekly_sessions}
-          unit="sessions"
-        />
+        {/* ═══ RIGHT COLUMN ═════════════════════════════════════════ */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {/* ── Workout Plan Block ───────────────────────────────────────── */}
+          {!data.has_workout_plan && weekWorkouts.length === 0 ? (
+            /* No plan — show CTA */
+            <div
+              style={{
+                background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
+                border: "1px solid rgba(212,175,55,0.2)",
+                borderRadius: 14,
+                padding: "32px 22px 28px",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: 42, marginBottom: 14, lineHeight: 1 }}>
+                &#127947;
+              </div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>
+                No Workout Plan Yet
+              </h3>
+              <p
+                style={{
+                  color: "#9e9e9e",
+                  fontSize: 13,
+                  marginBottom: 24,
+                  lineHeight: 1.6,
+                }}
+              >
+                Create a personalized workout plan to get started
+              </p>
+              <button
+                className="btn btn-gold"
+                style={{
+                  width: "100%",
+                  padding: "14px 0",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  letterSpacing: "1px",
+                  borderRadius: 10,
+                }}
+                onClick={() => navigate("/workouts")}
+              >
+                CREATE WORKOUT PLAN
+              </button>
+            </div>
+          ) : (
+            /* Plan exists — show plan details + today's workout */
+            <div
+              style={{
+                background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
+                border: "1px solid rgba(212,175,55,0.2)",
+                borderRadius: 14,
+                padding: "20px 22px",
+              }}
+            >
+              {/* Plan header */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  marginBottom: 12,
+                }}
+              >
+                <div>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "#D4AF37",
+                      letterSpacing: "1px",
+                      textTransform: "uppercase",
+                      marginBottom: 2,
+                    }}
+                  >
+                    Your Workout Plan
+                  </p>
+                  {planFreq > 0 && (
+                    <p style={{ fontSize: 12, color: "#9e9e9e" }}>
+                      {planFreq} day{planFreq !== 1 ? "s" : ""}/week
+                      {planDifficulty
+                        ? ` · ${planDifficulty.charAt(0).toUpperCase() + planDifficulty.slice(1)}`
+                        : ""}
+                    </p>
+                  )}
+                </div>
+                <span style={{ fontSize: 12, color: "#9e9e9e", paddingTop: 2 }}>
+                  {data.weekly_sessions} session
+                  {data.weekly_sessions !== 1 ? "s" : ""} done
+                </span>
+              </div>
+
+              {/* ML split badge */}
+              {mlSplit?.split && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    background: "rgba(212,175,55,0.07)",
+                    border: "1px solid rgba(212,175,55,0.25)",
+                    borderRadius: 8,
+                    padding: "7px 12px",
+                    marginBottom: 14,
+                  }}
+                >
+                  <span
+                    style={{ fontSize: 11, color: "#D4AF37", fontWeight: 700 }}
+                  >
+                    YOUR PLAN
+                  </span>
+                  <span
+                    style={{
+                      width: 1,
+                      height: 12,
+                      background: "rgba(212,175,55,0.3)",
+                    }}
+                  />
+                  <span
+                    style={{ fontSize: 13, color: "#fff", fontWeight: 700 }}
+                  >
+                    {mlSplit.split}
+                  </span>
+                  <span style={{ fontSize: 12, color: "#9e9e9e", flex: 1 }}>
+                    &mdash; {SPLIT_DESC[mlSplit.split] || "Personalized plan"}
+                  </span>
+                </div>
+              )}
+
+              {/* Day dots — Mon-Sun with workout/rest differentiation */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 5,
+                  justifyContent: "space-between",
+                  marginBottom: 14,
+                }}
+              >
+                {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => {
+                  const todayIdx = (new Date().getDay() + 6) % 7;
+                  const isToday = i === todayIdx;
+                  const dayWorkout = weekWorkouts.find(
+                    (w) => w.day_of_week === FULL_DAYS[i],
+                  );
+                  const isWorkoutDay = dayWorkout && !dayWorkout.is_rest_day;
+                  const done =
+                    isWorkoutDay && i < todayIdx && i < data.weekly_sessions;
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        flex: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "100%",
+                          aspectRatio: "1",
+                          borderRadius: 6,
+                          background: isToday
+                            ? "rgba(212,175,55,0.25)"
+                            : done
+                              ? "rgba(76,175,80,0.25)"
+                              : isWorkoutDay
+                                ? "rgba(212,175,55,0.07)"
+                                : "#1a1a1a",
+                          border: `1.5px solid ${
+                            isToday
+                              ? "#D4AF37"
+                              : done
+                                ? "#4caf50"
+                                : isWorkoutDay
+                                  ? "rgba(212,175,55,0.3)"
+                                  : "#2a2a2a"
+                          }`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {isToday && (
+                          <span
+                            style={{
+                              color: "#D4AF37",
+                              fontWeight: 900,
+                              fontSize: 12,
+                            }}
+                          >
+                            &bull;
+                          </span>
+                        )}
+                        {!isToday && done && (
+                          <span style={{ color: "#4caf50", fontSize: 10 }}>
+                            &#10003;
+                          </span>
+                        )}
+                        {!isToday && !done && isWorkoutDay && (
+                          <span
+                            style={{
+                              color: "rgba(212,175,55,0.4)",
+                              fontSize: 9,
+                            }}
+                          >
+                            &#9679;
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          color: isToday
+                            ? "#D4AF37"
+                            : isWorkoutDay
+                              ? "#757575"
+                              : "#333",
+                          fontWeight: isToday ? 700 : 400,
+                        }}
+                      >
+                        {d}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Today's workout preview */}
+              {todayWorkout ? (
+                todayWorkout.is_rest_day ? (
+                  <div
+                    style={{
+                      background: "rgba(255,255,255,0.03)",
+                      borderRadius: 10,
+                      padding: "18px 16px",
+                      textAlign: "center",
+                      marginBottom: 14,
+                      border: "1px solid #1e1a12",
+                    }}
+                  >
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>
+                      &#128564;
+                    </div>
+                    <p
+                      style={{
+                        color: "#D4AF37",
+                        fontWeight: 700,
+                        fontSize: 14,
+                      }}
+                    >
+                      Rest Day
+                    </p>
+                    <p style={{ color: "#616161", fontSize: 12, marginTop: 4 }}>
+                      Recovery is part of the plan. Rest up!
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ marginBottom: 14 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: 10,
+                      }}
+                    >
+                      <p
+                        style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}
+                      >
+                        Today — {todayWorkout.name}
+                      </p>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 8,
+                          alignItems: "center",
+                        }}
+                      >
+                        {todayWorkout.duration_minutes ? (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: "#9e9e9e",
+                              background: "#1a1a1a",
+                              borderRadius: 6,
+                              padding: "3px 8px",
+                            }}
+                          >
+                            {todayWorkout.duration_minutes} min
+                          </span>
+                        ) : null}
+                        {todayWorkout.difficulty ? (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: "#D4AF37",
+                              background: "rgba(212,175,55,0.1)",
+                              borderRadius: 6,
+                              padding: "3px 8px",
+                              textTransform: "capitalize",
+                            }}
+                          >
+                            {todayWorkout.difficulty}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
+                      {(todayWorkout.exercises || [])
+                        .slice(0, 4)
+                        .map((ex, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              background: "rgba(255,255,255,0.03)",
+                              border: "1px solid #1e1a12",
+                              borderRadius: 8,
+                              padding: "8px 12px",
+                            }}
+                          >
+                            <div>
+                              <p
+                                style={{
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  color: "#e0e0e0",
+                                }}
+                              >
+                                {ex.name}
+                              </p>
+                              <p
+                                style={{
+                                  fontSize: 11,
+                                  color: "#616161",
+                                  marginTop: 1,
+                                }}
+                              >
+                                {ex.muscle_group}
+                              </p>
+                            </div>
+                            <span
+                              style={{
+                                fontSize: 12,
+                                color: "#D4AF37",
+                                fontWeight: 700,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {ex.sets}×{ex.reps}
+                            </span>
+                          </div>
+                        ))}
+                      {(todayWorkout.exercises || []).length > 4 && (
+                        <p
+                          style={{
+                            fontSize: 12,
+                            color: "#616161",
+                            textAlign: "center",
+                            padding: "4px 0",
+                          }}
+                        >
+                          +{todayWorkout.exercises.length - 4} more exercises
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div
+                  style={{
+                    background: "rgba(255,255,255,0.03)",
+                    borderRadius: 10,
+                    padding: "14px 16px",
+                    textAlign: "center",
+                    marginBottom: 14,
+                    border: "1px solid #1e1a12",
+                  }}
+                >
+                  <p style={{ color: "#616161", fontSize: 13 }}>
+                    No workout scheduled for today.
+                  </p>
+                </div>
+              )}
+
+              <button
+                className="btn btn-gold"
+                style={{
+                  width: "100%",
+                  padding: "12px 0",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  letterSpacing: "0.5px",
+                  borderRadius: 10,
+                }}
+                onClick={() => navigate("/workouts")}
+              >
+                {todayWorkout && !todayWorkout.is_rest_day
+                  ? "Start Workout"
+                  : "View Full Plan"}
+              </button>
+            </div>
+          )}
+
+          {/* ── Today's Tasks ──────────────────────────────────────────── */}
+          {data.today_tasks?.length > 0 && (
+            <div
+              style={{
+                background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
+                border: "1px solid rgba(212,175,55,0.2)",
+                borderRadius: 14,
+                padding: "20px 22px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 16,
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "#D4AF37",
+                    letterSpacing: "1px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Today&apos;s Tasks
+                </p>
+                <span style={{ fontSize: 11, color: "#616161" }}>
+                  {data.today_tasks.filter((t) => t.is_completed).length}/
+                  {data.today_tasks.length} done
+                </span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {data.today_tasks.map((task) => (
+                  <TaskRow key={task.id} task={task} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── All-time strip ─────────────────────────────────────────── */}
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+          >
+            <MiniStatCard
+              label="Total Sessions"
+              value={data.total_workouts_completed}
+            />
+            <MiniStatCard
+              label="This Week"
+              value={data.weekly_sessions}
+              unit="sessions"
+            />
+          </div>
+        </div>
+        {/* end RIGHT COLUMN */}
       </div>
-
-      </div>{/* end RIGHT COLUMN */}
-      </div>{/* end two-column grid */}
+      {/* end two-column grid */}
     </div>
   );
 }
