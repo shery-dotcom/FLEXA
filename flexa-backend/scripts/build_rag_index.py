@@ -1,23 +1,27 @@
 """
-build_rag_index.py — Build FAISS indexes for FLEXOR RAG.
+build_rag_index.py — Build FAISS + BM25 hybrid indexes for FLEXOR RAG.
 
 Run once (or when data changes):
     python scripts/build_rag_index.py
 
 Outputs:
-    flexa-backend/data/faiss/fitness_qa.index
+    flexa-backend/data/faiss/fitness_qa.index       (FAISS semantic search)
+    flexa-backend/data/faiss/fitness_qa.bm25        (BM25 lexical search)
     flexa-backend/data/faiss/fitness_qa_docs.json
-    flexa-backend/data/faiss/nutrition.index
+    flexa-backend/data/faiss/nutrition.index        (FAISS semantic search)
+    flexa-backend/data/faiss/nutrition.bm25         (BM25 lexical search)
     flexa-backend/data/faiss/nutrition_docs.json
 
 Sources:
     1. HuggingFace: its-myrto/fitness-question-answers
     2. Datasets/pakistani_meals.csv
     3. Datasets/Food.com/RAW_recipes.csv (sample)
+    4. flexa-backend/data/rag_docs/*.md|*.txt (optional custom docs)
 """
 import os
 import sys
 import json
+import pickle
 import logging
 from pathlib import Path
 
@@ -32,6 +36,8 @@ logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parents[1]           # flexa-backend/
 DATA_DIR = ROOT / "data" / "faiss"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+CUSTOM_DOCS_DIR = ROOT / "data" / "rag_docs"
+CUSTOM_DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
 DATASETS_DIR = ROOT.parent / "Datasets"              # Datasets/
 PAKISTANI_CSV = DATASETS_DIR / "pakistani_meals.csv"
@@ -89,6 +95,26 @@ def embed_and_save(docs: list[str], index_path: Path, docs_path: Path, model) ->
     logger.info(f"Saved index ({index.ntotal} vectors) → {index_path}")
 
 
+def build_bm25_index(docs: list[str], index_path: Path) -> None:
+    """Build and save BM25 index for lexical (keyword) search."""
+    from rank_bm25 import BM25Okapi
+    
+    if not docs:
+        logger.warning(f"No docs to index for BM25: {index_path.name}")
+        return
+    
+    # Tokenize: simple whitespace split (lowercase)
+    tokenized_docs = [doc.lower().split() for doc in docs]
+    
+    logger.info(f"Building BM25 index for {len(docs)} chunks → {index_path.name}")
+    bm25 = BM25Okapi(tokenized_docs)
+    
+    with open(index_path, "wb") as f:
+        pickle.dump(bm25, f, protocol=pickle.HIGHEST_PROTOCOL)
+    
+    logger.info(f"Saved BM25 index → {index_path}")
+
+
 # ─── Source 1: HuggingFace Fitness Q&A ───────────────────────────────────────
 
 def load_fitness_qa() -> list[str]:
@@ -142,6 +168,7 @@ def load_foodcom_recipes(max_rows: int = 5000) -> list[str]:
     if not FOODCOM_CSV.exists():
         logger.warning(f"Food.com recipes CSV not found at {FOODCOM_CSV}")
         return []
+
     try:
         df = pd.read_csv(FOODCOM_CSV, nrows=max_rows, usecols=lambda c: c in (
             "name", "description", "ingredients", "tags", "nutrition", "steps"
@@ -161,6 +188,37 @@ def load_foodcom_recipes(max_rows: int = 5000) -> list[str]:
         return []
 
 
+def load_custom_docs() -> list[str]:
+    """
+    Load user-curated docs from flexa-backend/data/rag_docs.
+    Supports .md and .txt files.
+    """
+    if not CUSTOM_DOCS_DIR.exists():
+        return []
+
+    files = sorted([
+        p for p in CUSTOM_DOCS_DIR.rglob("*")
+        if p.is_file() and p.suffix.lower() in {".md", ".txt"}
+    ])
+    if not files:
+        logger.info("No custom RAG docs found in %s", CUSTOM_DOCS_DIR)
+        return []
+
+    docs: list[str] = []
+    for p in files:
+        try:
+            text = p.read_text(encoding="utf-8", errors="ignore").strip()
+            if not text:
+                continue
+            prefixed = f"Source: {p.name}\n{text}"
+            docs.extend(chunk_text(prefixed, max_chars=350))
+        except Exception as e:
+            logger.warning("Failed to read custom doc %s: %s", p, e)
+
+    logger.info("Custom docs: %d chunks from %d files", len(docs), len(files))
+    return docs
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
@@ -169,7 +227,9 @@ def main():
     model = SentenceTransformer("all-MiniLM-L6-v2")
 
     # ── Fitness index ──────────────────────────────────────────────────────────
-    fitness_docs = load_fitness_qa()
+    custom_docs = load_custom_docs()
+
+    fitness_docs = load_fitness_qa() + custom_docs
     if not fitness_docs:
         logger.warning("No fitness docs — creating minimal placeholder.")
         fitness_docs = [
@@ -186,9 +246,11 @@ def main():
         DATA_DIR / "fitness_qa_docs.json",
         model,
     )
+    
+    build_bm25_index(fitness_docs, DATA_DIR / "fitness_qa.bm25")
 
     # ── Nutrition index ────────────────────────────────────────────────────────
-    nutrition_docs = (
+    nutrition_docs = custom_docs + (
         load_pakistani_meals() +
         load_foodcom_recipes(max_rows=5000)
     )
@@ -207,10 +269,15 @@ def main():
         DATA_DIR / "nutrition_docs.json",
         model,
     )
+    
+    build_bm25_index(nutrition_docs, DATA_DIR / "nutrition.bm25")
 
     logger.info("✅ RAG indexes built successfully.")
-    logger.info(f"   → {DATA_DIR}/fitness_qa.index")
-    logger.info(f"   → {DATA_DIR}/nutrition.index")
+    logger.info(f"   → {DATA_DIR}/fitness_qa.index (FAISS)")
+    logger.info(f"   → {DATA_DIR}/fitness_qa.bm25 (BM25)")
+    logger.info(f"   → {DATA_DIR}/nutrition.index (FAISS)")
+    logger.info(f"   → {DATA_DIR}/nutrition.bm25 (BM25)")
+    logger.info(f"   → custom docs dir: {CUSTOM_DOCS_DIR}")
 
 
 if __name__ == "__main__":

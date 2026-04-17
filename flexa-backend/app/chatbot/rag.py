@@ -1,17 +1,25 @@
 """
-rag.py — FAISS-backed semantic retrieval for FLEXOR.
+rag.py — Hybrid (BM25 + FAISS) semantic + lexical retrieval for FLEXOR.
 
-At startup, loads two indexes:
-  • fitness_qa   — from HuggingFace its-myrto/fitness-question-answers
-  • nutrition     — from USDA / food.com summaries
+At startup, loads two dual-index pairs:
+  Fitness:
+    • fitness_qa.index (FAISS) + fitness_qa.bm25 (BM25)
+  Nutrition:
+    • nutrition.index (FAISS) + nutrition.bm25 (BM25)
 
-Call `retrieve(query, top_k=5)` to get relevant text chunks.
+Call `retrieve(query, top_k=5)` to get relevant text chunks via hybrid search.
+Uses reciprocal rank fusion (RRF) to merge lexical + semantic results.
 """
 from __future__ import annotations
 import os
 import json
 import logging
+import time
+import hashlib
+import pickle
+from collections import OrderedDict
 from pathlib import Path
+from threading import Lock
 from typing import Optional
 
 import numpy as np
@@ -22,15 +30,80 @@ logger = logging.getLogger(__name__)
 _BASE = Path(__file__).resolve().parents[2] / "data" / "faiss"
 _FITNESS_INDEX = _BASE / "fitness_qa.index"
 _FITNESS_DOCS  = _BASE / "fitness_qa_docs.json"
+_FITNESS_BM25  = _BASE / "fitness_qa.bm25"
 _NUTRITION_INDEX = _BASE / "nutrition.index"
 _NUTRITION_DOCS  = _BASE / "nutrition_docs.json"
+_NUTRITION_BM25  = _BASE / "nutrition.bm25"
 
 # Lazy singletons
 _model = None
 _fitness_index = None
 _fitness_docs: list[str] = []
+_fitness_bm25 = None
 _nutrition_index = None
 _nutrition_docs: list[str] = []
+_nutrition_bm25 = None
+
+# Retrieval tuning
+_DEFAULT_TOP_K = int(os.getenv("RAG_TOP_K", "3"))
+_CANDIDATE_MULTIPLIER = int(os.getenv("RAG_CANDIDATE_MULTIPLIER", "4"))
+_MIN_SCORE = float(os.getenv("RAG_MIN_SCORE", "0.18"))
+_MAX_CONTEXT_CHARS = int(os.getenv("RAG_MAX_CONTEXT_CHARS", "2400"))
+
+# Simple in-memory LRU caches for fast repeat queries
+_QUERY_CACHE_TTL_S = int(os.getenv("RAG_QUERY_CACHE_TTL_S", "900"))
+_QUERY_CACHE_SIZE = int(os.getenv("RAG_QUERY_CACHE_SIZE", "512"))
+_EMBED_CACHE_SIZE = int(os.getenv("RAG_EMBED_CACHE_SIZE", "1024"))
+_query_cache: "OrderedDict[str, tuple[float, str]]" = OrderedDict()
+_embed_cache: "OrderedDict[str, np.ndarray]" = OrderedDict()
+_cache_lock = Lock()
+
+
+def _normalize_query(query: str) -> str:
+    return " ".join((query or "").strip().lower().split())
+
+
+def _cache_get_query(key: str) -> Optional[str]:
+    now = time.time()
+    with _cache_lock:
+        item = _query_cache.get(key)
+        if not item:
+            return None
+        ts, value = item
+        if now - ts > _QUERY_CACHE_TTL_S:
+            _query_cache.pop(key, None)
+            return None
+        _query_cache.move_to_end(key)
+        return value
+
+
+def _cache_set_query(key: str, value: str) -> None:
+    with _cache_lock:
+        _query_cache[key] = (time.time(), value)
+        _query_cache.move_to_end(key)
+        while len(_query_cache) > _QUERY_CACHE_SIZE:
+            _query_cache.popitem(last=False)
+
+
+def _cache_get_embed(key: str) -> Optional[np.ndarray]:
+    with _cache_lock:
+        vec = _embed_cache.get(key)
+        if vec is None:
+            return None
+        _embed_cache.move_to_end(key)
+        return vec
+
+
+def _cache_set_embed(key: str, vec: np.ndarray) -> None:
+    with _cache_lock:
+        _embed_cache[key] = vec
+        _embed_cache.move_to_end(key)
+        while len(_embed_cache) > _EMBED_CACHE_SIZE:
+            _embed_cache.popitem(last=False)
+
+
+def _hash_doc(doc: str) -> str:
+    return hashlib.sha1(doc.encode("utf-8", errors="ignore")).hexdigest()
 
 
 def _get_model():
@@ -58,50 +131,185 @@ def _load_index(index_path: Path, docs_path: Path):
         return None, []
 
 
+def _load_bm25_index(bm25_path: Path):
+    """Load a BM25 index from disk. Returns BM25 object or None."""
+    if not bm25_path.exists():
+        logger.warning(f"BM25 index not found at {bm25_path}. Run scripts/build_rag_index.py first.")
+        return None
+    try:
+        with open(bm25_path, "rb") as f:
+            bm25 = pickle.load(f)
+        logger.info(f"Loaded BM25 index: {bm25_path.name}")
+        return bm25
+    except Exception as e:
+        logger.error(f"Failed to load BM25 index {bm25_path}: {e}")
+        return None
+
+
 def _ensure_loaded():
-    global _fitness_index, _fitness_docs, _nutrition_index, _nutrition_docs
+    global _fitness_index, _fitness_docs, _fitness_bm25, _nutrition_index, _nutrition_docs, _nutrition_bm25
     if _fitness_index is None:
         _fitness_index, _fitness_docs = _load_index(_FITNESS_INDEX, _FITNESS_DOCS)
+        _fitness_bm25 = _load_bm25_index(_FITNESS_BM25)
     if _nutrition_index is None:
         _nutrition_index, _nutrition_docs = _load_index(_NUTRITION_INDEX, _NUTRITION_DOCS)
+        _nutrition_bm25 = _load_bm25_index(_NUTRITION_BM25)
+
+
+def _rrf_score(rank: int, k: int = 60) -> float:
+    """Reciprocal Rank Fusion: score = 1 / (k + rank). Higher is better."""
+    return 1.0 / (k + rank)
+
+
+def _hybrid_search(
+    query_vec: np.ndarray,
+    query_norm: str,
+    faiss_index,
+    bm25_index,
+    docs: list[str],
+    candidate_k: int,
+    intent: str,
+) -> list[tuple[float, str]]:
+    """
+    Hybrid search using FAISS (semantic) + BM25 (lexical).
+    Returns list of (combined_score, doc) tuples, sorted by score descending.
+    """
+    results_by_doc: dict[str, tuple[float, str, float]] = {}  # doc_hash -> (rrf_score, doc, bm25_raw)
+
+    # ─── FAISS search (semantic) ──────────────────────────────────────────────
+    if faiss_index is not None and len(docs) > 0:
+        k = min(candidate_k, faiss_index.ntotal)
+        distances, indices = faiss_index.search(query_vec, k)
+        faiss_candidates = []
+        for rank, (dist, i) in enumerate(zip(distances[0], indices[0])):
+            if 0 <= i < len(docs):
+                score = float(dist)
+                if score >= _MIN_SCORE:
+                    doc = docs[i]
+                    h = _hash_doc(doc)
+                    rrf = _rrf_score(rank, k=60)
+                    results_by_doc[h] = (rrf, doc, 0.0)  # 0.0 = no BM25 yet
+                    faiss_candidates.append((rank, rrf, doc))
+        logger.debug("FAISS candidates=%d for intent=%s", len(faiss_candidates), intent)
+
+    # ─── BM25 search (lexical) ───────────────────────────────────────────────
+    if bm25_index is not None and len(docs) > 0:
+        tokenized = query_norm.lower().split()
+        bm25_scores = bm25_index.get_scores(tokenized)
+        # Get top-k indices by BM25 score
+        top_bm25_indices = np.argsort(-bm25_scores)[:candidate_k]
+        bm25_candidates = []
+        for rank, i in enumerate(top_bm25_indices):
+            if 0 <= i < len(docs):
+                raw_score = float(bm25_scores[i])
+                if raw_score > 0:
+                    doc = docs[i]
+                    h = _hash_doc(doc)
+                    rrf = _rrf_score(rank, k=60)
+                    if h in results_by_doc:
+                        _, _, _ = results_by_doc[h]
+                        results_by_doc[h] = (results_by_doc[h][0] + rrf, doc, raw_score)
+                    else:
+                        results_by_doc[h] = (rrf, doc, raw_score)
+                    bm25_candidates.append((rank, rrf, doc))
+        logger.debug("BM25 candidates=%d for intent=%s", len(bm25_candidates), intent)
+
+    # ─── Merge results by RRF score ──────────────────────────────────────────
+    merged = [(rrf, doc) for rrf, doc, _ in results_by_doc.values()]
+    merged.sort(key=lambda x: x[0], reverse=True)
+
+    return merged
+
 
 
 def retrieve(query: str, top_k: int = 5, intent: str = "general") -> str:
     """
-    Retrieve top_k most relevant chunks for `query`.
+    Retrieve top_k most relevant chunks for `query` using hybrid (FAISS + BM25) search.
+    
+    Combines semantic search (FAISS) + lexical search (BM25) via reciprocal rank fusion.
     Returns a single string block (chunks separated by blank lines).
     """
+    t0 = time.perf_counter()
     _ensure_loaded()
     model = _get_model()
 
-    query_vec = model.encode([query], normalize_embeddings=True).astype("float32")
+    effective_top_k = max(1, int(top_k or _DEFAULT_TOP_K))
+    query_norm = _normalize_query(query)
+    cache_key = f"{intent}:{effective_top_k}:{query_norm}"
 
-    results: list[tuple[float, str]] = []
+    # ─── Query cache lookup ──────────────────────────────────────────────────
+    cached = _cache_get_query(cache_key)
+    if cached is not None:
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        logger.debug("RAG cache hit intent=%s top_k=%d query=%s latency_ms=%.2f", 
+                     intent, effective_top_k, query_norm[:80], elapsed_ms)
+        return cached
 
-    # Pick primary index based on intent
+    # ─── Encode query (with embedding cache) ─────────────────────────────────
+    vec_key = f"{intent}:{query_norm}"
+    query_vec = _cache_get_embed(vec_key)
+    if query_vec is None:
+        query_vec = model.encode([query_norm], normalize_embeddings=True).astype("float32")
+        _cache_set_embed(vec_key, query_vec)
+
+    candidate_k = max(effective_top_k, effective_top_k * _CANDIDATE_MULTIPLIER)
+    all_results: list[tuple[float, str]] = []
+
+    # ─── Pick primary index pair based on intent ─────────────────────────────
     if intent in ("nutrition", "diet_plan", "recipe"):
-        indexes = [(_nutrition_index, _nutrition_docs), (_fitness_index, _fitness_docs)]
+        index_pairs = [
+            (_nutrition_index, _nutrition_bm25, _nutrition_docs, "nutrition"),
+            (_fitness_index, _fitness_bm25, _fitness_docs, "fitness"),
+        ]
     else:
-        indexes = [(_fitness_index, _fitness_docs), (_nutrition_index, _nutrition_docs)]
+        index_pairs = [
+            (_fitness_index, _fitness_bm25, _fitness_docs, "fitness"),
+            (_nutrition_index, _nutrition_bm25, _nutrition_docs, "nutrition"),
+        ]
 
-    for idx, docs in indexes:
-        if idx is None or len(docs) == 0:
+    # ─── Hybrid search per index pair ────────────────────────────────────────
+    for faiss_idx, bm25_idx, docs, index_name in index_pairs:
+        if (faiss_idx is None and bm25_idx is None) or len(docs) == 0:
             continue
-        k = min(top_k, idx.ntotal)
-        distances, indices = idx.search(query_vec, k)
-        for dist, i in zip(distances[0], indices[0]):
-            if 0 <= i < len(docs):
-                results.append((float(dist), docs[i]))
+        
+        hybrid = _hybrid_search(
+            query_vec, query_norm, faiss_idx, bm25_idx, docs, candidate_k, intent
+        )
+        all_results.extend(hybrid)
 
-    if not results:
+    if not all_results:
+        _cache_set_query(cache_key, "")
         return ""
 
-    # Sort by score descending (cosine similarity, higher = better)
-    results.sort(key=lambda x: x[0], reverse=True)
-    top = results[:top_k]
+    # ─── Merge & deduplicate across all results ──────────────────────────────
+    all_results.sort(key=lambda x: x[0], reverse=True)
+    
+    unique: list[tuple[float, str]] = []
+    seen = set()
+    for score, doc in all_results:
+        h = _hash_doc(doc)
+        if h in seen:
+            continue
+        seen.add(h)
+        unique.append((score, doc))
+        if len(unique) >= effective_top_k:
+            break
+
+    top = unique[:effective_top_k]
 
     chunks = "\n\n".join(chunk for _, chunk in top)
-    # Truncate to ~600 tokens (rough: 4 chars per token)
-    if len(chunks) > 2400:
-        chunks = chunks[:2400] + "…"
+    if len(chunks) > _MAX_CONTEXT_CHARS:
+        chunks = chunks[:_MAX_CONTEXT_CHARS] + "…"
+
+    _cache_set_query(cache_key, chunks)
+
+    elapsed_ms = (time.perf_counter() - t0) * 1000.0
+    logger.debug(
+        "RAG hybrid retrieve intent=%s top_k=%d candidates=%d selected=%d latency_ms=%.2f",
+        intent,
+        effective_top_k,
+        len(all_results),
+        len(top),
+        elapsed_ms,
+    )
     return chunks

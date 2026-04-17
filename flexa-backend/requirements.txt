@@ -32,5 +32,6 @@ xgboost>=2.0.0              # optional: XGBoost calorie prediction fallback
 groq>=1.0.0                 # Groq LLM API (llama-3.3-70b-versatile)
 sentence-transformers>=5.0  # all-MiniLM-L6-v2 embeddings for RAG
 faiss-cpu>=1.7.4            # FAISS vector store (CPU edition)
+rank-bm25>=0.2.2            # BM25 lexical search for hybrid retrieval
 datasets>=2.18.0            # HuggingFace datasets for fitness Q&A
 langdetect>=1.0.9           # Urdu/English language detection

@@ -54,6 +54,10 @@ MAX_IMAGE_SIZE = 10 * 1024 * 1024
 # Confidence below which the food is rejected (too low to use)
 # Can be tuned per deployment via env without code changes.
 CONFIDENCE_THRESHOLD = float(os.getenv("FOOD_CONFIDENCE_THRESHOLD", "0.70"))
+# Absolute floor: always reject if top-1 is below this confidence.
+TOP1_MIN_CONFIDENCE = float(os.getenv("FOOD_TOP1_MIN_CONFIDENCE", "0.10"))
+# Margin rule: allow low absolute confidence if top-1 is clearly above top-2.
+TOP1_TOP2_MARGIN = float(os.getenv("FOOD_TOP1_TOP2_MARGIN", "0.05"))
 
 
 # ─────────────────────────────── Background task helpers ───────────────────────────────
@@ -618,7 +622,15 @@ async def upload_meal_image(
     top3            = predict_top3_from_image_bytes(image_bytes)
     predicted_class = top3[0]["food_name"]
     confidence      = top3[0]["confidence"]
-    low_confidence  = confidence < CONFIDENCE_THRESHOLD
+    second_conf     = top3[1]["confidence"] if len(top3) > 1 else 0.0
+    conf_margin     = confidence - second_conf
+
+    # Reject only when confidence is low AND either absolute confidence is too low
+    # or top-1 is not clearly separated from top-2.
+    low_confidence = (
+        confidence < CONFIDENCE_THRESHOLD
+        and (confidence < TOP1_MIN_CONFIDENCE or conf_margin < TOP1_TOP2_MARGIN)
+    )
     requires_conf   = low_confidence
 
     # ── Reject foods below confidence threshold ──────────────────────────────
