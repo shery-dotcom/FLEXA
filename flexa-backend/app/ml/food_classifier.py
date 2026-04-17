@@ -1,16 +1,16 @@
 """
 Module 3 – Food Image Classification Service
 Architecture:
-  - PyTorch ResNet-50 with frozen backbone + Dropout(0.3) + Linear(2048, 101)
-  - Trained on Food-101 dataset (official 75 750 / 25 250 split)
-  - If .pt model not found → falls back to keyword-based estimator
-  - Class index decoded from food_class_map.json (saved during training)
-  - Predicted class mapped to nutrition_foods table via fuzzy name match
-  - Standard portion assumption: 150g per serving
+    - Architecture is loaded from food_model_meta.json (mobile-friendly by default)
+    - If .pt model not found → falls back to keyword-based estimator
+    - Class index decoded from food_class_map.json (saved during training)
+    - Predicted class mapped to nutrition_foods table via fuzzy name match
+    - Standard portion assumption: 150g per serving
 
 Training script: flexa-backend/scripts/train_food_classifier.py
 Model save path: flexa-backend/models/food_classifier.pt
 Class map path : flexa-backend/models/food_class_map.json
+Model meta path: flexa-backend/models/food_model_meta.json
 """
 import os
 import io
@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 MODEL_DIR        = Path(__file__).resolve().parents[2] / "models"
 MODEL_PATH       = MODEL_DIR / "food_classifier.pt"
 MAP_PATH         = MODEL_DIR / "food_class_map.json"    # idx → class label (written by training)
+META_PATH        = MODEL_DIR / "food_model_meta.json"
 CLASSES_TXT      = Path(__file__).resolve().parents[3] / "Datasets" / "food-101" / "meta" / "classes.txt"
 PAK_IMAGES_DIR   = Path(__file__).resolve().parents[3] / "Datasets" / "Pakistani Food Images"
 VEG_IMAGES_DIR   = Path(__file__).resolve().parents[3] / "Datasets" / "Vegetables & Fruits"
@@ -116,6 +117,74 @@ _model = None
 _transform = None
 _model_loaded = False
 _device = "cpu"
+_loaded_signature = None
+_model_meta = {
+    "model_arch": "resnet50",
+    "img_size": 224,
+    "normalize_mean": [0.485, 0.456, 0.406],
+    "normalize_std": [0.229, 0.224, 0.225],
+}
+
+
+def _load_model_meta() -> dict:
+    if META_PATH.exists():
+        try:
+            with open(META_PATH, "r") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+        except Exception as e:
+            logger.warning("Could not read model meta at %s: %s", META_PATH, e)
+    return {
+        "model_arch": "resnet50",
+        "img_size": 224,
+        "normalize_mean": [0.485, 0.456, 0.406],
+        "normalize_std": [0.229, 0.224, 0.225],
+    }
+
+
+def _build_model_by_arch(model_arch: str, num_classes: int):
+    import torch.nn as nn
+    from torchvision.models import (
+        mobilenet_v3_large,
+        resnet50,
+    )
+
+    arch = (model_arch or "resnet50").lower()
+    if arch == "mobilenet_v3_large":
+        model = mobilenet_v3_large(weights=None)
+        in_features = model.classifier[-1].in_features
+        model.classifier[-1] = nn.Linear(in_features, num_classes)
+        return model
+
+    if arch == "resnet50":
+        model = resnet50(weights=None)
+        model.fc = nn.Sequential(
+            nn.Dropout(0.3),
+            nn.Linear(model.fc.in_features, num_classes),
+        )
+        return model
+
+    raise ValueError(f"Unsupported model_arch '{model_arch}' in model metadata")
+
+
+def _file_mtime(path: Path) -> float:
+    try:
+        return path.stat().st_mtime
+    except Exception:
+        return -1.0
+
+
+def _current_signature() -> tuple:
+    """Signature of model artifacts currently on disk for hot-reload checks."""
+    return (
+        MODEL_PATH.exists(),
+        MAP_PATH.exists(),
+        META_PATH.exists(),
+        _file_mtime(MODEL_PATH),
+        _file_mtime(MAP_PATH),
+        _file_mtime(META_PATH),
+    )
 
 
 def _try_load_model():
@@ -124,15 +193,14 @@ def _try_load_model():
         model.fc = nn.Sequential(nn.Dropout(0.3), nn.Linear(2048, 101))
     Falls back silently if torch is not installed or model file is missing.
     """
-    global _model, _transform, _model_loaded, _idx_to_class, _device
-    if _model_loaded:
+    global _model, _transform, _model_loaded, _idx_to_class, _device, _model_meta, _loaded_signature
+    current_sig = _current_signature()
+    if _model_loaded and _loaded_signature == current_sig:
         return
 
     try:
         import torch
-        import torch.nn as nn
         import torchvision.transforms as T
-        from torchvision.models import resnet50, ResNet50_Weights
 
         _device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -150,12 +218,14 @@ def _try_load_model():
         num_classes = len(class_map) if class_map else len(ALL_CLASSES)
         logger.info("Loading model with %d output classes", num_classes)
 
-        # Build architecture EXACTLY as in train_food_classifier.py
-        model = resnet50(weights=None)
-        model.fc = nn.Sequential(
-            nn.Dropout(0.3),
-            nn.Linear(model.fc.in_features, num_classes),
-        )
+        _model_meta = _load_model_meta()
+        model_arch = _model_meta.get("model_arch", "resnet50")
+        img_size = int(_model_meta.get("img_size", 224))
+        mean = _model_meta.get("normalize_mean", [0.485, 0.456, 0.406])
+        std = _model_meta.get("normalize_std", [0.229, 0.224, 0.225])
+
+        # Build architecture EXACTLY as saved during training
+        model = _build_model_by_arch(model_arch=model_arch, num_classes=num_classes)
         state = torch.load(MODEL_PATH, map_location=_device)
         model.load_state_dict(state)
         model.to(_device)
@@ -163,15 +233,22 @@ def _try_load_model():
 
         transform = T.Compose([
             T.Resize(256),
-            T.CenterCrop(224),
+            T.CenterCrop(img_size),
             T.ToTensor(),
-            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            T.Normalize(mean=mean, std=std),
         ])
 
         _model      = model
         _transform  = transform
         _idx_to_class = _load_class_map()
-        logger.info("✅ Food classifier loaded (%s) — device: %s", MODEL_PATH.name, _device)
+        _loaded_signature = current_sig
+        logger.info(
+            "Food classifier loaded (%s) arch=%s img=%s device=%s",
+            MODEL_PATH.name,
+            model_arch,
+            img_size,
+            _device,
+        )
 
     except ImportError:
         logger.warning("PyTorch not installed. Install: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126")
@@ -299,3 +376,17 @@ async def map_prediction_to_nutrition(
         logger.error("Nutrition mapping error: %s", e)
 
     return None
+
+
+def get_model_runtime_info() -> dict:
+    """Expose runtime model metadata for mobile clients and diagnostics."""
+    meta = _load_model_meta()
+    return {
+        "model_available": MODEL_PATH.exists(),
+        "model_arch": meta.get("model_arch", "resnet50"),
+        "img_size": int(meta.get("img_size", 224)),
+        "normalize_mean": meta.get("normalize_mean", [0.485, 0.456, 0.406]),
+        "normalize_std": meta.get("normalize_std", [0.229, 0.224, 0.225]),
+        "class_map_available": MAP_PATH.exists(),
+        "num_classes": len(_load_class_map()),
+    }

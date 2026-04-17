@@ -1,13 +1,14 @@
 """
 Flexa – Module 3: Food Image Classifier
 ========================================
-Architecture : ResNet-50 (ImageNet pretrained) + Dropout(0.3) + Linear(2048→N)
+Architecture : configurable (MobileNetV3-Large default for mobile, ResNet-50 optional)
 Datasets     : Food-101  (75 750 train / 25 250 test, official split from JSON)
                Pakistani Food Images (folder-based, 80/20 random split)
                Vegetables & Fruits   (folder-based, 80/20 random split)
-Training     : Phase 1 – head only (frozen backbone), Phase 2 – layer3+layer4 unfrozen
+Training     : Phase 1 – head only (frozen backbone), Phase 2 – selective unfreeze
 Output       : flexa-backend/models/food_classifier.pt
               flexa-backend/models/food_class_map.json   (idx → class label)
+              flexa-backend/models/food_model_meta.json  (arch + preprocessing)
 
 Usage:
     cd flexa-backend
@@ -15,9 +16,8 @@ Usage:
 
 Notes:
     - With NVIDIA GPU training takes ≈ 40-70 min total for combined dataset
-    - The FC architecture here MUST match food_classifier.py exactly:
-        model.fc = nn.Sequential(nn.Dropout(0.3), nn.Linear(2048, NUM_CLASSES))
-    - NUM_CLASSES is determined automatically from all three datasets combined
+    - Model metadata is saved so inference can rebuild the exact architecture.
+    - NUM_CLASSES is determined automatically from all three datasets combined.
 """
 import os
 import sys
@@ -25,6 +25,11 @@ import json
 import time
 import random
 from pathlib import Path
+
+from PIL import Image, ImageFile
+
+# Do not fail on partially truncated JPEG streams.
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 # ─── Paths ─────────────────────────────────────────────────────────────────
 ROOT       = Path(__file__).resolve().parents[2]
@@ -36,16 +41,18 @@ VEG_IMAGES_DIR  = ROOT / "Datasets" / "Vegetables & Fruits"
 MODEL_DIR  = Path(__file__).resolve().parents[1] / "models"
 MODEL_PATH = MODEL_DIR / "food_classifier.pt"
 MAP_PATH   = MODEL_DIR / "food_class_map.json"
+META_PATH  = MODEL_DIR / "food_model_meta.json"
 
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
 # ─── Hyper-parameters ───────────────────────────────────────────────────────
 EPOCHS_FROZEN   = 5      # head-only  (backbone frozen)
-EPOCHS_FINETUNE = 3      # layer3+4 unfrozen
+EPOCHS_FINETUNE = 3      # selective unfreeze
 BATCH_SIZE      = 64
 LR_HEAD         = 1e-3
 LR_FINETUNE     = 1e-4
-IMG_SIZE        = 224
+MODEL_ARCH      = os.getenv("FOOD_MODEL_ARCH", "mobilenet_v3_large").strip().lower()
+IMG_SIZE        = int(os.getenv("FOOD_IMG_SIZE", "192"))
 NUM_WORKERS     = 4      # set to 0 if multiprocessing crashes on Windows
 RANDOM_SEED     = 42
 
@@ -111,11 +118,16 @@ class Food101Dataset:
         return len(self.paths)
 
     def __getitem__(self, i):
-        from PIL import Image
-        img = Image.open(self.paths[i]).convert("RGB")
-        if self.transform:
-            img = self.transform(img)
-        return img, self.labels[i]
+        # Retry with nearby samples if a file is corrupted.
+        for _ in range(5):
+            try:
+                img = Image.open(self.paths[i]).convert("RGB")
+                if self.transform:
+                    img = self.transform(img)
+                return img, self.labels[i]
+            except Exception:
+                i = (i + 1) % len(self.paths)
+        raise RuntimeError(f"Failed to load image after retries around index {i}")
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -181,11 +193,16 @@ class FolderImageDataset:
         return len(self.paths)
 
     def __getitem__(self, i):
-        from PIL import Image
-        img = Image.open(self.paths[i]).convert("RGB")
-        if self.transform:
-            img = self.transform(img)
-        return img, self.labels[i]
+        # Retry with nearby samples if a file is corrupted.
+        for _ in range(5):
+            try:
+                img = Image.open(self.paths[i]).convert("RGB")
+                if self.transform:
+                    img = self.transform(img)
+                return img, self.labels[i]
+            except Exception:
+                i = (i + 1) % len(self.paths)
+        raise RuntimeError(f"Failed to load image after retries around index {i}")
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -215,21 +232,67 @@ class CombinedDataset:
 # ────────────────────────────────────────────────────────────────────────────
 # Model builder — architecture MUST match food_classifier.py
 # ────────────────────────────────────────────────────────────────────────────
-def build_model(num_classes: int, freeze_backbone: bool = True):
+def build_model(num_classes: int, freeze_backbone: bool = True, model_arch: str = MODEL_ARCH):
     import torch.nn as nn
-    from torchvision.models import resnet50, ResNet50_Weights
-
-    model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
-    if freeze_backbone:
-        for param in model.parameters():
-            param.requires_grad = False
-
-    # ⚠️  This Sequential structure MUST match food_classifier.py load code
-    model.fc = nn.Sequential(
-        nn.Dropout(0.3),
-        nn.Linear(model.fc.in_features, num_classes),
+    from torchvision.models import (
+        mobilenet_v3_large,
+        MobileNet_V3_Large_Weights,
+        resnet50,
+        ResNet50_Weights,
     )
-    return model
+
+    arch = model_arch.lower()
+
+    if arch == "mobilenet_v3_large":
+        model = mobilenet_v3_large(weights=MobileNet_V3_Large_Weights.IMAGENET1K_V2)
+        if freeze_backbone:
+            for param in model.features.parameters():
+                param.requires_grad = False
+        in_features = model.classifier[-1].in_features
+        model.classifier[-1] = nn.Linear(in_features, num_classes)
+        return model
+
+    if arch == "resnet50":
+        model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
+        if freeze_backbone:
+            for param in model.parameters():
+                param.requires_grad = False
+
+        model.fc = nn.Sequential(
+            nn.Dropout(0.3),
+            nn.Linear(model.fc.in_features, num_classes),
+        )
+        return model
+
+    raise ValueError(f"Unsupported FOOD_MODEL_ARCH='{model_arch}'. Use 'mobilenet_v3_large' or 'resnet50'.")
+
+
+def get_head_parameters(model, model_arch: str = MODEL_ARCH):
+    arch = model_arch.lower()
+    if arch == "mobilenet_v3_large":
+        return model.classifier.parameters()
+    if arch == "resnet50":
+        return model.fc.parameters()
+    raise ValueError(f"Unsupported FOOD_MODEL_ARCH='{model_arch}'.")
+
+
+def unfreeze_for_finetune(model, model_arch: str = MODEL_ARCH) -> None:
+    """Unfreeze only deeper layers to keep training stable with mixed datasets."""
+    arch = model_arch.lower()
+
+    if arch == "mobilenet_v3_large":
+        for name, param in model.named_parameters():
+            if any(k in name for k in ("features.13", "features.14", "features.15", "features.16", "classifier")):
+                param.requires_grad = True
+        return
+
+    if arch == "resnet50":
+        for name, param in model.named_parameters():
+            if any(x in name for x in ("layer3", "layer4", "fc")):
+                param.requires_grad = True
+        return
+
+    raise ValueError(f"Unsupported FOOD_MODEL_ARCH='{model_arch}'.")
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -305,6 +368,8 @@ def main():
     NUM_CLASSES = len(global_class_to_idx)
     idx_to_class = {str(v): k for k, v in global_class_to_idx.items()}
     print(f"[INFO] Total classes: {NUM_CLASSES}")
+    print(f"[INFO] Model arch  : {MODEL_ARCH}")
+    print(f"[INFO] Image size  : {IMG_SIZE}")
     print(f"       Food-101 active: {IMAGES_DIR.exists()}")
     print(f"       Pakistani Food Images active: {PAK_IMAGES_DIR.exists()}")
     print(f"       Vegetables & Fruits active: {VEG_IMAGES_DIR.exists()}")
@@ -313,6 +378,17 @@ def main():
     with open(MAP_PATH, "w") as f:
         json.dump(idx_to_class, f, indent=2)
     print(f"[INFO] Class map saved → {MAP_PATH}  ({NUM_CLASSES} classes)")
+
+    model_meta = {
+        "model_arch": MODEL_ARCH,
+        "img_size": IMG_SIZE,
+        "normalize_mean": [0.485, 0.456, 0.406],
+        "normalize_std": [0.229, 0.224, 0.225],
+        "num_classes": NUM_CLASSES,
+    }
+    with open(META_PATH, "w") as f:
+        json.dump(model_meta, f, indent=2)
+    print(f"[INFO] Model metadata saved → {META_PATH}")
 
     # ── Transforms ──────────────────────────────────────────────────────
     train_tf = transforms.Compose([
@@ -384,8 +460,8 @@ def main():
     )
 
     # ── Model ────────────────────────────────────────────────────────────
-    print(f"\n[INFO] Building ResNet-50 (ImageNet pretrained, frozen backbone, {NUM_CLASSES} classes) …")
-    model = build_model(NUM_CLASSES, freeze_backbone=True).to(device)
+    print(f"\n[INFO] Building {MODEL_ARCH} (ImageNet pretrained, frozen backbone, {NUM_CLASSES} classes) …")
+    model = build_model(NUM_CLASSES, freeze_backbone=True, model_arch=MODEL_ARCH).to(device)
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"[INFO] Trainable params: {trainable:,}")
 
@@ -396,7 +472,7 @@ def main():
     print(f"\n{'='*60}")
     print(f" PHASE 1 — Classifier head only ({EPOCHS_FROZEN} epochs)")
     print(f"{'='*60}")
-    optimizer = optim.Adam(model.fc.parameters(), lr=LR_HEAD, weight_decay=1e-4)
+    optimizer = optim.Adam(get_head_parameters(model, MODEL_ARCH), lr=LR_HEAD, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS_FROZEN)
 
     for epoch in range(1, EPOCHS_FROZEN + 1):
@@ -412,9 +488,7 @@ def main():
     print(f"\n{'='*60}")
     print(f" PHASE 2 — Fine-tuning layer3+layer4 ({EPOCHS_FINETUNE} epochs)")
     print(f"{'='*60}")
-    for name, param in model.named_parameters():
-        if any(x in name for x in ("layer3", "layer4", "fc")):
-            param.requires_grad = True
+    unfreeze_for_finetune(model, MODEL_ARCH)
     trainable_ft = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"[INFO] Trainable params (fine-tune): {trainable_ft:,}")
 
@@ -439,6 +513,7 @@ def main():
     print(f" Total Classes     : {NUM_CLASSES}")
     print(f" Model             : {MODEL_PATH}")
     print(f" Class map         : {MAP_PATH}")
+    print(f" Model metadata    : {META_PATH}")
     print(f"{'='*60}")
 
 

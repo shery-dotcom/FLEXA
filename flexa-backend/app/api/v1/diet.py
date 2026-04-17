@@ -37,7 +37,12 @@ from app.schemas.diet import (
 from app.services.calorie_engine import run_calorie_calculator
 from app.services.meal_recommender import generate_meal_plan
 from app.services.diet_service import get_current_reminders
-from app.ml.food_classifier import predict_from_image_bytes, predict_top3_from_image_bytes, map_prediction_to_nutrition
+from app.ml.food_classifier import (
+    predict_from_image_bytes,
+    predict_top3_from_image_bytes,
+    map_prediction_to_nutrition,
+    get_model_runtime_info,
+)
 from app.core.cache import cache_get, cache_set, cache_delete
 from app.core.rate_limit import limiter
 
@@ -47,8 +52,8 @@ router = APIRouter(prefix="/diet", tags=["Module 3 – Diet & Calorie Planner"])
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
 
 # Confidence below which the food is rejected (too low to use)
-# Increased from 0.60 to 0.75 for higher accuracy
-CONFIDENCE_THRESHOLD = 0.75
+# Can be tuned per deployment via env without code changes.
+CONFIDENCE_THRESHOLD = float(os.getenv("FOOD_CONFIDENCE_THRESHOLD", "0.70"))
 
 
 # ─────────────────────────────── Background task helpers ───────────────────────────────
@@ -570,6 +575,18 @@ async def get_reminders(
 # ───────────────────────────────────────────────────────────────────────────
 # 8. Image-based Calorie Estimation  (FE-6, FE-7)
 # ───────────────────────────────────────────────────────────────────────────
+
+@router.get("/image-model-config")
+async def image_model_config(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Returns backend-side model preprocessing/runtime config.
+    This is useful for future Android/iOS clients to stay aligned with server model settings.
+    """
+    info = get_model_runtime_info()
+    info["confidence_threshold"] = CONFIDENCE_THRESHOLD
+    return info
 
 @router.post("/upload-meal-image", response_model=ImageAnalysisResponse)
 @limiter.limit("5/minute")
