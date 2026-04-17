@@ -108,7 +108,7 @@ export default function WorkoutPlanner() {
   const [newFreq, setNewFreq] = useState(4);
   const [newExperienceLevel, setNewExperienceLevel] = useState("intermediate");
 
-  // "plan" | "detail" | "active"
+  // "plan" | "session"
   const [view, setView] = useState("plan");
   const [selectedWorkout, setSelectedWorkout] = useState(null);
 
@@ -194,40 +194,24 @@ export default function WorkoutPlanner() {
   };
 
   /* ── view transitions ── */
-  const openDetail = (workout) => {
+  const openSession = (workout) => {
     setSelectedWorkout(workout);
-    setView("detail");
-    window.scrollTo({ top: 0 });
-  };
-  const openActive = () => {
-    setView("active");
+    setView("session");
     window.scrollTo({ top: 0 });
   };
   const backToPlan = () => {
     setView("plan");
     setSelectedWorkout(null);
   };
-  const backToDetail = () => {
-    setView("detail");
-  };
 
   /* ── render ── */
-  if (view === "detail" && selectedWorkout)
+  if (view === "session" && selectedWorkout)
     return (
-      <DayDetailView
+      <WorkoutSessionScreen
         workout={selectedWorkout}
         onBack={backToPlan}
-        onStart={openActive}
-      />
-    );
-
-  if (view === "active" && selectedWorkout)
-    return (
-      <ActiveWorkoutView
-        workout={selectedWorkout}
-        onBack={backToDetail}
-        onComplete={async () => {
-          await completeWorkout(selectedWorkout.id);
+        onComplete={async (sessionData) => {
+          await completeWorkout(selectedWorkout.id, sessionData);
           backToPlan();
         }}
       />
@@ -255,30 +239,6 @@ export default function WorkoutPlanner() {
           <p style={{ color: "#9e9e9e", marginTop: 6, fontSize: 14 }}>
             AI-generated weekly training plan built around your goal
           </p>
-          {mlSplit && (
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                marginTop: 10,
-                padding: "7px 14px",
-                background: "rgba(212,175,55,0.08)",
-                border: "1px solid rgba(212,175,55,0.3)",
-                borderRadius: 20,
-                fontSize: 13,
-              }}
-            >
-              <FiBarChart2 size={14} color="#D4AF37" />
-              <span style={{ color: "#D4AF37", fontWeight: 700 }}>
-                Recommended:
-              </span>
-              <span style={{ color: "#e0e0e0" }}>{mlSplit.split}</span>
-              <span style={{ color: "#616161", fontSize: 12 }}>
-                — {SPLIT_INFO[mlSplit.split]?.desc}
-              </span>
-            </div>
-          )}
         </div>
 
         {hasPlan && (
@@ -364,7 +324,7 @@ export default function WorkoutPlanner() {
           onGenerate={() => generate(freq, week, experienceLevel)}
         />
       ) : (
-        <WeekGrid workouts={workouts} onViewWorkout={openDetail} />
+        <WeekGrid workouts={workouts} onViewWorkout={openSession} />
       )}
     </div>
   );
@@ -731,34 +691,297 @@ function ExerciseDetailCard({ index, ex }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   DayDetailView
+   WorkoutSessionScreen — unified workout day view with set logging,
+   anti-cheat timer, and inline rest suggestions
 ───────────────────────────────────────────────────────────────── */
-function DayDetailView({ workout, onBack, onStart }) {
-  const exercises = workout.exercises || [];
-  const warmup = workout.warmup || [];
-  const cooldown = workout.cooldown || [];
+const MIN_SET_DURATION_S = 12; // min realistic seconds per set
+const RAPID_WINDOW_S = 20; // sets completed within this window count as rapid
+const RAPID_THRESHOLD = 3; // rapid sets before rest is suggested
 
+function WorkoutSessionScreen({ workout, onBack, onComplete }) {
+  const exercises = (workout.exercises || []).filter(Boolean);
+  const warmupList = workout.warmup || [];
+  const cooldownList = workout.cooldown || [];
+
+  /* ── session timer ── */
+  const [sessionSec, setSessionSec] = useState(0);
+  const sessionRef = useRef(null);
+  useEffect(() => {
+    sessionRef.current = setInterval(() => setSessionSec((s) => s + 1), 1000);
+    return () => clearInterval(sessionRef.current);
+  }, []);
+
+  /* ── warmup / cooldown checklists ── */
+  const [warmupChecked, setWarmupChecked] = useState(() =>
+    Array(warmupList.length).fill(false),
+  );
+  const [cooldownChecked, setCooldownChecked] = useState(() =>
+    Array(cooldownList.length).fill(false),
+  );
+
+  /* ── exercise accordion state ── */
+  const [expandedSet, setExpandedSet] = useState(new Set());
+
+  /* ── per-exercise set rows ── */
+  const [allSetRows, setAllSetRows] = useState(() => {
+    const init = {};
+    exercises.forEach((ex, i) => {
+      init[i] = makeDefaultSets(ex);
+    });
+    return init;
+  });
+
+  /* ── rest timer ── */
+  const [restSec, setRestSec] = useState(0);
+  const [restRunning, setRestRunning] = useState(false);
+  const [restMax, setRestMax] = useState(0);
+  const [restLabel, setRestLabel] = useState("");
+  const restRef = useRef(null);
+  useEffect(() => {
+    if (!restRunning) return;
+    clearInterval(restRef.current);
+    restRef.current = setInterval(() => {
+      setRestSec((s) => {
+        if (s <= 1) {
+          clearInterval(restRef.current);
+          setRestRunning(false);
+          toast("Rest complete — start your next set!", {
+            duration: 4000,
+            style: {
+              background: "#1a1a1a",
+              border: "1px solid #4caf50",
+              color: "#4caf50",
+            },
+          });
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(restRef.current);
+  }, [restRunning]);
+  useEffect(() => () => clearInterval(restRef.current), []);
+
+  /* ── anti-cheat refs ── */
+  const exerciseStartedAt = useRef({}); // { [exIdx]: timestamp }
+  const lastSetDoneAt = useRef({}); // { [exIdx]: timestamp }
+  const rapidTimestamps = useRef([]); // timestamps of recent set completions (any exercise)
+
+  const [completing, setCompleting] = useState(false);
+
+  /* ── per-set individual timers ── */
+  const [setTimers, setSetTimers] = useState({}); // { "exIdx_rowIdx": { sec, running } }
+  const setTimerRefs = useRef({}); // { "exIdx_rowIdx": intervalId }
+
+  const startSetTimer = (exIdx, rowIdx) => {
+    const key = `${exIdx}_${rowIdx}`;
+    if (setTimerRefs.current[key]) return; // already running
+    setSetTimers((prev) => ({ ...prev, [key]: { sec: 0, running: true } }));
+    setTimerRefs.current[key] = setInterval(() => {
+      setSetTimers((prev) => ({
+        ...prev,
+        [key]: { running: true, sec: (prev[key]?.sec ?? 0) + 1 },
+      }));
+    }, 1000);
+  };
+
+  const stopSetTimer = (exIdx, rowIdx) => {
+    const key = `${exIdx}_${rowIdx}`;
+    clearInterval(setTimerRefs.current[key]);
+    delete setTimerRefs.current[key];
+    setSetTimers((prev) => ({
+      ...prev,
+      [key]: { ...(prev[key] || {}), running: false },
+    }));
+  };
+
+  // Cleanup all set timers on unmount
+  useEffect(
+    () => () => Object.values(setTimerRefs.current).forEach(clearInterval),
+    [],
+  );
+
+  /* ── helpers ── */
+  const toggleExpand = (idx) => {
+    setExpandedSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) {
+        next.delete(idx);
+      } else {
+        next.add(idx);
+        if (!exerciseStartedAt.current[idx])
+          exerciseStartedAt.current[idx] = Date.now();
+      }
+      return next;
+    });
+  };
+
+  const updateRow = (exIdx, rowIdx, field, val) =>
+    setAllSetRows((prev) => ({
+      ...prev,
+      [exIdx]: prev[exIdx].map((r, i) =>
+        i === rowIdx ? { ...r, [field]: val } : r,
+      ),
+    }));
+
+  const startRestTimer = (seconds, label) => {
+    if (restRunning) return;
+    setRestMax(seconds);
+    setRestSec(seconds);
+    setRestLabel(label);
+    setRestRunning(true);
+  };
+
+  const toggleRowDone = (exIdx, rowIdx) => {
+    const row = (allSetRows[exIdx] || [])[rowIdx];
+    if (!row) return;
+
+    /* un-mark */
+    if (row.done) {
+      setAllSetRows((prev) => ({
+        ...prev,
+        [exIdx]: prev[exIdx].map((r, i) =>
+          i === rowIdx ? { ...r, done: false } : r,
+        ),
+      }));
+      return;
+    }
+
+    /* ── anti-cheat: per-set timer check ── */
+    const key = `${exIdx}_${rowIdx}`;
+    const timerData = setTimers[key];
+
+    if (!timerData) {
+      toast("Tap ▶ to start the set timer first!", {
+        duration: 3000,
+        style: {
+          background: "#1a1a1a",
+          border: "1px solid #ff9800",
+          color: "#ff9800",
+        },
+      });
+      return;
+    }
+
+    if ((timerData.sec ?? 0) < MIN_SET_DURATION_S) {
+      toast(
+        `⚠ Too fast! Keep going — at least ${MIN_SET_DURATION_S}s per set.`,
+        {
+          duration: 4500,
+          style: {
+            background: "#1a1a1a",
+            border: "1px solid #ef5350",
+            color: "#ef5350",
+          },
+        },
+      );
+      return; // block the mark-done
+    }
+
+    stopSetTimer(exIdx, rowIdx);
+
+    /* ── rapid-set fatigue detection ── */
+    const now = Date.now();
+    const cutoff = now - RAPID_WINDOW_S * 1000;
+    rapidTimestamps.current = rapidTimestamps.current.filter((t) => t > cutoff);
+    rapidTimestamps.current.push(now);
+
+    if (rapidTimestamps.current.length >= RAPID_THRESHOLD) {
+      rapidTimestamps.current = []; // reset counter
+      setTimeout(() => {
+        toast(
+          "🔔 You're moving fast — take a 30-second recovery break to avoid fatigue and injury.",
+          {
+            duration: 6000,
+            style: {
+              background: "#1a1a1a",
+              border: "1px solid #ff9800",
+              color: "#ff9800",
+            },
+          },
+        );
+        startRestTimer(30, "Fatigue Break");
+      }, 150);
+    }
+
+    /* ── mark done ── */
+    const ex = exercises[exIdx];
+
+    setAllSetRows((prev) => ({
+      ...prev,
+      [exIdx]: prev[exIdx].map((r, i) =>
+        i === rowIdx ? { ...r, done: true } : r,
+      ),
+    }));
+
+    /* start prescribed rest if no rest already running */
+    if (ex?.rest_seconds) {
+      startRestTimer(ex.rest_seconds, `${ex.name} rest`);
+    }
+  };
+
+  const addSet = (exIdx) =>
+    setAllSetRows((prev) => ({
+      ...prev,
+      [exIdx]: [...prev[exIdx], { weight: "", reps: "", done: false }],
+    }));
+
+  const completedCount = exercises.filter((_, i) =>
+    (allSetRows[i] || []).some((r) => r.done),
+  ).length;
+
+  const handleComplete = async () => {
+    clearInterval(sessionRef.current);
+    setCompleting(true);
+    await onComplete({ setsData: allSetRows, durationSeconds: sessionSec });
+    setCompleting(false);
+  };
+
+  /* ── render ── */
   return (
     <div className="page-content" style={{ maxWidth: 720, margin: "0 auto" }}>
-      <button
-        onClick={onBack}
+      {/* Top bar */}
+      <div
         style={{
-          background: "none",
-          border: "none",
-          color: "#9e9e9e",
-          cursor: "pointer",
           display: "flex",
+          justifyContent: "space-between",
           alignItems: "center",
-          gap: 6,
-          fontSize: 14,
-          marginBottom: 24,
-          padding: 0,
+          marginBottom: 20,
         }}
       >
-        <FiArrowLeft size={16} /> Back to week plan
-      </button>
+        <button
+          onClick={onBack}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#9e9e9e",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 14,
+            padding: 0,
+          }}
+        >
+          <FiArrowLeft size={16} /> Back to plan
+        </button>
+        <div
+          style={{
+            fontFamily: "monospace",
+            fontSize: 16,
+            fontWeight: 700,
+            color: "#D4AF37",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <FiClock size={14} /> {fmtTime(sessionSec)}
+        </div>
+      </div>
 
-      <div style={{ marginBottom: 28 }}>
+      {/* Workout header */}
+      <div style={{ marginBottom: 20 }}>
         <div
           style={{
             display: "inline-block",
@@ -771,19 +994,24 @@ function DayDetailView({ workout, onBack, onStart }) {
             padding: "3px 10px",
             letterSpacing: "0.8px",
             textTransform: "uppercase",
-            marginBottom: 10,
+            marginBottom: 8,
           }}
         >
           {workout.day_of_week}
         </div>
-        <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>
           {workout.name}
         </h1>
-        <p style={{ color: "#9e9e9e", fontSize: 14 }}>
+        <p style={{ color: "#9e9e9e", fontSize: 13, marginBottom: 10 }}>
           {getMuscleLabel(workout)}
         </p>
         <div
-          style={{ display: "flex", gap: 20, marginTop: 14, flexWrap: "wrap" }}
+          style={{
+            display: "flex",
+            gap: 16,
+            flexWrap: "wrap",
+            marginBottom: 12,
+          }}
         >
           <StatPill
             icon={<FiClock size={13} />}
@@ -803,704 +1031,47 @@ function DayDetailView({ workout, onBack, onStart }) {
             />
           )}
         </div>
-      </div>
-
-      {warmup.length > 0 && (
-        <div style={{ marginBottom: 28 }}>
-          <SectionLabel
-            icon={<FiSun size={13} />}
-            label="Warmup"
-            color="#ff9800"
-          />
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {warmup.map((item, i) => (
-              <SimpleDetailRow
-                key={i}
-                name={item.name}
-                right={item.duration}
-                rightColor="#ff9800"
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div style={{ marginBottom: 28 }}>
-        <SectionLabel
-          icon={<FiActivity size={13} />}
-          label="Exercises"
-          color="#D4AF37"
-        />
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {exercises.map((ex, i) => (
-            <ExerciseDetailCard key={i} index={i} ex={ex} />
-          ))}
-        </div>
-      </div>
-
-      {cooldown.length > 0 && (
-        <div style={{ marginBottom: 28 }}>
-          <SectionLabel
-            icon={<FiWind size={13} />}
-            label="Cooldown"
-            color="#4caf50"
-          />
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {cooldown.map((item, i) => (
-              <SimpleDetailRow
-                key={i}
-                name={item.name}
-                right={item.duration}
-                rightColor="#4caf50"
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div style={{ position: "sticky", bottom: 16, padding: "16px 0 4px" }}>
-        <button
-          className="btn btn-gold"
-          style={{
-            width: "100%",
-            padding: "14px",
-            fontSize: 15,
-            fontWeight: 700,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-          }}
-          onClick={onStart}
-        >
-          Start Workout
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────
-   ActiveWorkoutView — live set tracker (with warmup & cooldown)
-───────────────────────────────────────────────────────────────── */
-function ActiveWorkoutView({ workout, onBack, onComplete }) {
-  const exercises = (workout.exercises || []).filter(Boolean);
-  const warmupList = workout.warmup || [];
-  const cooldownList = workout.cooldown || [];
-  const total = exercises.length;
-
-  // phase: "warmup" → "exercise" → "cooldown" → "done"
-  const [phase, setPhase] = useState(
-    warmupList.length > 0 ? "warmup" : "exercise",
-  );
-  const [warmupChecked, setWarmupChecked] = useState(() =>
-    Array(warmupList.length).fill(false),
-  );
-  const [cooldownChecked, setCooldownChecked] = useState(() =>
-    Array(cooldownList.length).fill(false),
-  );
-
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [setRows, setSetRows] = useState(() => makeDefaultSets(exercises[0]));
-  const [sessionSec, setSessionSec] = useState(0);
-  const [restSec, setRestSec] = useState(0);
-  const [restRunning, setRestRunning] = useState(false);
-  const [restMax, setRestMax] = useState(0);
-  const [completing, setCompleting] = useState(false);
-
-  const sessionRef = useRef(null);
-  const restRef = useRef(null);
-  const lastSetDoneAt = useRef(null);
-
-  useEffect(() => {
-    sessionRef.current = setInterval(() => setSessionSec((s) => s + 1), 1000);
-    return () => clearInterval(sessionRef.current);
-  }, []);
-
-  useEffect(() => {
-    if (!restRunning) return;
-    clearInterval(restRef.current);
-    restRef.current = setInterval(() => {
-      setRestSec((s) => {
-        if (s <= 1) {
-          clearInterval(restRef.current);
-          setRestRunning(false);
-          toast("Rest complete — start your next set.", {
-            duration: 4000,
-            style: {
-              background: "#1a1a1a",
-              border: "1px solid #4caf50",
-              color: "#4caf50",
-            },
-          });
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(restRef.current);
-  }, [restRunning]);
-
-  // Clear session timer on unmount
-  useEffect(() => () => clearInterval(sessionRef.current), []);
-
-  const goToExercise = (idx) => {
-    setCurrentIdx(idx);
-    setSetRows(makeDefaultSets(exercises[idx]));
-    clearInterval(restRef.current);
-    setRestRunning(false);
-    setRestSec(0);
-    lastSetDoneAt.current = null;
-    window.scrollTo({ top: 0 });
-  };
-
-  const ex = exercises[currentIdx];
-  const isLast = currentIdx === total - 1;
-
-  const updateRow = (idx, field, val) =>
-    setSetRows((rows) =>
-      rows.map((r, i) => (i === idx ? { ...r, [field]: val } : r)),
-    );
-
-  const toggleRowDone = (idx) => {
-    const currentRow = setRows[idx];
-    if (currentRow?.done) {
-      setSetRows((rows) =>
-        rows.map((r, i) => (i === idx ? { ...r, done: false } : r)),
-      );
-      return;
-    }
-    lastSetDoneAt.current = Date.now();
-    setSetRows((rows) =>
-      rows.map((r, i) => {
-        if (i !== idx) return r;
-        if (ex?.rest_seconds) {
-          clearInterval(restRef.current);
-          setRestMax(ex.rest_seconds);
-          setRestSec(ex.rest_seconds);
-          setRestRunning(true);
-        }
-        return { ...r, done: true };
-      }),
-    );
-  };
-
-  const addSet = () =>
-    setSetRows((rows) => [...rows, { weight: "", reps: "", done: false }]);
-
-  const handleCompleteExercise = async () => {
-    if (isLast) {
-      // Transition to cooldown if available, else done
-      clearInterval(sessionRef.current);
-      if (cooldownList.length > 0) {
-        setPhase("cooldown");
-      } else {
-        setPhase("done");
-        setCompleting(true);
-        await onComplete();
-        setCompleting(false);
-      }
-    } else {
-      goToExercise(currentIdx + 1);
-    }
-  };
-
-  const handleFinishCooldown = async () => {
-    setCompleting(true);
-    clearInterval(sessionRef.current);
-    await onComplete();
-    setCompleting(false);
-    setPhase("done");
-  };
-
-  /* ── Warmup phase ── */
-  if (phase === "warmup") {
-    const allChecked = warmupChecked.every(Boolean);
-    return (
-      <div className="page-content" style={{ maxWidth: 680, margin: "0 auto" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 28,
-          }}
-        >
-          <button
-            onClick={onBack}
-            style={{
-              background: "none",
-              border: "none",
-              color: "#9e9e9e",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 14,
-              padding: 0,
-            }}
-          >
-            <FiArrowLeft size={16} /> Back
-          </button>
+        {/* Progress bar */}
+        <div>
           <div
             style={{
-              fontFamily: "monospace",
-              fontSize: 14,
-              fontWeight: 700,
-              color: "#D4AF37",
               display: "flex",
-              alignItems: "center",
-              gap: 6,
+              justifyContent: "space-between",
+              marginBottom: 6,
             }}
           >
-            <FiClock size={14} /> {fmtTime(sessionSec)}
-          </div>
-        </div>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: "50%",
-              background: "rgba(76,175,80,0.1)",
-              border: "1px solid rgba(76,175,80,0.3)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 14px",
-            }}
-          >
-            <FiActivity size={26} color="#4caf50" />
-          </div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>
-            Warm-Up
-          </h2>
-          <p style={{ color: "#9e9e9e", fontSize: 13 }}>
-            Complete each warm-up activity before starting your workout
-          </p>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-            marginBottom: 32,
-          }}
-        >
-          {warmupList.map((item, i) => (
-            <button
-              key={i}
-              onClick={() =>
-                setWarmupChecked((prev) =>
-                  prev.map((v, j) => (j === i ? !v : v)),
-                )
-              }
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                padding: "14px 18px",
-                background: warmupChecked[i] ? "rgba(76,175,80,0.07)" : "#111",
-                border: `1px solid ${warmupChecked[i] ? "rgba(76,175,80,0.3)" : "#1e1e1e"}`,
-                borderRadius: 10,
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-            >
-              <div
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: "50%",
-                  border: `2px solid ${warmupChecked[i] ? "#4caf50" : "#333"}`,
-                  background: warmupChecked[i]
-                    ? "rgba(76,175,80,0.2)"
-                    : "transparent",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  transition: "all 0.2s",
-                }}
-              >
-                {warmupChecked[i] && <FiCheck size={13} color="#4caf50" />}
-              </div>
-              <div style={{ flex: 1 }}>
-                <span
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: warmupChecked[i] ? "#9e9e9e" : "#e0e0e0",
-                    textDecoration: warmupChecked[i] ? "line-through" : "none",
-                  }}
-                >
-                  {item.name || item}
-                </span>
-                {item.duration && (
-                  <span
-                    style={{
-                      display: "block",
-                      fontSize: 12,
-                      color: "#616161",
-                      marginTop: 2,
-                    }}
-                  >
-                    {item.duration}
-                  </span>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-        <button
-          className="btn btn-gold"
-          style={{
-            width: "100%",
-            padding: "14px",
-            fontSize: 15,
-            fontWeight: 700,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-          }}
-          onClick={() => setPhase("exercise")}
-        >
-          {allChecked ? "Start Training →" : "Skip Warm-Up & Start →"}
-        </button>
-      </div>
-    );
-  }
-
-  /* ── Cooldown phase ── */
-  if (phase === "cooldown") {
-    const allChecked = cooldownChecked.every(Boolean);
-    return (
-      <div className="page-content" style={{ maxWidth: 680, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: "50%",
-              background: "rgba(212,175,55,0.1)",
-              border: "1px solid rgba(212,175,55,0.25)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 14px",
-            }}
-          >
-            <FiActivity size={26} color="#D4AF37" />
-          </div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>
-            Cool-Down
-          </h2>
-          <p style={{ color: "#9e9e9e", fontSize: 13 }}>
-            Great work! Finish with these cool-down activities
-          </p>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-            marginBottom: 32,
-          }}
-        >
-          {cooldownList.map((item, i) => (
-            <button
-              key={i}
-              onClick={() =>
-                setCooldownChecked((prev) =>
-                  prev.map((v, j) => (j === i ? !v : v)),
-                )
-              }
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                padding: "14px 18px",
-                background: cooldownChecked[i]
-                  ? "rgba(212,175,55,0.06)"
-                  : "#111",
-                border: `1px solid ${cooldownChecked[i] ? "rgba(212,175,55,0.25)" : "#1e1e1e"}`,
-                borderRadius: 10,
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-            >
-              <div
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: "50%",
-                  border: `2px solid ${cooldownChecked[i] ? "#D4AF37" : "#333"}`,
-                  background: cooldownChecked[i]
-                    ? "rgba(212,175,55,0.15)"
-                    : "transparent",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  transition: "all 0.2s",
-                }}
-              >
-                {cooldownChecked[i] && <FiCheck size={13} color="#D4AF37" />}
-              </div>
-              <div style={{ flex: 1 }}>
-                <span
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: cooldownChecked[i] ? "#9e9e9e" : "#e0e0e0",
-                    textDecoration: cooldownChecked[i]
-                      ? "line-through"
-                      : "none",
-                  }}
-                >
-                  {item.name || item}
-                </span>
-                {item.duration && (
-                  <span
-                    style={{
-                      display: "block",
-                      fontSize: 12,
-                      color: "#616161",
-                      marginTop: 2,
-                    }}
-                  >
-                    {item.duration}
-                  </span>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-        <button
-          className="btn btn-gold"
-          style={{
-            width: "100%",
-            padding: "14px",
-            fontSize: 15,
-            fontWeight: 700,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            opacity: completing ? 0.5 : 1,
-            cursor: completing ? "not-allowed" : "pointer",
-          }}
-          onClick={handleFinishCooldown}
-          disabled={completing}
-        >
-          {completing
-            ? "Saving..."
-            : allChecked
-              ? "Complete Workout ✓"
-              : "Skip & Complete Workout"}
-        </button>
-      </div>
-    );
-  }
-
-  /* ── Done / summary phase ── */
-  if (phase === "done") {
-    return (
-      <div
-        className="page-content"
-        style={{
-          maxWidth: 680,
-          margin: "0 auto",
-          textAlign: "center",
-          paddingTop: 20,
-        }}
-      >
-        <div
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: "50%",
-            background: "rgba(76,175,80,0.1)",
-            border: "2px solid rgba(76,175,80,0.4)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 24px",
-          }}
-        >
-          <FiCheck size={32} color="#4caf50" />
-        </div>
-        <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 8 }}>
-          Workout Complete!
-        </h2>
-        <p style={{ color: "#9e9e9e", fontSize: 14, marginBottom: 32 }}>
-          Excellent session — every rep counts.
-        </p>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 24,
-            marginBottom: 40,
-          }}
-        >
-          <div style={{ textAlign: "center" }}>
-            <p
-              style={{
-                fontSize: 28,
-                fontWeight: 800,
-                color: "#D4AF37",
-                fontFamily: "monospace",
-              }}
-            >
-              {fmtTime(sessionSec)}
-            </p>
-            <p style={{ fontSize: 12, color: "#616161", marginTop: 4 }}>
-              Total time
-            </p>
-          </div>
-          <div style={{ width: 1, background: "#1e1e1e" }} />
-          <div style={{ textAlign: "center" }}>
-            <p style={{ fontSize: 28, fontWeight: 800, color: "#D4AF37" }}>
-              {total}
-            </p>
-            <p style={{ fontSize: 12, color: "#616161", marginTop: 4 }}>
-              Exercises
-            </p>
-          </div>
-        </div>
-        <button
-          className="btn btn-gold"
-          style={{ padding: "13px 36px", fontSize: 15, fontWeight: 700 }}
-          onClick={onBack}
-        >
-          Back to Plan
-        </button>
-      </div>
-    );
-  }
-
-  if (!ex) return null;
-
-  return (
-    <div className="page-content" style={{ maxWidth: 680, margin: "0 auto" }}>
-      {/* Top bar */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 24,
-        }}
-      >
-        <button
-          onClick={onBack}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#9e9e9e",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontSize: 14,
-            padding: 0,
-          }}
-        >
-          <FiArrowLeft size={16} /> Back
-        </button>
-        <div
-          style={{
-            fontFamily: "monospace",
-            fontSize: 14,
-            fontWeight: 700,
-            color: "#D4AF37",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <FiClock size={14} /> {fmtTime(sessionSec)}
-        </div>
-      </div>
-
-      {/* Progress bar */}
-      <div style={{ marginBottom: 22 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: 8,
-          }}
-        >
-          <span style={{ fontSize: 12, color: "#9e9e9e" }}>
-            Exercise {currentIdx + 1} of {total}
-          </span>
-          <span style={{ fontSize: 12, color: "#D4AF37", fontWeight: 700 }}>
-            {Math.round((currentIdx / total) * 100)}% done
-          </span>
-        </div>
-        <div
-          style={{
-            background: "#1a1a1a",
-            borderRadius: 6,
-            height: 5,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              height: "100%",
-              width: `${(currentIdx / total) * 100}%`,
-              background: "#D4AF37",
-              borderRadius: 6,
-              transition: "width 0.4s ease",
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Exercise card */}
-      <div
-        style={{
-          background: "linear-gradient(135deg,#111 0%,#181408 100%)",
-          border: "1px solid rgba(212,175,55,0.22)",
-          borderRadius: 14,
-          padding: "20px 20px 18px",
-          marginBottom: 20,
-        }}
-      >
-        <p
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: "#D4AF37",
-            textTransform: "uppercase",
-            letterSpacing: "1px",
-            marginBottom: 6,
-          }}
-        >
-          {ex.muscle_group
-            ? ex.muscle_group.charAt(0).toUpperCase() + ex.muscle_group.slice(1)
-            : "Exercise"}
-        </p>
-        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>
-          {ex.name}
-        </h2>
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 13, color: "#9e9e9e" }}>
-            Target: {ex.sets} sets × {ex.reps}
-          </span>
-          {ex.equipment && ex.equipment !== "none" && (
-            <span style={{ fontSize: 13, color: "#616161" }}>
-              {ex.equipment.replace(/_/g, " ")}
+            <span style={{ fontSize: 12, color: "#9e9e9e" }}>
+              {completedCount} of {exercises.length} exercises logged
             </span>
-          )}
+            <span style={{ fontSize: 12, color: "#D4AF37", fontWeight: 700 }}>
+              {exercises.length > 0
+                ? Math.round((completedCount / exercises.length) * 100)
+                : 0}
+              %
+            </span>
+          </div>
+          <div
+            style={{
+              background: "#1a1a1a",
+              borderRadius: 6,
+              height: 5,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                width: `${exercises.length > 0 ? (completedCount / exercises.length) * 100 : 0}%`,
+                background: "#D4AF37",
+                borderRadius: 6,
+                transition: "width 0.4s ease",
+              }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Rest timer */}
+      {/* Rest timer (floating) */}
       {restRunning && (
         <div
           style={{
@@ -1508,7 +1079,7 @@ function ActiveWorkoutView({ workout, onBack, onComplete }) {
             border: "1px solid rgba(76,175,80,0.2)",
             borderRadius: 10,
             padding: "12px 16px",
-            marginBottom: 20,
+            marginBottom: 16,
             display: "flex",
             alignItems: "center",
             gap: 12,
@@ -1524,7 +1095,7 @@ function ActiveWorkoutView({ workout, onBack, onComplete }) {
               }}
             >
               <span style={{ fontSize: 13, color: "#4caf50", fontWeight: 700 }}>
-                Rest
+                Rest — {restLabel}
               </span>
               <span
                 style={{
@@ -1570,250 +1141,580 @@ function ActiveWorkoutView({ workout, onBack, onComplete }) {
         </div>
       )}
 
-      {/* Set table */}
-      <div
-        style={{
-          background: "#111",
-          border: "1px solid #1e1e1e",
-          borderRadius: 12,
-          overflow: "hidden",
-          marginBottom: 16,
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "44px 1fr 1fr 44px",
-            background: "#0d0d0d",
-            padding: "10px 16px",
-            borderBottom: "1px solid #1e1e1e",
-          }}
-        >
-          {["Set", "Weight (kg)", "Reps", ""].map((h) => (
-            <p
-              key={h}
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: "#616161",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}
-            >
-              {h}
-            </p>
-          ))}
-        </div>
-        {setRows.map((row, i) => (
-          <div
-            key={i}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "44px 1fr 1fr 44px",
-              alignItems: "center",
-              padding: "10px 16px",
-              borderBottom:
-                i < setRows.length - 1 ? "1px solid #161616" : "none",
-              background: row.done ? "rgba(76,175,80,0.05)" : "transparent",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: row.done ? "#4caf50" : "#9e9e9e",
-              }}
-            >
-              {i + 1}
-            </span>
-            <input
-              type="number"
-              placeholder="—"
-              min="0"
-              step="0.5"
-              value={row.weight}
-              onChange={(e) => updateRow(i, "weight", e.target.value)}
-              disabled={row.done}
-              style={{
-                background: "transparent",
-                border: "none",
-                borderBottom: row.done ? "none" : "1px solid #2a2a2a",
-                color: row.done ? "#616161" : "#e0e0e0",
-                fontSize: 14,
-                padding: "4px 4px 4px 0",
-                width: "70%",
-                outline: "none",
-              }}
-            />
-            <input
-              type="number"
-              placeholder="—"
-              min="0"
-              value={row.reps}
-              onChange={(e) => updateRow(i, "reps", e.target.value)}
-              disabled={row.done}
-              style={{
-                background: "transparent",
-                border: "none",
-                borderBottom: row.done ? "none" : "1px solid #2a2a2a",
-                color: row.done ? "#616161" : "#e0e0e0",
-                fontSize: 14,
-                padding: "4px 4px 4px 0",
-                width: "70%",
-                outline: "none",
-              }}
-            />
-            <button
-              onClick={() => toggleRowDone(i)}
-              style={{
-                background: row.done
-                  ? "rgba(76,175,80,0.15)"
-                  : "rgba(255,255,255,0.03)",
-                border: `1px solid ${row.done ? "rgba(76,175,80,0.4)" : "#2a2a2a"}`,
-                borderRadius: 6,
-                width: 32,
-                height: 32,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-              }}
-            >
-              {row.done ? (
-                <FiCheck size={14} color="#4caf50" />
-              ) : (
-                <div
-                  style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    border: "2px solid #3a3a3a",
-                  }}
-                />
-              )}
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Add set */}
-      <button
-        onClick={addSet}
-        style={{
-          background: "none",
-          border: "1px dashed #2a2a2a",
-          borderRadius: 8,
-          padding: "9px 14px",
-          color: "#616161",
-          fontSize: 13,
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          width: "100%",
-          justifyContent: "center",
-          marginBottom: 28,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = "#D4AF37";
-          e.currentTarget.style.color = "#D4AF37";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = "#2a2a2a";
-          e.currentTarget.style.color = "#616161";
-        }}
-      >
-        <FiPlus size={14} /> Add Set
-      </button>
-
-      {/* Complete / Next */}
-      <button
-        className="btn btn-gold"
-        style={{
-          width: "100%",
-          padding: "14px",
-          fontSize: 15,
-          fontWeight: 700,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          opacity: completing ? 0.45 : 1,
-          cursor: completing ? "not-allowed" : "pointer",
-        }}
-        onClick={handleCompleteExercise}
-        disabled={completing}
-      >
-        {completing
-          ? "Saving..."
-          : isLast
-            ? cooldownList.length > 0
-              ? "Finish & Cool Down →"
-              : "Complete Workout ✓"
-            : `Next: ${exercises[currentIdx + 1]?.name} →`}
-      </button>
-
-      {/* Dot navigation */}
-      {total > 1 && (
-        <div
-          style={{
-            marginTop: 28,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <p
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: "#424242",
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-            }}
-          >
-            Exercises
-          </p>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 8,
-              justifyContent: "center",
-            }}
-          >
-            {exercises.map((e, i) => (
+      {/* Warmup */}
+      {warmupList.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <SectionLabel
+            icon={<FiSun size={13} />}
+            label="Warm-Up"
+            color="#ff9800"
+          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {warmupList.map((item, i) => (
               <button
                 key={i}
-                onClick={() => i !== currentIdx && goToExercise(i)}
-                title={e.name}
+                onClick={() =>
+                  setWarmupChecked((prev) =>
+                    prev.map((v, j) => (j === i ? !v : v)),
+                  )
+                }
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  border: `2px solid ${i === currentIdx ? "#D4AF37" : "#2a2a2a"}`,
-                  background: i === currentIdx ? "#D4AF37" : "transparent",
-                  color: i === currentIdx ? "#000" : "#424242",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: i === currentIdx ? "default" : "pointer",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 0.2s",
-                  flexShrink: 0,
+                  gap: 12,
+                  padding: "12px 16px",
+                  background: warmupChecked[i]
+                    ? "rgba(76,175,80,0.07)"
+                    : "#111",
+                  border: `1px solid ${warmupChecked[i] ? "rgba(76,175,80,0.3)" : "#1e1e1e"}`,
+                  borderRadius: 10,
+                  cursor: "pointer",
+                  textAlign: "left",
                 }}
               >
-                {i + 1}
+                <div
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    border: `2px solid ${warmupChecked[i] ? "#4caf50" : "#333"}`,
+                    background: warmupChecked[i]
+                      ? "rgba(76,175,80,0.2)"
+                      : "transparent",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  {warmupChecked[i] && <FiCheck size={12} color="#4caf50" />}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <span
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: warmupChecked[i] ? "#9e9e9e" : "#e0e0e0",
+                      textDecoration: warmupChecked[i]
+                        ? "line-through"
+                        : "none",
+                    }}
+                  >
+                    {item.name || item}
+                  </span>
+                  {item.duration && (
+                    <span
+                      style={{
+                        display: "block",
+                        fontSize: 12,
+                        color: "#616161",
+                        marginTop: 2,
+                      }}
+                    >
+                      {item.duration}
+                    </span>
+                  )}
+                </div>
               </button>
             ))}
           </div>
-          <p style={{ fontSize: 12, color: "#616161" }}>
-            {exercises[currentIdx]?.name}
-          </p>
         </div>
       )}
+
+      {/* Exercises accordion */}
+      <div style={{ marginBottom: 24 }}>
+        <SectionLabel
+          icon={<FiActivity size={13} />}
+          label="Exercises"
+          color="#D4AF37"
+        />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {exercises.map((ex, exIdx) => {
+            const isExpanded = expandedSet.has(exIdx);
+            const rows = allSetRows[exIdx] || [];
+            const doneCount = rows.filter((r) => r.done).length;
+            const hasProgress = doneCount > 0;
+
+            return (
+              <div
+                key={exIdx}
+                style={{
+                  background: hasProgress
+                    ? "linear-gradient(135deg,rgba(76,175,80,0.05) 0%,#111 100%)"
+                    : "#111",
+                  border: `1px solid ${
+                    hasProgress
+                      ? "rgba(76,175,80,0.25)"
+                      : isExpanded
+                        ? "rgba(212,175,55,0.3)"
+                        : "#1e1e1e"
+                  }`,
+                  borderRadius: 12,
+                  overflow: "hidden",
+                }}
+              >
+                {/* Header / toggle */}
+                <button
+                  onClick={() => toggleExpand(exIdx)}
+                  style={{
+                    width: "100%",
+                    background: "none",
+                    border: "none",
+                    padding: "14px 16px",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 12 }}
+                    >
+                      <div
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: "50%",
+                          background: hasProgress
+                            ? "rgba(76,175,80,0.15)"
+                            : "rgba(212,175,55,0.1)",
+                          border: `1px solid ${hasProgress ? "rgba(76,175,80,0.4)" : "rgba(212,175,55,0.25)"}`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: hasProgress ? "#4caf50" : "#D4AF37",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {hasProgress ? <FiCheck size={12} /> : exIdx + 1}
+                      </div>
+                      <div>
+                        <p
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 700,
+                            color: "#e0e0e0",
+                            marginBottom: 2,
+                          }}
+                        >
+                          {ex.name}
+                        </p>
+                        <p style={{ fontSize: 12, color: "#616161" }}>
+                          {ex.muscle_group
+                            ? ex.muscle_group.charAt(0).toUpperCase() +
+                              ex.muscle_group.slice(1)
+                            : ""}
+                          {ex.equipment && ex.equipment !== "none"
+                            ? ` · ${ex.equipment.replace(/_/g, " ")}`
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 10 }}
+                    >
+                      <div style={{ textAlign: "right" }}>
+                        <p
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 800,
+                            color: "#D4AF37",
+                          }}
+                        >
+                          {ex.sets} × {ex.reps}
+                        </p>
+                        {hasProgress && (
+                          <p
+                            style={{
+                              fontSize: 11,
+                              color: "#4caf50",
+                              marginTop: 2,
+                            }}
+                          >
+                            {doneCount}/{rows.length} done
+                          </p>
+                        )}
+                        {!hasProgress && (
+                          <p
+                            style={{
+                              fontSize: 11,
+                              color: "#424242",
+                              marginTop: 2,
+                            }}
+                          >
+                            {ex.rest_seconds}s rest
+                          </p>
+                        )}
+                      </div>
+                      <FiChevronRight
+                        size={14}
+                        color="#616161"
+                        style={{
+                          transform: isExpanded ? "rotate(90deg)" : "none",
+                          transition: "transform 0.2s",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </button>
+
+                {/* Expanded set logger */}
+                {isExpanded && (
+                  <div style={{ borderTop: "1px solid #1e1e1e" }}>
+                    {/* Table header */}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "36px 1fr 1fr 72px 36px",
+                        background: "#0d0d0d",
+                        padding: "8px 16px",
+                        borderBottom: "1px solid #1e1e1e",
+                      }}
+                    >
+                      {["Set", "Weight (kg)", "Reps", "Timer", ""].map((h) => (
+                        <p
+                          key={h}
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "#616161",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                            margin: 0,
+                          }}
+                        >
+                          {h}
+                        </p>
+                      ))}
+                    </div>
+
+                    {/* Set rows */}
+                    {rows.map((row, rowIdx) => {
+                      const tKey = `${exIdx}_${rowIdx}`;
+                      const tData = setTimers[tKey];
+                      return (
+                        <div
+                          key={rowIdx}
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "36px 1fr 1fr 72px 36px",
+                            alignItems: "center",
+                            padding: "10px 16px",
+                            borderBottom:
+                              rowIdx < rows.length - 1
+                                ? "1px solid #161616"
+                                : "none",
+                            background: row.done
+                              ? "rgba(76,175,80,0.05)"
+                              : tData?.running
+                                ? "rgba(212,175,55,0.03)"
+                                : "transparent",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 700,
+                              color: row.done ? "#4caf50" : "#9e9e9e",
+                            }}
+                          >
+                            {rowIdx + 1}
+                          </span>
+                          <input
+                            type="number"
+                            placeholder="—"
+                            min="0"
+                            step="0.5"
+                            value={row.weight}
+                            onChange={(e) =>
+                              updateRow(exIdx, rowIdx, "weight", e.target.value)
+                            }
+                            disabled={row.done}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              borderBottom: row.done
+                                ? "none"
+                                : "1px solid #2a2a2a",
+                              color: row.done ? "#616161" : "#e0e0e0",
+                              fontSize: 14,
+                              padding: "4px 4px 4px 0",
+                              width: "70%",
+                              outline: "none",
+                            }}
+                          />
+                          <input
+                            type="number"
+                            placeholder="—"
+                            min="0"
+                            value={row.reps}
+                            onChange={(e) =>
+                              updateRow(exIdx, rowIdx, "reps", e.target.value)
+                            }
+                            disabled={row.done}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              borderBottom: row.done
+                                ? "none"
+                                : "1px solid #2a2a2a",
+                              color: row.done ? "#616161" : "#e0e0e0",
+                              fontSize: 14,
+                              padding: "4px 4px 4px 0",
+                              width: "70%",
+                              outline: "none",
+                            }}
+                          />
+                          {/* Per-set timer */}
+                          {row.done ? (
+                            <span
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: "#4caf50",
+                                fontFamily: "monospace",
+                              }}
+                            >
+                              {tData ? fmtTime(tData.sec) : "—"}
+                            </span>
+                          ) : tData?.running ? (
+                            <button
+                              onClick={() => stopSetTimer(exIdx, rowIdx)}
+                              style={{
+                                background: "rgba(239,83,80,0.1)",
+                                border: "1px solid rgba(239,83,80,0.3)",
+                                borderRadius: 6,
+                                padding: "4px 6px",
+                                color: "#ef5350",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 3,
+                                fontFamily: "monospace",
+                              }}
+                            >
+                              ⏹ {fmtTime(tData.sec)}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => startSetTimer(exIdx, rowIdx)}
+                              style={{
+                                background: "rgba(212,175,55,0.1)",
+                                border: "1px solid rgba(212,175,55,0.3)",
+                                borderRadius: 6,
+                                padding: "4px 6px",
+                                color: "#D4AF37",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 3,
+                              }}
+                            >
+                              ▶ Start
+                            </button>
+                          )}
+                          <button
+                            onClick={() => toggleRowDone(exIdx, rowIdx)}
+                            style={{
+                              background: row.done
+                                ? "rgba(76,175,80,0.15)"
+                                : "rgba(255,255,255,0.03)",
+                              border: `1px solid ${row.done ? "rgba(76,175,80,0.4)" : "#2a2a2a"}`,
+                              borderRadius: 6,
+                              width: 32,
+                              height: 32,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                            }}
+                          >
+                            {row.done ? (
+                              <FiCheck size={14} color="#4caf50" />
+                            ) : (
+                              <div
+                                style={{
+                                  width: 10,
+                                  height: 10,
+                                  borderRadius: "50%",
+                                  border: "2px solid #3a3a3a",
+                                }}
+                              />
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                    {/* Add set + Cancel (collapse) */}
+                    <div
+                      style={{ display: "flex", gap: 8, padding: "10px 16px" }}
+                    >
+                      <button
+                        onClick={() => addSet(exIdx)}
+                        style={{
+                          flex: 1,
+                          background: "none",
+                          border: "1px dashed #2a2a2a",
+                          borderRadius: 8,
+                          padding: "8px",
+                          color: "#616161",
+                          fontSize: 13,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = "#D4AF37";
+                          e.currentTarget.style.color = "#D4AF37";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = "#2a2a2a";
+                          e.currentTarget.style.color = "#616161";
+                        }}
+                      >
+                        <FiPlus size={13} /> Add Set
+                      </button>
+                      <button
+                        onClick={() => toggleExpand(exIdx)}
+                        style={{
+                          background: "rgba(239,83,80,0.07)",
+                          border: "1px solid rgba(239,83,80,0.2)",
+                          borderRadius: 8,
+                          padding: "8px 14px",
+                          color: "#ef5350",
+                          fontSize: 13,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Cooldown */}
+      {cooldownList.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <SectionLabel
+            icon={<FiWind size={13} />}
+            label="Cool-Down"
+            color="#4caf50"
+          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {cooldownList.map((item, i) => (
+              <button
+                key={i}
+                onClick={() =>
+                  setCooldownChecked((prev) =>
+                    prev.map((v, j) => (j === i ? !v : v)),
+                  )
+                }
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "12px 16px",
+                  background: cooldownChecked[i]
+                    ? "rgba(212,175,55,0.06)"
+                    : "#111",
+                  border: `1px solid ${
+                    cooldownChecked[i] ? "rgba(212,175,55,0.25)" : "#1e1e1e"
+                  }`,
+                  borderRadius: 10,
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <div
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    border: `2px solid ${cooldownChecked[i] ? "#D4AF37" : "#333"}`,
+                    background: cooldownChecked[i]
+                      ? "rgba(212,175,55,0.15)"
+                      : "transparent",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  {cooldownChecked[i] && <FiCheck size={12} color="#D4AF37" />}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <span
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: cooldownChecked[i] ? "#9e9e9e" : "#e0e0e0",
+                      textDecoration: cooldownChecked[i]
+                        ? "line-through"
+                        : "none",
+                    }}
+                  >
+                    {item.name || item}
+                  </span>
+                  {item.duration && (
+                    <span
+                      style={{
+                        display: "block",
+                        fontSize: 12,
+                        color: "#616161",
+                        marginTop: 2,
+                      }}
+                    >
+                      {item.duration}
+                    </span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Complete workout button */}
+      <div style={{ position: "sticky", bottom: 16, padding: "16px 0 4px" }}>
+        <button
+          className="btn btn-gold"
+          style={{
+            width: "100%",
+            padding: "14px",
+            fontSize: 15,
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            opacity: completing ? 0.45 : 1,
+            cursor: completing ? "not-allowed" : "pointer",
+          }}
+          onClick={handleComplete}
+          disabled={completing}
+        >
+          {completing ? "Saving..." : "Complete Workout ✓"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -1865,7 +1766,7 @@ function EmptyState({
         }}
       >
         Tell us how many days you can train each week and your experience level.
-        We'll build you a full weekly plan.
+        We&apos;ll build you a full weekly plan.
       </p>
 
       <div style={{ marginBottom: 24, textAlign: "left" }}>
@@ -1957,6 +1858,7 @@ function EmptyState({
   );
 }
 
+/* ─────────────────────────────────────────────────────────────────
 /* ─────────────────────────────────────────────────────────────────
    WeekEmptyCard
 ───────────────────────────────────────────────────────────────── */

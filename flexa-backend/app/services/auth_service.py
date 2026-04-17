@@ -4,9 +4,12 @@ from sqlalchemy import select, update
 from app.models.user import User
 from app.models.profile import Profile
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
+from app.core.cache import cache_set
+from app.core.config import settings
 from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse
 from fastapi import HTTPException, status
 import uuid
+import time
 from datetime import datetime, timedelta
 
 # In-memory store for password reset tokens {token: (user_id, expires_at)}
@@ -108,6 +111,14 @@ class AuthService:
         await db.commit()
         del _reset_tokens[token]
         return {"message": "Password updated successfully."}
+
+    @staticmethod
+    async def logout(user_id: uuid.UUID) -> dict:
+        """Invalidate all tokens for this user by recording the logout timestamp."""
+        logout_time = int(time.time())
+        ttl = settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400 + 3600
+        await cache_set(f"logout_time:{user_id}", logout_time, ttl=ttl)
+        return {"message": "Logged out successfully."}
 
     @staticmethod
     async def google_login_or_create(db: AsyncSession, google_user_info: dict) -> TokenResponse:

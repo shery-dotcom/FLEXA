@@ -3,6 +3,9 @@ from sqlalchemy import select
 from fastapi import HTTPException
 from app.models.workout import Workout, WorkoutSession, FitnessGoal
 from app.models.profile import Profile
+from app.models.progress import DashboardTask
+from app.core.cache import cache_delete
+from datetime import date
 from app.schemas.workout import WorkoutPlanRequest
 from app.ml.workout_recommender import generate_workout_plan
 from app.ml.workout_ml_predictor import predict_split
@@ -103,7 +106,7 @@ class WorkoutService:
         return result.scalars().all()
 
     @staticmethod
-    async def complete_workout_session(db: AsyncSession, user_id: uuid.UUID, workout_id: uuid.UUID) -> WorkoutSession:
+    async def complete_workout_session(db: AsyncSession, user_id: uuid.UUID, workout_id: uuid.UUID, sets_data: dict = None, session_duration_seconds: int = None, notes: str = None) -> WorkoutSession:
         result = await db.execute(select(Workout).where(Workout.id == workout_id, Workout.user_id == user_id))
         workout = result.scalar_one_or_none()
         if not workout:
@@ -111,8 +114,25 @@ class WorkoutService:
         if workout.is_rest_day:
             raise HTTPException(status_code=400, detail="Cannot complete a rest day.")
 
-        session = WorkoutSession(workout_id=workout_id, user_id=user_id, duration_minutes=workout.duration_minutes)
+        duration = (session_duration_seconds // 60) if session_duration_seconds else workout.duration_minutes
+        session = WorkoutSession(workout_id=workout_id, user_id=user_id, duration_minutes=duration, sets_data=sets_data, notes=notes)
         db.add(session)
         await db.commit()
         await db.refresh(session)
+
+        # Auto-complete today's workout dashboard task
+        task_result = await db.execute(
+            select(DashboardTask).where(
+                DashboardTask.user_id == user_id,
+                DashboardTask.task_date == date.today(),
+                DashboardTask.task_type == "workout",
+                DashboardTask.is_completed == False,
+            )
+        )
+        workout_task = task_result.scalar_one_or_none()
+        if workout_task:
+            workout_task.is_completed = True
+            await db.commit()
+        await cache_delete(f"dashboard:{user_id}")
+
         return session

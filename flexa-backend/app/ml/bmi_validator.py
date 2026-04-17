@@ -66,6 +66,14 @@ def validate_goal_against_bmi(
     # ML-style scoring (rule-based scoring heuristic)
     ml_score = _compute_ml_score(bmi, goal_type, activity_multiplier)
 
+    # Recommend a healthier goal if the chosen one doesn't suit the user's BMI
+    recommended_goal = _get_recommended_goal(bmi, goal_type)
+    if recommended_goal:
+        warnings.append(
+            f"Your BMI ({bmi}) suggests '{recommended_goal}' would be a healthier choice than '{goal_type}'. "
+            f"Proceeding with '{goal_type}' may not be optimal for your current body composition."
+        )
+
     return {
         "is_valid": is_valid,
         "bmi": bmi,
@@ -75,8 +83,25 @@ def validate_goal_against_bmi(
         "ml_score": round(ml_score, 3),
         "warnings": warnings,
         "recommendations": recommendations,
+        "recommended_goal": recommended_goal,
         "next_steps": _generate_next_steps(goal_type, bmi_category, activity_level),
     }
+
+
+def _get_recommended_goal(bmi: float, chosen_goal: str) -> str | None:
+    """Return a better goal recommendation if the chosen one doesn't suit the user's BMI."""
+    if bmi < 18.5:
+        rec = "bulking"
+    elif bmi < 25.0:
+        # Healthy range — cutting is too aggressive
+        rec = "recomp" if chosen_goal == "cutting" else None
+    elif bmi < 30.0:
+        # Overweight — bulking is counter-productive
+        rec = "cutting" if chosen_goal == "bulking" else None
+    else:
+        # Obese — only cutting makes sense
+        rec = "cutting" if chosen_goal != "cutting" else None
+    return rec if rec and rec != chosen_goal else None
 
 
 def _compute_ml_score(bmi: float, goal_type: str, activity_multiplier: float) -> float:

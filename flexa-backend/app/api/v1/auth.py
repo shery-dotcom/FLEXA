@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
+from app.dependencies import get_current_user
+from app.models.user import User
 from app.services.auth_service import AuthService
 from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, RefreshRequest, MessageResponse, ForgotPasswordRequest, ResetPasswordRequest
 
@@ -31,6 +33,12 @@ async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depend
 @router.post("/reset-password", response_model=MessageResponse)
 async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
     return await AuthService.reset_password(db, data.token, data.new_password)
+
+
+@router.post("/logout", response_model=MessageResponse)
+async def logout(current_user: User = Depends(get_current_user)):
+    """Invalidate all tokens for the current user. Client should also discard local tokens."""
+    return await AuthService.logout(current_user.id)
 
 
 @router.get("/google")

@@ -28,3 +28,4 @@ class User(Base):
     progress_logs: Mapped[list["ProgressLog"]] = relationship("ProgressLog", back_populates="user", cascade="all, delete-orphan")
     dashboard_tasks: Mapped[list["DashboardTask"]] = relationship("DashboardTask", back_populates="user", cascade="all, delete-orphan")
     achievements: Mapped[list["Achievement"]] = relationship("Achievement", back_populates="user", cascade="all, delete-orphan")
+    water_logs: Mapped[list["WaterLog"]] = relationship("WaterLog", back_populates="user", cascade="all, delete-orphan")

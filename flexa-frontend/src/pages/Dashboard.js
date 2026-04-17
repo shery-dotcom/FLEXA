@@ -4,6 +4,7 @@ import api from "../api/axios";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 import FlexorGuide from "../components/FlexorGuide";
+import FlexorAppTour from "../components/FlexorAppTour";
 
 /* ─── Calorie formula helpers (Mifflin-St Jeor) ────────────────── */
 const ACTIVITY_MULT = {
@@ -298,6 +299,7 @@ export default function Dashboard() {
         padding: "20px 24px 48px",
       }}
     >
+      <FlexorAppTour onDone={() => {}} />
       <FlexorGuide pageKey="dashboard" />
       {/* ── Welcome Banner ─────────────────────────────────────────── */}
       <div

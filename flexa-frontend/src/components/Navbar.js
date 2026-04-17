@@ -18,11 +18,11 @@ import FlexorVideoIntro from "./FlexorVideoIntro";
 
 const NAV_LINKS = [
   { to: "/dashboard", label: "Home", icon: <FiGrid /> },
-  { to: "/progress", label: "Report", icon: <FiTrendingUp /> },
   { to: "/workouts", label: "Workout", icon: <FiActivity /> },
   { to: "/diet-planner", label: "Diet", icon: <FiBookOpen /> },
   { to: "/calorie-estimator", label: "Calories", icon: <FiCamera /> },
   { to: "/chatbot", label: "FLEXOR", icon: <TbRobot /> },
+  { to: "/progress", label: "Report", icon: <FiTrendingUp /> },
 ];
 
 export default function Navbar() {

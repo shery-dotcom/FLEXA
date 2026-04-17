@@ -48,7 +48,12 @@ export function AuthProvider({ children }) {
     return res.data;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post("/auth/logout"); // invalidate token server-side
+    } catch {
+      // silent — proceed with local logout even if server unreachable
+    }
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     setUser(null);

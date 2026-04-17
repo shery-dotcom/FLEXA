@@ -36,7 +36,9 @@ from app.schemas.chatbot import AvatarEvent, ChatMessageResponse
 
 logger = logging.getLogger(__name__)
 
-_GROQ_MODEL = "llama-3.3-70b-versatile"
+# llama-3.1-8b-instant is Groq's speed-optimised model — ~5-10× faster than
+# the 70B while retaining strong fitness/nutrition reasoning quality.
+_GROQ_MODEL = "llama-3.1-8b-instant"
 
 
 def _get_api_key() -> str:
@@ -96,22 +98,22 @@ async def process_message(
     # 2. Intent classification
     intent = classify_intent(user_message)
 
-    # 3+4. Run RAG (CPU-bound, off-thread) and memory fetch in parallel
-    rag_context, history = await asyncio.gather(
+    # 3+4+5+6. Run RAG (CPU thread) + memory + avatar + profile in parallel.
+    # RAG uses a background thread (no DB); memory/avatar/profile all use the
+    # same AsyncSession but asyncio.gather interleaves their awaits safely
+    # because SQLAlchemy async never holds the connection between awaits.
+    # Top_k reduced from 5 to 3 for faster retrieval without quality loss.
+    rag_context, history, avatar_state, user_profile = await asyncio.gather(
         asyncio.to_thread(rag_mod.retrieve, user_message, 3, intent),
         memory_mod.fetch_window(db, user_id),
+        avatar_mod.refresh_avatar_from_progress(db, user_id),
+        _get_user_profile(db, user_id),
     )
-
-    # 5. Avatar refresh (updates streak, BMI class)
-    avatar_state = await avatar_mod.refresh_avatar_from_progress(db, user_id)
 
     # Compute days inactive
     days_inactive = 0
     if avatar_state.last_active_date:
         days_inactive = (date.today() - avatar_state.last_active_date).days
-
-    # 6. User profile
-    user_profile = await _get_user_profile(db, user_id)
 
     avatar_dict = {
         "bmi": avatar_state.bmi,
@@ -138,8 +140,8 @@ async def process_message(
         completion = await async_client.chat.completions.create(
             model=_GROQ_MODEL,
             messages=messages,
-            max_tokens=380,
-            temperature=0.7,
+            max_tokens=300,   # system prompt caps responses at 150 words
+            temperature=0.72,
         )
         reply = completion.choices[0].message.content.strip()
         tokens_used = getattr(completion.usage, "completion_tokens", len(reply.split()))

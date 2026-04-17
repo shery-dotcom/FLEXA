@@ -26,6 +26,7 @@ from app.database import get_db, AsyncSessionLocal
 from app.dependencies import get_current_user
 from app.models.user import User
 from app.models.diet import NutritionFood, UserDietPreference, DailyMealLog, ImageAnalysisLog
+from app.models.progress import DashboardTask, WaterLog
 from app.schemas.diet import (
     CalorieCalculatorRequest, CalorieCalculatorResponse,
     DietPlanRequest, DietPlanResponse,
@@ -45,8 +46,9 @@ router = APIRouter(prefix="/diet", tags=["Module 3 – Diet & Calorie Planner"])
 # Max image upload size: 10 MB
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
 
-# Confidence below which the top-3 alternatives are returned for user confirmation
-CONFIDENCE_THRESHOLD = 0.60
+# Confidence below which the food is rejected (too low to use)
+# Increased from 0.60 to 0.75 for higher accuracy
+CONFIDENCE_THRESHOLD = 0.75
 
 
 # ─────────────────────────────── Background task helpers ───────────────────────────────
@@ -255,6 +257,49 @@ async def log_meal(
     await db.commit()
     await db.refresh(log)
 
+    # Auto-complete nutrition dashboard tasks based on today's totals
+    today = date.today()
+    day_start = datetime(today.year, today.month, today.day, 0, 0, 0)
+    day_end   = datetime(today.year, today.month, today.day, 23, 59, 59)
+    totals_stmt = select(
+        DailyMealLog.calories_consumed,
+        DailyMealLog.protein_consumed_g,
+    ).where(
+        DailyMealLog.user_id == current_user.id,
+        DailyMealLog.logged_at >= day_start,
+        DailyMealLog.logged_at <= day_end,
+    )
+    totals_r = await db.execute(totals_stmt)
+    rows = totals_r.all()
+    total_protein = sum(r.protein_consumed_g for r in rows)
+
+    pref_stmt = select(UserDietPreference).where(UserDietPreference.user_id == current_user.id)
+    pref_r = await db.execute(pref_stmt)
+    pref = pref_r.scalar_one_or_none()
+    protein_target = pref.protein_target_g if pref and pref.protein_target_g else None
+
+    tasks_stmt = select(DashboardTask).where(
+        DashboardTask.user_id == current_user.id,
+        DashboardTask.task_date == today,
+        DashboardTask.task_type == "nutrition",
+        DashboardTask.is_completed == False,
+    )
+    tasks_r = await db.execute(tasks_stmt)
+    nutrition_tasks = tasks_r.scalars().all()
+
+    updated = False
+    for task in nutrition_tasks:
+        if "Track Calories" in task.title:
+            task.is_completed = True
+            updated = True
+        elif "Protein" in task.title and protein_target and total_protein >= protein_target:
+            task.is_completed = True
+            updated = True
+
+    if updated:
+        await db.commit()
+    await cache_delete(f"dashboard:{current_user.id}")
+
     # Invalidate today's cached daily summary so the next GET reflects the new entry
     await cache_delete(f"daily_summary:{current_user.id}:{date.today().isoformat()}")
     return log
@@ -451,6 +496,60 @@ async def search_foods(
 # 7. Hydration & Meal Reminders  (FE-5)
 # ───────────────────────────────────────────────────────────────────────────
 
+class WaterLogCreate(BaseModel):
+    water_ml: float  # e.g. 250 per glass
+
+
+@router.post("/log-water")
+async def log_water(
+    payload: WaterLogCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Log water intake. Auto-completes today's hydration dashboard task when target is met."""
+    log = WaterLog(user_id=current_user.id, water_ml=payload.water_ml)
+    db.add(log)
+    await db.commit()
+
+    today = date.today()
+    day_start = datetime(today.year, today.month, today.day, 0, 0, 0)
+    day_end   = datetime(today.year, today.month, today.day, 23, 59, 59)
+
+    total_r = await db.execute(
+        select(func.sum(WaterLog.water_ml)).where(
+            WaterLog.user_id == current_user.id,
+            WaterLog.logged_at >= day_start,
+            WaterLog.logged_at <= day_end,
+        )
+    )
+    total_water_ml = total_r.scalar() or 0.0
+
+    pref_r = await db.execute(select(UserDietPreference).where(UserDietPreference.user_id == current_user.id))
+    pref = pref_r.scalar_one_or_none()
+    water_target = pref.water_target_ml if pref and pref.water_target_ml else 2500.0
+
+    if total_water_ml >= water_target:
+        task_r = await db.execute(
+            select(DashboardTask).where(
+                DashboardTask.user_id == current_user.id,
+                DashboardTask.task_date == today,
+                DashboardTask.task_type == "hydration",
+                DashboardTask.is_completed == False,
+            )
+        )
+        hydration_task = task_r.scalar_one_or_none()
+        if hydration_task:
+            hydration_task.is_completed = True
+            await db.commit()
+        await cache_delete(f"dashboard:{current_user.id}")
+
+    return {
+        "water_ml_today": total_water_ml,
+        "target_ml": water_target,
+        "target_met": total_water_ml >= water_target,
+    }
+
+
 @router.get("/reminders")
 async def get_reminders(
     db: AsyncSession = Depends(get_db),
@@ -505,13 +604,48 @@ async def upload_meal_image(
     low_confidence  = confidence < CONFIDENCE_THRESHOLD
     requires_conf   = low_confidence
 
+    # ── Reject foods below confidence threshold ──────────────────────────────
+    if low_confidence:
+        # Don't guess — return rejection with top-3 alternatives for user selection
+        return ImageAnalysisResponse(
+            predicted_class="unknown",
+            confidence=0.0,
+            portion_g=portion_g,
+            estimated_calories=0.0,
+            estimated_protein_g=0.0,
+            estimated_carbs_g=0.0,
+            estimated_fat_g=0.0,
+            low_confidence=True,
+            matched_food=None,
+            message=f"❌ I'm not confident about this food (only {confidence:.0%} sure). Please pick the correct one below:",
+            top_predictions=[TopPrediction(**p) for p in top3],
+            requires_confirmation=True,
+        )
+
     # ── Nutrition lookup on primary prediction ──────────────────────────────
     nutrition = await map_prediction_to_nutrition(predicted_class, db, portion_g)
 
-    cal  = nutrition["calories"]  if nutrition else round(portion_g * 1.5,  1)
-    pro  = nutrition["protein_g"] if nutrition else round(portion_g * 0.10, 1)
-    carb = nutrition["carbs_g"]   if nutrition else round(portion_g * 0.20, 1)
-    fat  = nutrition["fat_g"]     if nutrition else round(portion_g * 0.05, 1)
+    # ── If no match found in DB, reject instead of guessing ──────────────────
+    if not nutrition:
+        return ImageAnalysisResponse(
+            predicted_class=predicted_class,
+            confidence=confidence,
+            portion_g=portion_g,
+            estimated_calories=0.0,
+            estimated_protein_g=0.0,
+            estimated_carbs_g=0.0,
+            estimated_fat_g=0.0,
+            low_confidence=True,
+            matched_food=None,
+            message=f"⚠️ I detected '{predicted_class.title()}' but don't have nutrition data for it. Try another food or manually enter details.",
+            top_predictions=[TopPrediction(**p) for p in top3[:3]],
+            requires_confirmation=False,
+        )
+
+    cal  = nutrition["calories"]
+    pro  = nutrition["protein_g"]
+    carb = nutrition["carbs_g"]
+    fat  = nutrition["fat_g"]
 
     # ── Persist audit log after the response is sent (non-blocking) ──────────────
     background_tasks.add_task(_save_image_analysis_log, {
@@ -536,13 +670,7 @@ async def upload_meal_image(
             matched = FoodSearchResult.model_validate(food_row)
 
     # ── User-facing message ──────────────────────────────────────────────────────
-    if requires_conf:
-        msg = (
-            f"⚠️ Low confidence ({confidence:.0%}). "
-            "Please confirm the food from the options below."
-        )
-    else:
-        msg = f"✅ Detected: {predicted_class.title()} ({confidence:.0%} confidence)"
+    msg = f"✅ Detected: {predicted_class.title()} ({confidence:.0%} confidence)"
 
     return ImageAnalysisResponse(
         predicted_class=predicted_class,

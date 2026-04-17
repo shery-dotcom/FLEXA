@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from app.models.user import User
 from app.models.profile import Profile
 from app.models.workout import FitnessGoal, WorkoutSession, Workout
-from app.models.progress import DashboardTask, Achievement
+from app.models.progress import DashboardTask, Achievement, ProgressLog
 from app.ml.motivation_engine import compute_motivation_score
 from app.ml.milestone_detector import detect_milestones
 from app.schemas.progress import DashboardResponse, DashboardTaskResponse, MilestoneResponse
@@ -105,14 +105,47 @@ class DashboardService:
         )
 
         # Detect milestones
+        # Compute actual weight delta from progress logs
+        oldest_w_r = await db.execute(
+            select(ProgressLog.weight_kg)
+            .where(ProgressLog.user_id == user_id, ProgressLog.weight_kg.isnot(None))
+            .order_by(ProgressLog.log_date.asc()).limit(1)
+        )
+        oldest_weight = oldest_w_r.scalar_one_or_none()
+        latest_w_r = await db.execute(
+            select(ProgressLog.weight_kg)
+            .where(ProgressLog.user_id == user_id, ProgressLog.weight_kg.isnot(None))
+            .order_by(ProgressLog.log_date.desc()).limit(1)
+        )
+        latest_weight = latest_w_r.scalar_one_or_none()
+        weight_lost_kg = max(0.0, round((oldest_weight or 0) - (latest_weight or 0), 2)) if oldest_weight and latest_weight else 0.0
+
         milestone_data = {
             "total_sessions": total_sessions,
             "streak_days": min(total_sessions, days_since_joined),
             "current_bmi": profile.bmi if profile else 0,
-            "weight_lost_kg": 0,  # Would be from progress logs in full version
+            "weight_lost_kg": weight_lost_kg,
             "days_since_joined": days_since_joined,
         }
         milestones = detect_milestones(milestone_data)
+
+        # Persist newly earned achievements
+        existing_r = await db.execute(
+            select(Achievement.title).where(Achievement.user_id == user_id)
+        )
+        existing_titles = {row[0] for row in existing_r.all()}
+        new_achievements = []
+        for m in milestones:
+            if m["title"] not in existing_titles:
+                db.add(Achievement(
+                    user_id=user_id,
+                    title=m["title"],
+                    description=m["description"],
+                    badge_type=m["milestone_type"],
+                ))
+                new_achievements.append(m["title"])
+        if new_achievements:
+            await db.commit()
 
         # Calories
         act_level = goal.activity_level if goal else "moderate"
@@ -154,6 +187,8 @@ class DashboardService:
             task_templates.append({"title": "Hit Protein Target", "description": "Ensure you're hitting 2g protein per kg bodyweight.", "task_type": "nutrition", "priority": 2})
         elif goal and goal.goal_type == "cutting":
             task_templates.append({"title": "Track Calories", "description": "Log all meals and maintain your calorie deficit.", "task_type": "nutrition", "priority": 2})
+        elif goal and goal.goal_type in ("recomp", "maintaining"):
+            task_templates.append({"title": "Track Nutrition", "description": "Log your meals and monitor macro balance.", "task_type": "nutrition", "priority": 2})
 
         tasks = []
         for tmpl in task_templates:

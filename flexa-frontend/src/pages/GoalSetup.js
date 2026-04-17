@@ -65,6 +65,22 @@ export default function GoalSetup() {
     }
   };
 
+  const handleAdoptGoal = async (recommendedGoal) => {
+    setLoading(true);
+    try {
+      const res = await api.post("/goals/", {
+        goal_type: recommendedGoal,
+        activity_level: activity,
+      });
+      setReport(res.data.ai_report);
+      toast.success(`Switched to ${recommendedGoal} — great choice!`);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to update goal.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div
       className="page-content"
@@ -191,6 +207,8 @@ export default function GoalSetup() {
         /* AI Report Card */
         <AIReportCard
           report={report}
+          loading={loading}
+          onAdoptGoal={handleAdoptGoal}
           onContinue={() => navigate("/dashboard")}
         />
       )}
@@ -198,7 +216,13 @@ export default function GoalSetup() {
   );
 }
 
-function AIReportCard({ report, onContinue }) {
+function AIReportCard({ report, loading, onAdoptGoal, onContinue }) {
+  const GOAL_DESCRIPTIONS = {
+    bulking: "Build muscle mass with a calorie surplus",
+    cutting: "Lose fat while preserving lean muscle",
+    recomp: "Simultaneously build muscle and burn fat",
+  };
+
   return (
     <div className="card-gold-border">
       <div
@@ -211,9 +235,11 @@ function AIReportCard({ report, onContinue }) {
       >
         <h2 style={{ fontSize: 20, fontWeight: 700 }}>Your Health Report</h2>
         <span
-          className={`badge ${report.is_valid ? "badge-green" : "badge-red"}`}
+          className={`badge ${report.is_valid && !report.recommended_goal ? "badge-green" : "badge-red"}`}
         >
-          {report.is_valid ? "✓ Goal Validated" : "⚠ Needs Attention"}
+          {report.is_valid && !report.recommended_goal
+            ? "✓ Goal Validated"
+            : "⚠ Needs Attention"}
         </span>
       </div>
 
@@ -236,7 +262,92 @@ function AIReportCard({ report, onContinue }) {
         </div>
       </div>
 
-      {report.warnings?.length > 0 && (
+      {/* Goal Mismatch Recommendation Banner */}
+      {report.recommended_goal && (
+        <div
+          style={{
+            background: "rgba(255,152,0,0.08)",
+            border: "1px solid rgba(255,152,0,0.35)",
+            borderRadius: 10,
+            padding: "18px 20px",
+            marginBottom: 18,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 10,
+            }}
+          >
+            <span style={{ fontSize: 18 }}>⚠</span>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#ff9800" }}>
+              This goal isn't a healthy option for your current BMI
+            </p>
+          </div>
+          <p
+            style={{
+              fontSize: 13,
+              color: "#bdbdbd",
+              marginBottom: 14,
+              lineHeight: 1.6,
+            }}
+          >
+            Based on your BMI of{" "}
+            <strong style={{ color: "#fff" }}>{report.bmi}</strong> (
+            {report.bmi_category}),{" "}
+            <strong style={{ color: "#ff9800", textTransform: "capitalize" }}>
+              {report.goal_type}
+            </strong>{" "}
+            is not the optimal choice. We strongly recommend{" "}
+            <strong style={{ color: "#4caf50", textTransform: "capitalize" }}>
+              {report.recommended_goal}
+            </strong>{" "}
+            instead.
+          </p>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={() => onAdoptGoal(report.recommended_goal)}
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: "11px 16px",
+                background: "rgba(76,175,80,0.12)",
+                border: "1px solid rgba(76,175,80,0.4)",
+                borderRadius: 8,
+                color: "#4caf50",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: loading ? "not-allowed" : "pointer",
+                textTransform: "capitalize",
+              }}
+            >
+              {loading
+                ? "Switching..."
+                : `✓ Switch to ${report.recommended_goal}`}
+            </button>
+            <button
+              onClick={onContinue}
+              style={{
+                flex: 1,
+                padding: "11px 16px",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid #2a2a2a",
+                borderRadius: 8,
+                color: "#616161",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Keep {report.goal_type} anyway
+            </button>
+          </div>
+        </div>
+      )}
+
+      {report.warnings?.filter((w) => !w.includes("suggests")).length > 0 && (
         <div
           style={{
             background: "rgba(239,83,80,0.08)",
@@ -246,14 +357,16 @@ function AIReportCard({ report, onContinue }) {
             marginBottom: 16,
           }}
         >
-          {report.warnings.map((w, i) => (
-            <p
-              key={i}
-              style={{ fontSize: 13, color: "#ef9a9a", marginBottom: 4 }}
-            >
-              ⚠ {w}
-            </p>
-          ))}
+          {report.warnings
+            .filter((w) => !w.includes("suggests"))
+            .map((w, i) => (
+              <p
+                key={i}
+                style={{ fontSize: 13, color: "#ef9a9a", marginBottom: 4 }}
+              >
+                ⚠ {w}
+              </p>
+            ))}
         </div>
       )}
 
@@ -287,13 +400,15 @@ function AIReportCard({ report, onContinue }) {
         ))}
       </ul>
 
-      <button
-        className="btn btn-gold"
-        style={{ width: "100%", marginTop: 28 }}
-        onClick={onContinue}
-      >
-        Continue to My Dashboard →
-      </button>
+      {!report.recommended_goal && (
+        <button
+          className="btn btn-gold"
+          style={{ width: "100%", marginTop: 28 }}
+          onClick={onContinue}
+        >
+          Continue to My Dashboard →
+        </button>
+      )}
     </div>
   );
 }

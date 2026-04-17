@@ -112,6 +112,12 @@ MEAL_CALORIE_SPLITS = {
 
 SLOT_ORDER = ["breakfast", "lunch", "dinner", "snack"]
 
+# Number of food items generated per meal slot.
+# Main meals produce 2 complementary items (protein + carb/vegetable) so the
+# plan looks like an actual meal rather than a single scaled-up bread or grain.
+# Snacks stay at 1 item.
+_SLOT_ITEM_COUNTS = {"breakfast": 2, "lunch": 2, "dinner": 2, "snack": 1}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Built-in food library — used when the DB is empty.
 # Fields per entry: food_name, calories per 100g, protein_g, carbs_g, fat_g,
@@ -371,10 +377,10 @@ BUILTIN_FOODS = [
 
     # ── Multi-purpose ─────────────────────────────────────────────────────────
     dict(food_name="Brown Rice with Grilled Chicken", calories=380, protein_g=32, carbs_g=44, fat_g=8,
-         meal_type="any", diet_type="non-vegetarian", region="general", allergens="",
+         meal_type="lunch", diet_type="non-vegetarian", region="general", allergens="",
          ingredients="brown rice, chicken breast, olive oil, herbs, lemon"),
     dict(food_name="Whole Wheat Roti with Mixed Vegetables", calories=200, protein_g=7, carbs_g=34, fat_g=5,
-         meal_type="any", diet_type="vegan", region="pakistani", allergens="gluten",
+         meal_type="lunch", diet_type="vegan", region="pakistani", allergens="gluten",
          ingredients="whole wheat flour, mixed vegetables, oil, spices"),
 ]
 
@@ -531,6 +537,72 @@ def _filter_builtin(meal_type: str, diet_types: List[str], allergies: List[str],
     return results
 
 
+def _pick_one_food(
+    rec,
+    slot: str,
+    per_cal: float,
+    per_pro: float,
+    per_carb: float,
+    per_fat: float,
+    diet_types: List[str],
+    allergies: List[str],
+    region: str,
+    chosen_names: set,
+    apply_protein_filter: bool = True,
+):
+    """
+    Run ML ranking + fallback and return a single food object for one item in a slot.
+
+    For the anchor (first) item of main meal slots the protein-density filter
+    ensures a protein-rich dish is selected (not a stand-alone bread/grain).
+    For complement (second) items the filter is skipped so Naan/Roti/Rice pair
+    naturally with the anchor dish, producing a complete meal.
+    """
+    ranked_idx = rec.recommend(
+        target_calories=per_cal,
+        target_protein_g=per_pro,
+        target_carbs_g=per_carb,
+        target_fat_g=per_fat,
+        meal_type=slot,
+        diet_types=diet_types,
+        allergies=allergies,
+        region=region,
+        top_n=20,
+    )
+
+    novel_idx = [i for i in ranked_idx if rec.get_food(i)["food_name"] not in chosen_names]
+    best_idx = novel_idx if novel_idx else ranked_idx
+
+    # Protein-density preference: applied only to anchor items in main meals.
+    # Threshold: ≥5 g protein per 100 kcal filters out pure-bread/grain items.
+    # Falls back gracefully when all candidates are low-protein.
+    if apply_protein_filter and slot in ("breakfast", "lunch", "dinner") and best_idx:
+        protein_ok = [
+            i for i in best_idx
+            if (rec.get_food(i).get("protein_g") or 0)
+            / max(rec.get_food(i).get("calories") or 1, 1) * 100 >= 5.0
+        ]
+        if protein_ok:
+            best_idx = protein_ok   # prefer protein-bearing anchor items
+
+    if best_idx:
+        pick_from = best_idx[:5]
+        chosen_i = random.choice(pick_from)
+        food_dict = rec.get_food(chosen_i)
+        food_obj = _build_fake_food(food_dict)
+        food_obj.id = food_dict.get("id") or 0
+    else:
+        pool = _filter_builtin(slot, diet_types, allergies, region)
+        if not pool:
+            pool = _filter_builtin("any", diet_types, allergies, region)
+        if not pool:
+            pool = [_build_fake_food(random.choice(BUILTIN_FOODS))]
+        fresh = [f for f in pool if f.food_name not in chosen_names] or pool
+        food_obj = random.choice(fresh[:5])
+
+    return food_obj
+
+
 async def generate_meal_plan(
     db: AsyncSession,
     calorie_target: float,
@@ -569,6 +641,9 @@ async def generate_meal_plan(
     plan: dict  = {"breakfast": [], "lunch": [], "dinner": [], "snack": []}
     total_cal = total_pro = total_carb = total_fat = 0.0
     chosen_names: set = set()   # avoid serving the same food twice in one plan
+    
+    # Bread/carb foods to avoid duplication: ['naan', 'roti', 'rice', 'bread', 'pasta', 'couscous', 'polenta', 'tortilla']
+    BREAD_KEYWORDS = {'naan', 'roti', 'rice', 'bread', 'pasta', 'couscous', 'polenta', 'tortilla', 'flatbread', 'chapati', 'puri', 'paratha', 'basmati'}
 
     for slot, fraction in slot_list:
         # Per-slot macro targets
@@ -577,50 +652,42 @@ async def generate_meal_plan(
         slot_carb = carbs_g       * fraction
         slot_fat  = fat_g         * fraction
 
-        # ── ML ranking ────────────────────────────────────────────────
-        ranked_idx = rec.recommend(
-            target_calories = slot_cal,
-            target_protein_g= slot_pro,
-            target_carbs_g  = slot_carb,
-            target_fat_g    = slot_fat,
-            meal_type       = slot,
-            diet_types      = diet_types,
-            allergies       = allergies,
-            region          = region,
-            top_n           = 20,          # rank 20; we'll filter by novelty then pick
-        )
+        # Main meals generate 2 items each (protein source + carb/vegetable),
+        # snacks generate 1 item.  Calorie budget is split evenly across items.
+        n_items  = _SLOT_ITEM_COUNTS.get(slot, 1)
+        per_cal  = slot_cal  / n_items
+        per_pro  = slot_pro  / n_items
+        per_carb = slot_carb / n_items
+        per_fat  = slot_fat  / n_items
 
-        # Remove already-chosen foods for variety; accept duplicates as last resort
-        novel_idx = [i for i in ranked_idx if rec.get_food(i)["food_name"] not in chosen_names]
-        best_idx  = novel_idx if novel_idx else ranked_idx
-
-        if best_idx:
-            # Stochastic tie-break among the top-5 cosine-ranked candidates
-            pick_from = best_idx[:5]
-            chosen_i  = random.choice(pick_from)
-            food_dict = rec.get_food(chosen_i)
-
-            # Re-construct a lightweight NutritionFood-like object for _scale_meal
-            food_obj = _build_fake_food(food_dict)
-            food_obj.id = food_dict.get("id") or 0
-        else:
-            # ── Hard fallback: built-in library ──────────────────────────
-            pool = _filter_builtin(slot, diet_types, allergies, region)
-            if not pool:
-                pool = _filter_builtin("any", diet_types, allergies, region)
-            if not pool:
-                pool = [_build_fake_food(random.choice(BUILTIN_FOODS))]
-            fresh = [f for f in pool if f.food_name not in chosen_names] or pool
-            food_obj = random.choice(fresh[:5])
-
-        chosen_names.add(food_obj.food_name)
-        item = _scale_meal(food_obj, slot_cal)
-
-        plan[slot].append(item)
-        total_cal  += item.calories
-        total_pro  += item.protein_g
-        total_carb += item.carbs_g
-        total_fat  += item.fat_g
+        slot_foods = []  # Track foods picked in this slot
+        
+        for item_idx in range(n_items):
+            # Anchor (first) item: protein filter on → picks protein-rich dish.
+            # Complement (second) item: check if first was bread/carb; if so, apply protein filter
+            # to avoid naan+roti or rice+bread combos.
+            first_is_bread = False
+            if item_idx > 0 and slot_foods:
+                # Check if previous item was bread-like
+                prev_food_lower = slot_foods[0].food_name.lower()
+                first_is_bread = any(kw in prev_food_lower for kw in BREAD_KEYWORDS)
+            
+            # Apply protein filter to first item OR if second item's predecessor was bread
+            apply_filter = (item_idx == 0) or first_is_bread
+            
+            food_obj = _pick_one_food(
+                rec, slot, per_cal, per_pro, per_carb, per_fat,
+                diet_types, allergies, region, chosen_names,
+                apply_protein_filter=apply_filter,
+            )
+            chosen_names.add(food_obj.food_name)
+            slot_foods.append(food_obj)
+            item = _scale_meal(food_obj, per_cal)
+            plan[slot].append(item)
+            total_cal  += item.calories
+            total_pro  += item.protein_g
+            total_carb += item.carbs_g
+            total_fat  += item.fat_g
 
     tips = random.sample(DIET_TIPS, min(3, len(DIET_TIPS)))
 

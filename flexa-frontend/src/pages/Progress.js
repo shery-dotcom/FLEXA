@@ -163,7 +163,6 @@ export default function Progress() {
   const [form, setForm] = useState({
     log_date: new Date().toISOString().split("T")[0],
     weight_kg: "",
-    body_fat_pct: "",
     calorie_intake: "",
     notes: "",
   });
@@ -222,9 +221,6 @@ export default function Progress() {
       await api.post("/progress/log", {
         ...form,
         weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : undefined,
-        body_fat_pct: form.body_fat_pct
-          ? parseFloat(form.body_fat_pct)
-          : undefined,
         calorie_intake: form.calorie_intake
           ? parseFloat(form.calorie_intake)
           : undefined,
@@ -233,7 +229,6 @@ export default function Progress() {
       setForm({
         log_date: new Date().toISOString().split("T")[0],
         weight_kg: "",
-        body_fat_pct: "",
         calorie_intake: "",
         notes: "",
       });
@@ -683,18 +678,6 @@ export default function Progress() {
                     onChange={handleChange}
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Body Fat %</label>
-                  <input
-                    className="form-input"
-                    type="number"
-                    name="body_fat_pct"
-                    placeholder="18.5"
-                    step="0.1"
-                    value={form.body_fat_pct}
-                    onChange={handleChange}
-                  />
-                </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Calorie Intake (kcal)</label>
@@ -986,7 +969,6 @@ export default function Progress() {
                           "Date",
                           "Weight (kg)",
                           "BMI",
-                          "Body Fat %",
                           "Calories",
                           "Notes",
                         ].map((h) => (
@@ -1030,9 +1012,6 @@ export default function Progress() {
                             </td>
                             <td style={{ padding: "10px 12px" }}>
                               {l.bmi?.toFixed(1) ?? "—"}
-                            </td>
-                            <td style={{ padding: "10px 12px" }}>
-                              {l.body_fat_pct ?? "—"}
                             </td>
                             <td
                               style={{ padding: "10px 12px", color: "#64b5f6" }}

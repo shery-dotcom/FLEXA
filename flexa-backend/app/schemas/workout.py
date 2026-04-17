@@ -47,3 +47,9 @@ class WorkoutUpdateRequest(BaseModel):
     exercises: Optional[List[Dict[str, Any]]] = None
     duration_minutes: Optional[int] = None
     notes: Optional[str] = None
+
+
+class WorkoutCompleteRequest(BaseModel):
+    sets_data: Optional[Dict[str, Any]] = None  # {exercise_index: [{weight, reps, done}]}
+    session_duration_seconds: Optional[int] = None
+    notes: Optional[str] = None

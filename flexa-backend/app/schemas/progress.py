@@ -8,7 +8,6 @@ class ProgressLogCreate(BaseModel):
     log_date: date
     weight_kg: Optional[float] = None
     bmi: Optional[float] = None
-    body_fat_pct: Optional[float] = None
     calorie_intake: Optional[float] = None
     notes: Optional[str] = None
 
@@ -19,7 +18,6 @@ class ProgressLogResponse(BaseModel):
     log_date: date
     weight_kg: Optional[float]
     bmi: Optional[float]
-    body_fat_pct: Optional[float]
     calorie_intake: Optional[float] = None
     notes: Optional[str]
     created_at: datetime

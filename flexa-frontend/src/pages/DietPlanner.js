@@ -289,6 +289,9 @@ export default function DietPlanner() {
 
   // FE-5: Hydration / meal reminders
   const [reminder, setReminder] = useState(null);
+  const [waterToday, setWaterToday] = useState(0); // ml logged today
+  const [waterTarget, setWaterTarget] = useState(2500); // ml target
+  const [loggingWater, setLoggingWater] = useState(false);
 
   // FE-4: Inline log editing
   const [editingLog, setEditingLog] = useState(null); // { id, qty, meal_type }
@@ -337,7 +340,8 @@ export default function DietPlanner() {
           allergies: p.allergies || [],
           meals_per_day: p.meals_per_day || null,
         });
-        const savedWeeklyPlan = localStorage.getItem("flexa_diet_weekly_plan");
+        const planKey = `flexa_diet_plan_${user?.id}`;
+        const savedWeeklyPlan = localStorage.getItem(planKey);
         if (savedWeeklyPlan) {
           try {
             setWeeklyPlan(JSON.parse(savedWeeklyPlan));
@@ -506,7 +510,10 @@ export default function DietPlanner() {
       setWeeklyPlan(plans);
       setSelectedDay(0);
       setStep(1);
-      localStorage.setItem("flexa_diet_weekly_plan", JSON.stringify(plans));
+      localStorage.setItem(
+        `flexa_diet_plan_${user?.id}`,
+        JSON.stringify(plans),
+      );
       toast.success("7-day meal plan ready!", { id: toastId });
     } catch (e) {
       toast.error(e.response?.data?.detail || "Plan generation failed.", {
@@ -862,7 +869,7 @@ export default function DietPlanner() {
                     allergies: [],
                     meals_per_day: null,
                   });
-                  localStorage.removeItem("flexa_diet_weekly_plan");
+                  localStorage.removeItem(`flexa_diet_plan_${user?.id}`);
                   setWeeklyPlan(null);
                   setStep(0);
                 }}
@@ -1046,7 +1053,7 @@ export default function DietPlanner() {
           <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
             <button
               onClick={() => {
-                localStorage.removeItem("flexa_diet_weekly_plan");
+                localStorage.removeItem(`flexa_diet_plan_${user?.id}`);
                 setWeeklyPlan(null);
                 setStep(0);
               }}
@@ -1535,6 +1542,52 @@ export default function DietPlanner() {
                   🍽 {reminder.meal.message}
                 </div>
               )}
+            </div>
+            {/* Water intake quick-log */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-end",
+                gap: 4,
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ fontSize: 11, color: "#4ec9b0", fontWeight: 600 }}>
+                {(waterToday / 1000).toFixed(2)}L /{" "}
+                {(waterTarget / 1000).toFixed(1)}L
+              </div>
+              <button
+                disabled={loggingWater}
+                onClick={async () => {
+                  setLoggingWater(true);
+                  try {
+                    const r = await api.post("/diet/log-water", {
+                      water_ml: 250,
+                    });
+                    setWaterToday(r.data.water_ml_today);
+                    setWaterTarget(r.data.target_ml);
+                    if (r.data.target_met)
+                      toast.success("💧 Hydration goal reached!");
+                    else toast.success("💧 +1 glass logged");
+                  } catch {
+                    toast.error("Could not log water");
+                  }
+                  setLoggingWater(false);
+                }}
+                style={{
+                  background: "rgba(78,201,176,0.15)",
+                  border: "1px solid rgba(78,201,176,0.4)",
+                  color: "#4ec9b0",
+                  borderRadius: 6,
+                  padding: "4px 10px",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {loggingWater ? "..." : "+ 1 Glass (250ml)"}
+              </button>
             </div>
           </div>
         )}
