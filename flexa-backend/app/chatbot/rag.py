@@ -8,7 +8,7 @@ At startup, loads two dual-index pairs:
     • nutrition.index (FAISS) + nutrition.bm25 (BM25)
 
 Call `retrieve(query, top_k=5)` to get relevant text chunks via hybrid search.
-Uses reciprocal rank fusion (RRF) to merge lexical + semantic results.
+Uses intent routing + reciprocal rank fusion (RRF) to merge lexical + semantic results.
 """
 from __future__ import annotations
 import os
@@ -17,6 +17,7 @@ import logging
 import time
 import hashlib
 import pickle
+import re
 from collections import OrderedDict
 from pathlib import Path
 from threading import Lock
@@ -46,9 +47,9 @@ _nutrition_bm25 = None
 
 # Retrieval tuning
 _DEFAULT_TOP_K = int(os.getenv("RAG_TOP_K", "3"))
-_CANDIDATE_MULTIPLIER = int(os.getenv("RAG_CANDIDATE_MULTIPLIER", "4"))
+_CANDIDATE_MULTIPLIER = int(os.getenv("RAG_CANDIDATE_MULTIPLIER", "2"))
 _MIN_SCORE = float(os.getenv("RAG_MIN_SCORE", "0.18"))
-_MAX_CONTEXT_CHARS = int(os.getenv("RAG_MAX_CONTEXT_CHARS", "2400"))
+_MAX_CONTEXT_CHARS = int(os.getenv("RAG_MAX_CONTEXT_CHARS", "1800"))
 
 # Simple in-memory LRU caches for fast repeat queries
 _QUERY_CACHE_TTL_S = int(os.getenv("RAG_QUERY_CACHE_TTL_S", "900"))
@@ -104,6 +105,38 @@ def _cache_set_embed(key: str, vec: np.ndarray) -> None:
 
 def _hash_doc(doc: str) -> str:
     return hashlib.sha1(doc.encode("utf-8", errors="ignore")).hexdigest()
+
+
+def _resolve_index_plan(intent: str, query_norm: str):
+    """Pick the fastest primary index first, with an optional fallback."""
+    nutrition_first = intent in ("nutrition", "diet_plan", "recipe") or (
+        bool(re.search(r"\b(calorie|calories|protein|carb|carbs|fat|macro|macros|meal|food|nutrition|diet|recipe|portion|eat|eating|breakfast|lunch|dinner|snack|pre\s*workout|post\s*workout)\b", query_norm, re.IGNORECASE))
+        and not bool(re.search(r"\b(workout|exercise|training|gym|squat|bench|deadlift|push[- ]?up|pull[- ]?up|cardio|strength|muscle|sets?|reps?|rpe|injur|pain|mobility|warm[- ]?up|cool[- ]?down|progressive|overload|program|split)\b", query_norm, re.IGNORECASE))
+    )
+    fitness_first = intent in ("workout_plan", "weight_loss", "weight_gain", "progress", "motivation", "bmi", "general_fitness") or bool(
+        re.search(r"\b(workout|exercise|training|gym|squat|bench|deadlift|push[- ]?up|pull[- ]?up|cardio|strength|muscle|sets?|reps?|rpe|injur|pain|mobility|warm[- ]?up|cool[- ]?down|progressive|overload|program|split)\b", query_norm, re.IGNORECASE)
+    )
+
+    if nutrition_first and not fitness_first:
+        return [
+            ("nutrition", _nutrition_index, _nutrition_bm25, _nutrition_docs),
+            ("fitness", _fitness_index, _fitness_bm25, _fitness_docs),
+        ]
+
+    if fitness_first and not nutrition_first:
+        return [
+            ("fitness", _fitness_index, _fitness_bm25, _fitness_docs),
+            ("nutrition", _nutrition_index, _nutrition_bm25, _nutrition_docs),
+        ]
+
+    return [
+        ("fitness", _fitness_index, _fitness_bm25, _fitness_docs),
+        ("nutrition", _nutrition_index, _nutrition_bm25, _nutrition_docs),
+    ]
+
+
+def _best_score(results: list[tuple[float, str]]) -> float:
+    return results[0][0] if results else 0.0
 
 
 def _get_model():
@@ -253,29 +286,38 @@ def retrieve(query: str, top_k: int = 5, intent: str = "general") -> str:
         _cache_set_embed(vec_key, query_vec)
 
     candidate_k = max(effective_top_k, effective_top_k * _CANDIDATE_MULTIPLIER)
+    search_plan = _resolve_index_plan(intent, query_norm)
+
     all_results: list[tuple[float, str]] = []
 
-    # ─── Pick primary index pair based on intent ─────────────────────────────
-    if intent in ("nutrition", "diet_plan", "recipe"):
-        index_pairs = [
-            (_nutrition_index, _nutrition_bm25, _nutrition_docs, "nutrition"),
-            (_fitness_index, _fitness_bm25, _fitness_docs, "fitness"),
-        ]
-    else:
-        index_pairs = [
-            (_fitness_index, _fitness_bm25, _fitness_docs, "fitness"),
-            (_nutrition_index, _nutrition_bm25, _nutrition_docs, "nutrition"),
-        ]
-
-    # ─── Hybrid search per index pair ────────────────────────────────────────
-    for faiss_idx, bm25_idx, docs, index_name in index_pairs:
-        if (faiss_idx is None and bm25_idx is None) or len(docs) == 0:
-            continue
-        
-        hybrid = _hybrid_search(
-            query_vec, query_norm, faiss_idx, bm25_idx, docs, candidate_k, intent
+    # Search the primary corpus first; only fall back to the secondary corpus
+    # if the first pass is weak or empty.
+    primary_name, primary_faiss, primary_bm25, primary_docs = search_plan[0]
+    if primary_faiss is not None or primary_bm25 is not None:
+        all_results = _hybrid_search(
+            query_vec,
+            query_norm,
+            primary_faiss,
+            primary_bm25,
+            primary_docs,
+            candidate_k,
+            primary_name,
         )
-        all_results.extend(hybrid)
+
+    primary_best = _best_score(all_results)
+    if not all_results or (len(all_results) < effective_top_k and primary_best < 0.28):
+        secondary_name, secondary_faiss, secondary_bm25, secondary_docs = search_plan[1]
+        if secondary_faiss is not None or secondary_bm25 is not None:
+            fallback = _hybrid_search(
+                query_vec,
+                query_norm,
+                secondary_faiss,
+                secondary_bm25,
+                secondary_docs,
+                candidate_k,
+                secondary_name,
+            )
+            all_results.extend(fallback)
 
     if not all_results:
         _cache_set_query(cache_key, "")

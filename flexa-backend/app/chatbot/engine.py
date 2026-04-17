@@ -102,9 +102,9 @@ async def process_message(
     # RAG uses a background thread (no DB); memory/avatar/profile all use the
     # same AsyncSession but asyncio.gather interleaves their awaits safely
     # because SQLAlchemy async never holds the connection between awaits.
-    # Top_k reduced from 5 to 3 for faster retrieval without quality loss.
+    # Top_k kept small for faster retrieval without quality loss.
     rag_context, history, avatar_state, user_profile = await asyncio.gather(
-        asyncio.to_thread(rag_mod.retrieve, user_message, 3, intent),
+        asyncio.to_thread(rag_mod.retrieve, user_message, 2, intent),
         memory_mod.fetch_window(db, user_id),
         avatar_mod.refresh_avatar_from_progress(db, user_id),
         _get_user_profile(db, user_id),
@@ -140,7 +140,7 @@ async def process_message(
         completion = await async_client.chat.completions.create(
             model=_GROQ_MODEL,
             messages=messages,
-            max_tokens=300,   # system prompt caps responses at 150 words
+            max_tokens=220,   # keep responses concise and faster to generate
             temperature=0.72,
         )
         reply = completion.choices[0].message.content.strip()

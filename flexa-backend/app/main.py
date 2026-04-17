@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -9,6 +10,7 @@ from app.core.config import settings
 from app.core.rate_limit import limiter
 from app.core.cache import close_redis
 from app.ml.meal_recommender_ml import get_recommender
+from app.chatbot import rag as rag_mod
 
 
 @asynccontextmanager
@@ -17,6 +19,11 @@ async def lifespan(app: FastAPI):
     await init_db()
     # Invalidate ML meal recommender so it refits with merged BUILTIN_FOODS on first request
     get_recommender().invalidate()
+    # Warm up RAG assets so the first chatbot request does not pay the cold-start cost.
+    try:
+        await asyncio.to_thread(rag_mod.retrieve, "warmup", 1, "general")
+    except Exception as e:
+        print(f"[WARN] RAG warmup skipped: {e}")
     print(f"[OK] {settings.APP_NAME} v{settings.APP_VERSION} started")
     yield
     # Shutdown: release Redis connection
