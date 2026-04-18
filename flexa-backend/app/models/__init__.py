@@ -4,6 +4,7 @@ from app.models.workout import Workout, WorkoutSession, FitnessGoal
 from app.models.progress import ProgressLog, Achievement, DashboardTask
 from app.models.diet import NutritionFood, UserDietPreference, DailyMealLog, ImageAnalysisLog
 from app.models.chatbot import ChatMemory, AvatarState
+from app.models.posture import PostureSession
 
 __all__ = [
     "User", "Profile", "FitnessGoal",
@@ -11,4 +12,5 @@ __all__ = [
     "ProgressLog", "Achievement", "DashboardTask",
     "NutritionFood", "UserDietPreference", "DailyMealLog", "ImageAnalysisLog",
     "ChatMemory", "AvatarState",
+    "PostureSession",
 ]

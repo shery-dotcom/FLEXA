@@ -1,0 +1,411 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Pose } from "@mediapipe/pose";
+import api from "../api/axios";
+import WebcamCanvas from "./WebcamCanvas";
+import { getJointAngles } from "../utils/angleUtils";
+import {
+  createRepCounter,
+  updateRepCounter,
+  SUPPORTED_EXERCISES,
+  normalizeExercise,
+} from "../utils/repCounter";
+import {
+  evaluateExercisePosture,
+  calculateSessionPostureScore,
+} from "../utils/postureRules";
+
+const FPS_TARGET = 12;
+const FRAME_INTERVAL_MS = Math.round(1000 / FPS_TARGET);
+
+const POSE_CONNECTIONS = [
+  [11, 13],
+  [13, 15],
+  [12, 14],
+  [14, 16],
+  [11, 12],
+  [23, 24],
+  [11, 23],
+  [12, 24],
+  [23, 25],
+  [25, 27],
+  [24, 26],
+  [26, 28],
+  [27, 28],
+];
+
+function drawSkeleton(canvas, landmarks) {
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+
+  ctx.clearRect(0, 0, width, height);
+  if (!landmarks?.length) return;
+
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#00e5ff";
+  ctx.fillStyle = "#D4AF37";
+
+  POSE_CONNECTIONS.forEach(([from, to]) => {
+    const p1 = landmarks[from];
+    const p2 = landmarks[to];
+    if (!p1 || !p2) return;
+    if ((p1.visibility ?? 1) < 0.35 || (p2.visibility ?? 1) < 0.35) return;
+
+    ctx.beginPath();
+    ctx.moveTo(p1.x * width, p1.y * height);
+    ctx.lineTo(p2.x * width, p2.y * height);
+    ctx.stroke();
+  });
+
+  landmarks.forEach((p) => {
+    if (!p || (p.visibility ?? 1) < 0.45) return;
+    ctx.beginPath();
+    ctx.arc(p.x * width, p.y * height, 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+export default function PoseTracker({ exercise = "squat" }) {
+  const initialExercise = useMemo(
+    () => normalizeExercise(exercise),
+    [exercise],
+  );
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+
+  const poseRef = useRef(null);
+  const rafRef = useRef(null);
+  const busyRef = useRef(false);
+  const lastFrameAtRef = useRef(0);
+
+  const sessionStartRef = useRef(null);
+  const repCounterRef = useRef(createRepCounter(initialExercise));
+  const scoreSamplesRef = useRef([]);
+
+  const [isRunning, setIsRunning] = useState(false);
+  const [reps, setReps] = useState(0);
+  const [feedback, setFeedback] = useState("Ready");
+  const [postureScore, setPostureScore] = useState(0);
+  const [seconds, setSeconds] = useState(0);
+  const [history, setHistory] = useState([]);
+  const [selectedExercise, setSelectedExercise] = useState(initialExercise);
+
+  useEffect(() => {
+    if (isRunning) return;
+    setSelectedExercise(initialExercise);
+  }, [initialExercise, isRunning]);
+
+  const exerciseOptions = useMemo(
+    () =>
+      SUPPORTED_EXERCISES.map((item) => ({
+        value: item,
+        label: item.replace(/_/g, " "),
+      })),
+    [],
+  );
+
+  const elapsedLabel = useMemo(() => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }, [seconds]);
+
+  const resetSession = useCallback(() => {
+    repCounterRef.current = createRepCounter(selectedExercise);
+    scoreSamplesRef.current = [];
+    setReps(0);
+    setFeedback("Ready");
+    setPostureScore(0);
+    setSeconds(0);
+    sessionStartRef.current = Date.now();
+  }, [selectedExercise]);
+
+  useEffect(() => {
+    if (isRunning) return;
+    resetSession();
+  }, [selectedExercise, isRunning, resetSession]);
+
+  const loadHistory = useCallback(async () => {
+    try {
+      const data = await api.get("/workout/history?limit=10");
+      setHistory(data.data || []);
+    } catch {
+      setHistory([]);
+    }
+  }, []);
+
+  const handleCameraReady = useCallback(() => {
+    // Reserved for future hooks (permissions, warmup telemetry).
+  }, []);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  useEffect(() => {
+    if (!isRunning) return;
+    const tick = setInterval(() => {
+      if (!sessionStartRef.current) return;
+      setSeconds(Math.floor((Date.now() - sessionStartRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [isRunning]);
+
+  useEffect(() => {
+    const pose = new Pose({
+      locateFile: (file) =>
+        `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
+    });
+
+    pose.setOptions({
+      modelComplexity: 0,
+      smoothLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+    });
+
+    pose.onResults((results) => {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (!video || !canvas) return;
+
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+
+      drawSkeleton(canvas, results.poseLandmarks);
+
+      if (!results.poseLandmarks?.length) {
+        setFeedback("Move into camera frame");
+        return;
+      }
+
+      const angles = getJointAngles(results.poseLandmarks);
+      const counterState = updateRepCounter(
+        repCounterRef.current,
+        selectedExercise,
+        angles,
+        Date.now(),
+      );
+
+      if (counterState.didCount) {
+        setReps(counterState.reps);
+      }
+
+      const posture = evaluateExercisePosture(
+        selectedExercise,
+        results.poseLandmarks,
+        angles,
+      );
+      scoreSamplesRef.current.push(posture.score);
+      setPostureScore(posture.score);
+      setFeedback(posture.message);
+    });
+
+    poseRef.current = pose;
+
+    return () => {
+      poseRef.current = null;
+    };
+  }, [selectedExercise]);
+
+  const frameLoop = useCallback(async () => {
+    if (!isRunning) return;
+
+    const now = performance.now();
+    if (now - lastFrameAtRef.current < FRAME_INTERVAL_MS) {
+      rafRef.current = requestAnimationFrame(frameLoop);
+      return;
+    }
+
+    const video = videoRef.current;
+    const pose = poseRef.current;
+
+    if (video && pose && video.readyState >= 2 && !busyRef.current) {
+      try {
+        busyRef.current = true;
+        await pose.send({ image: video });
+        lastFrameAtRef.current = now;
+      } catch {
+        // Keep loop alive even if one frame fails.
+      } finally {
+        busyRef.current = false;
+      }
+    }
+
+    rafRef.current = requestAnimationFrame(frameLoop);
+  }, [isRunning]);
+
+  useEffect(() => {
+    if (!isRunning) {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      return;
+    }
+    rafRef.current = requestAnimationFrame(frameLoop);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [isRunning, frameLoop]);
+
+  const handleStart = () => {
+    resetSession();
+    setIsRunning(true);
+  };
+
+  const handleStopAndSave = async () => {
+    setIsRunning(false);
+
+    const duration = Math.max(1, Math.floor(seconds));
+    const sessionPostureScore = calculateSessionPostureScore(
+      scoreSamplesRef.current,
+    );
+
+    try {
+      await api.post("/workout/session", {
+        exercise: selectedExercise,
+        reps: repCounterRef.current.reps,
+        duration,
+        posture_score: sessionPostureScore,
+      });
+      await loadHistory();
+    } catch {
+      // Keep UI responsive; history section indicates persistence state on next load.
+    }
+
+    setPostureScore(sessionPostureScore);
+  };
+
+  return (
+    <div style={{ display: "grid", gap: 16 }}>
+      <WebcamCanvas
+        videoRef={videoRef}
+        canvasRef={canvasRef}
+        isRunning={isRunning}
+        onReady={handleCameraReady}
+      />
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: 12,
+        }}
+      >
+        <StatCard
+          label="Exercise"
+          value={selectedExercise.replace(/_/g, " ")}
+        />
+        <StatCard label="Reps" value={String(reps)} />
+        <StatCard label="Time" value={elapsedLabel} />
+        <StatCard label="Posture" value={`${postureScore}%`} />
+      </div>
+
+      <div style={{ display: "grid", gap: 6, maxWidth: 320 }}>
+        <label
+          htmlFor="exercise-picker"
+          style={{ fontSize: 12, color: "#9e9e9e", textTransform: "uppercase" }}
+        >
+          Exercise Mode
+        </label>
+        <select
+          id="exercise-picker"
+          value={selectedExercise}
+          disabled={isRunning}
+          onChange={(e) => setSelectedExercise(e.target.value)}
+          style={{
+            background: "#111",
+            color: "#d7d7d7",
+            border: "1px solid #2a2a2a",
+            borderRadius: 8,
+            padding: "10px 12px",
+            textTransform: "capitalize",
+          }}
+        >
+          {exerciseOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div
+        style={{
+          border: "1px solid #2a2a2a",
+          borderRadius: 10,
+          padding: "12px 14px",
+          color: feedback === "Good form" ? "#4caf50" : "#ff9800",
+          fontWeight: 700,
+          background: "#111",
+        }}
+      >
+        {feedback}
+      </div>
+
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {!isRunning ? (
+          <button className="btn btn-gold" onClick={handleStart}>
+            Start Tracking
+          </button>
+        ) : (
+          <button className="btn btn-ghost" onClick={handleStopAndSave}>
+            Stop & Save Session
+          </button>
+        )}
+      </div>
+
+      <div
+        style={{ border: "1px solid #2a2a2a", borderRadius: 10, padding: 12 }}
+      >
+        <h3 style={{ fontSize: 15, marginBottom: 8 }}>
+          Recent Posture Sessions
+        </h3>
+        <div style={{ display: "grid", gap: 6 }}>
+          {history.length === 0 && (
+            <p style={{ color: "#777", fontSize: 13 }}>
+              No posture sessions yet.
+            </p>
+          )}
+          {history.map((item) => (
+            <div
+              key={item.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 10,
+                fontSize: 13,
+                color: "#cfcfcf",
+                borderBottom: "1px solid #1e1e1e",
+                paddingBottom: 6,
+              }}
+            >
+              <span>{item.exercise}</span>
+              <span>{item.reps} reps</span>
+              <span>{item.duration}s</span>
+              <span>{item.posture_score}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value }) {
+  return (
+    <div
+      style={{
+        border: "1px solid #2a2a2a",
+        borderRadius: 10,
+        background: "#111",
+        padding: "10px 12px",
+      }}
+    >
+      <div style={{ fontSize: 11, color: "#777", textTransform: "uppercase" }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: "#D4AF37" }}>
+        {value}
+      </div>
+    </div>
+  );
+}

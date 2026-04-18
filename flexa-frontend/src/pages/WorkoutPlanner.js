@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import FlexorGuide from "../components/FlexorGuide";
 import {
   FiActivity,
   FiArrowLeft,
-  FiMoon,
   FiClock,
   FiSun,
   FiWind,
@@ -12,6 +12,7 @@ import {
   FiChevronRight,
   FiPlus,
   FiCheck,
+  FiCamera,
 } from "react-icons/fi";
 import api from "../api/axios";
 import toast from "react-hot-toast";
@@ -59,6 +60,15 @@ function fmtTime(totalSec) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+function parseRepTarget(repsText) {
+  const raw = String(repsText || "");
+  const nums = raw.match(/\d+/g);
+  if (!nums || nums.length === 0) return 0;
+  const parsed = nums.map((n) => Number(n)).filter((n) => Number.isFinite(n));
+  if (parsed.length === 0) return 0;
+  return Math.round(parsed.reduce((sum, n) => sum + n, 0) / parsed.length);
+}
+
 function makeDefaultSets(ex) {
   const count = Number(ex?.sets) || 3;
   return Array.from({ length: count }, () => ({
@@ -90,6 +100,26 @@ function getMuscleLabel(workout) {
     ),
   ];
   return groups.length > 0 ? groups.slice(0, 3).join(" · ") : "General";
+}
+
+function mapExerciseToPostureMode(exercise) {
+  const raw =
+    `${exercise?.name || ""} ${exercise?.muscle_group || ""}`.toLowerCase();
+
+  if (/curl|bicep|biceps|hammer/.test(raw)) return "bicep_curl";
+  if (/lunge|split squat|bulgarian|step up/.test(raw)) return "lunge";
+  if (
+    /push ?up|push-up|bench|chest press|dip|shoulder press|overhead press/.test(
+      raw,
+    )
+  ) {
+    return "pushup";
+  }
+  if (/squat|leg press|hack squat|front squat|back squat|goblet/.test(raw)) {
+    return "squat";
+  }
+
+  return "squat";
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -183,9 +213,13 @@ export default function WorkoutPlanner() {
   };
 
   /* ── complete workout ── */
-  const completeWorkout = async (workoutId) => {
+  const completeWorkout = async (workoutId, sessionData = {}) => {
     try {
-      await api.post(`/workouts/${workoutId}/complete`);
+      await api.post(`/workouts/${workoutId}/complete`, {
+        sets_data: sessionData.setsData || null,
+        session_duration_seconds: sessionData.durationSeconds || null,
+        notes: sessionData.notes || null,
+      });
       toast.success("Workout session recorded!");
       fetchWorkouts();
     } catch (err) {
@@ -699,6 +733,7 @@ const RAPID_WINDOW_S = 20; // sets completed within this window count as rapid
 const RAPID_THRESHOLD = 3; // rapid sets before rest is suggested
 
 function WorkoutSessionScreen({ workout, onBack, onComplete }) {
+  const navigate = useNavigate();
   const exercises = (workout.exercises || []).filter(Boolean);
   const warmupList = workout.warmup || [];
   const cooldownList = workout.cooldown || [];
@@ -720,7 +755,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
   );
 
   /* ── exercise accordion state ── */
-  const [expandedSet, setExpandedSet] = useState(new Set());
+  const [expandedExerciseIdx, setExpandedExerciseIdx] = useState(null);
 
   /* ── per-exercise set rows ── */
   const [allSetRows, setAllSetRows] = useState(() => {
@@ -803,16 +838,12 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
 
   /* ── helpers ── */
   const toggleExpand = (idx) => {
-    setExpandedSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(idx)) {
-        next.delete(idx);
-      } else {
-        next.add(idx);
-        if (!exerciseStartedAt.current[idx])
-          exerciseStartedAt.current[idx] = Date.now();
+    setExpandedExerciseIdx((prev) => {
+      if (prev === idx) return null;
+      if (!exerciseStartedAt.current[idx]) {
+        exerciseStartedAt.current[idx] = Date.now();
       }
-      return next;
+      return idx;
     });
   };
 
@@ -930,12 +961,94 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
     (allSetRows[i] || []).some((r) => r.done),
   ).length;
 
+  const sessionStats = exercises.reduce(
+    (acc, ex, exIdx) => {
+      const rows = allSetRows[exIdx] || [];
+      const targetPerSet = parseRepTarget(ex?.reps);
+      const completedRows = rows.filter((row) => row.done);
+
+      acc.totalSets += rows.length;
+      acc.completedSets += completedRows.length;
+      acc.totalTargetReps += rows.length * targetPerSet;
+
+      const loggedReps = completedRows.reduce((sum, row) => {
+        const entered = Number(row.reps);
+        if (Number.isFinite(entered) && entered > 0) return sum + entered;
+        return sum + targetPerSet;
+      }, 0);
+      acc.loggedReps += loggedReps;
+
+      if (rows.length > 0 && completedRows.length < rows.length) {
+        acc.incompleteExercises.push({
+          name: ex?.name || `Exercise ${exIdx + 1}`,
+          done: completedRows.length,
+          total: rows.length,
+        });
+      }
+
+      return acc;
+    },
+    {
+      totalSets: 0,
+      completedSets: 0,
+      totalTargetReps: 0,
+      loggedReps: 0,
+      incompleteExercises: [],
+    },
+  );
+
   const handleComplete = async () => {
+    if (sessionStats.totalSets > 0 && sessionStats.completedSets === 0) {
+      toast("Log at least one completed set before finishing this workout.", {
+        duration: 3500,
+        style: {
+          background: "#1a1a1a",
+          border: "1px solid #ff9800",
+          color: "#ff9800",
+        },
+      });
+      return;
+    }
+
+    if (sessionStats.incompleteExercises.length > 0) {
+      const preview = sessionStats.incompleteExercises
+        .slice(0, 3)
+        .map((e) => `- ${e.name}: ${e.done}/${e.total} sets`)
+        .join("\n");
+      const moreCount = Math.max(
+        0,
+        sessionStats.incompleteExercises.length - 3,
+      );
+      const proceed = window.confirm(
+        `You still have incomplete sets:\n\n${preview}${moreCount ? `\n- +${moreCount} more exercise(s)` : ""}\n\nComplete anyway?`,
+      );
+      if (!proceed) return;
+    }
+
     clearInterval(sessionRef.current);
     setCompleting(true);
-    await onComplete({ setsData: allSetRows, durationSeconds: sessionSec });
+    await onComplete({
+      setsData: allSetRows,
+      durationSeconds: sessionSec,
+      notes: `Session stats: ${sessionStats.completedSets}/${sessionStats.totalSets} sets, ${sessionStats.loggedReps}/${sessionStats.totalTargetReps || 0} reps logged.`,
+    });
     setCompleting(false);
   };
+
+  const openPostureTrackerForExercise = (exercise) => {
+    const mappedExercise = mapExerciseToPostureMode(exercise);
+    const params = new URLSearchParams({
+      mode: "workout",
+      exercise: mappedExercise,
+      exerciseName: exercise?.name || "Workout Exercise",
+    });
+    navigate(`/posture-tracker?${params.toString()}`);
+  };
+
+  const expandedExercise =
+    expandedExerciseIdx === null
+      ? null
+      : exercises[expandedExerciseIdx] || null;
 
   /* ── render ── */
   return (
@@ -1020,6 +1133,14 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
           <StatPill
             icon={<FiActivity size={13} />}
             label={`${exercises.length} exercises`}
+          />
+          <StatPill
+            icon={<FiCheck size={13} />}
+            label={`${sessionStats.completedSets}/${sessionStats.totalSets} sets`}
+          />
+          <StatPill
+            icon={<FiBarChart2 size={13} />}
+            label={`${sessionStats.loggedReps}/${sessionStats.totalTargetReps || 0} reps`}
           />
           {workout.difficulty && (
             <StatPill
@@ -1228,9 +1349,39 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
           label="Exercises"
           color="#D4AF37"
         />
+        <button
+          type="button"
+          disabled={!expandedExercise}
+          onClick={() => {
+            if (expandedExercise) {
+              openPostureTrackerForExercise(expandedExercise);
+            }
+          }}
+          style={{
+            marginBottom: 10,
+            background: expandedExercise
+              ? "rgba(0,229,255,0.08)"
+              : "rgba(255,255,255,0.02)",
+            border: `1px solid ${expandedExercise ? "rgba(0,229,255,0.25)" : "#2a2a2a"}`,
+            borderRadius: 9,
+            padding: "8px 10px",
+            color: expandedExercise ? "#00e5ff" : "#666",
+            fontSize: 12,
+            fontWeight: 700,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            cursor: expandedExercise ? "pointer" : "not-allowed",
+          }}
+        >
+          <FiCamera size={13} />
+          {expandedExercise
+            ? `Track posture: ${expandedExercise.name}`
+            : "Expand an exercise to track posture"}
+        </button>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {exercises.map((ex, exIdx) => {
-            const isExpanded = expandedSet.has(exIdx);
+            const isExpanded = expandedExerciseIdx === exIdx;
             const rows = allSetRows[exIdx] || [];
             const doneCount = rows.filter((r) => r.done).length;
             const hasProgress = doneCount > 0;

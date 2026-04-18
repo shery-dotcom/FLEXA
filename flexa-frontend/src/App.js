@@ -16,6 +16,7 @@ import DietPlanner from "./pages/DietPlanner";
 import CalorieEstimator from "./pages/CalorieEstimator";
 import Chatbot from "./pages/Chatbot";
 import GoogleAuthSuccess from "./pages/GoogleAuthSuccess";
+import PostureTrackerPage from "./pages/PostureTrackerPage";
 
 // Guard: logged in but no profile → send to profile-setup
 function OnboardingGuard({ children }) {
@@ -135,6 +136,14 @@ function App() {
           element={
             <OnboardingGuard>
               <Chatbot />
+            </OnboardingGuard>
+          }
+        />
+        <Route
+          path="/posture-tracker"
+          element={
+            <OnboardingGuard>
+              <PostureTrackerPage />
             </OnboardingGuard>
           }
         />

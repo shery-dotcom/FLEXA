@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import auth, users, goals, workouts, dashboard, progress, diet, chatbot
+from app.api.v1 import auth, users, goals, workouts, dashboard, progress, diet, chatbot, posture
 
 router = APIRouter(prefix="/api/v1")
 
@@ -11,3 +11,4 @@ router.include_router(dashboard.router)
 router.include_router(progress.router)
 router.include_router(diet.router)
 router.include_router(chatbot.router)
+router.include_router(posture.router)

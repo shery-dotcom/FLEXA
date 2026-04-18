@@ -12,6 +12,7 @@ import {
   FiEdit2,
   FiBookOpen,
   FiCamera,
+  FiVideo,
 } from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
 import FlexorVideoIntro from "./FlexorVideoIntro";
@@ -21,6 +22,7 @@ const NAV_LINKS = [
   { to: "/workouts", label: "Workout", icon: <FiActivity /> },
   { to: "/diet-planner", label: "Diet", icon: <FiBookOpen /> },
   { to: "/calorie-estimator", label: "Calories", icon: <FiCamera /> },
+  { to: "/posture-tracker", label: "Posture", icon: <FiVideo /> },
   { to: "/chatbot", label: "FLEXOR", icon: <TbRobot /> },
   { to: "/progress", label: "Report", icon: <FiTrendingUp /> },
 ];
