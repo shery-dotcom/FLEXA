@@ -1095,3 +1095,5 @@ function ProfileDetailRow({ label, value }) {
     </div>
   );
 }
+
+

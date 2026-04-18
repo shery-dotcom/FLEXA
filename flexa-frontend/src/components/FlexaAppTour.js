@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import FlexorAvatar from "./FlexorAvatar";
+import FlexaAvatar from "./FlexaAvatar";
 
-const STORAGE_KEY = "flexor_app_tour_done";
+const STORAGE_KEY = "flexa_app_tour_done";
 
 const SLIDES = [
   {
     emoji: "👋",
     label: "WELCOME",
-    title: "Hey! I'm FLEXOR.",
+    title: "Hey! I'm FLEXA.",
     avatarClass: "fit",
     animation: "celebrate",
     lines: [
@@ -85,16 +85,16 @@ const SLIDES = [
   },
   {
     emoji: "🤖",
-    label: "FLEXOR AI",
+    label: "FLEXA AI",
     title: "Talk to Me Anytime",
     avatarClass: "athletic",
     animation: "celebrate",
     lines: [
-      "Hit the FLEXOR button in the nav bar to chat with me — in English or Urdu!",
+      "Hit the FLEXA button in the nav bar to chat with me — in English or Urdu!",
       "Ask for workout tips, meal ideas, motivation, or anything fitness-related.",
       "I remember your profile, goals, and history to give personalised advice. 🧠",
     ],
-    cta: { label: "Chat with FLEXOR →", path: "/chatbot" },
+    cta: { label: "Chat with FLEXA →", path: "/chatbot" },
   },
 ];
 
@@ -108,7 +108,7 @@ const DOT_STYLE = (active) => ({
   flexShrink: 0,
 });
 
-export default function FlexorAppTour({ onDone }) {
+export default function FlexaAppTour({ onDone }) {
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [step, setStep] = useState(0);
@@ -128,7 +128,7 @@ export default function FlexorAppTour({ onDone }) {
       if (markDone) {
         localStorage.setItem(STORAGE_KEY, "1");
         // Also prevent the dashboard page-guide from doubling up
-        localStorage.setItem("flexor_guide_dashboard", "1");
+        localStorage.setItem("flexa_guide_dashboard", "1");
       }
       if (onDone) onDone();
     }, 420);
@@ -238,8 +238,8 @@ export default function FlexorAppTour({ onDone }) {
             }}
           >
             <img
-              src="/flexor-avatar.png"
-              alt="FLEXOR"
+              src="/flexa-avatar.png"
+              alt="FLEXA"
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           </div>
@@ -263,7 +263,7 @@ export default function FlexorAppTour({ onDone }) {
                 letterSpacing: 0.5,
               }}
             >
-              <span style={{ color: "#D4AF37" }}>FLEXOR</span> Guide
+              <span style={{ color: "#D4AF37" }}>FLEXA</span> Guide
             </div>
           </div>
           {/* Step counter */}
@@ -342,7 +342,7 @@ export default function FlexorAppTour({ onDone }) {
                 pointerEvents: "none",
               }}
             />
-            <FlexorAvatar
+            <FlexaAvatar
               avatarClass={slide.avatarClass}
               animation={slide.animation}
               personalityMode="coach"
@@ -361,7 +361,7 @@ export default function FlexorAppTour({ onDone }) {
                 textTransform: "uppercase",
               }}
             >
-              FLEXOR says
+              FLEXA says
             </div>
           </div>
 
@@ -569,3 +569,5 @@ export default function FlexorAppTour({ onDone }) {
     </>
   );
 }
+
+

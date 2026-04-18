@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import FlexorGuide from "../components/FlexorGuide";
+import FlexaGuide from "../components/FlexaGuide";
 import {
   FiActivity,
   FiArrowLeft,
@@ -254,7 +254,7 @@ export default function WorkoutPlanner() {
   /* ── Plan view ── */
   return (
     <div className="page-content">
-      <FlexorGuide pageKey="workouts" />
+      <FlexaGuide pageKey="workouts" />
       {/* Header */}
       <div
         style={{
@@ -2180,3 +2180,5 @@ function ChangePlanOverlay({
     </div>
   );
 }
+
+

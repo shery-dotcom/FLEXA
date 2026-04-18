@@ -13,6 +13,13 @@ export const POSE_LANDMARKS = {
   RIGHT_ANKLE: 28,
 };
 
+export const DEFAULT_EXERCISE_ZONE = {
+  xMin: 0.2,
+  xMax: 0.8,
+  yMin: 0.08,
+  yMax: 0.95,
+};
+
 export function calculateAngle(a, b, c) {
   if (!a || !b || !c) return 0;
 
@@ -40,9 +47,12 @@ export function getJointAngles(landmarks) {
       rightKnee: 0,
       avgKnee: 0,
       minKnee: 0,
+      maxKnee: 0,
       leftElbow: 0,
       rightElbow: 0,
       avgElbow: 0,
+      minElbow: 0,
+      maxElbow: 0,
       hipBack: 0,
     };
   }
@@ -75,9 +85,60 @@ export function getJointAngles(landmarks) {
     rightKnee,
     avgKnee: (leftKnee + rightKnee) / 2,
     minKnee: Math.min(leftKnee, rightKnee),
+    maxKnee: Math.max(leftKnee, rightKnee),
     leftElbow,
     rightElbow,
     avgElbow: (leftElbow + rightElbow) / 2,
+    minElbow: Math.min(leftElbow, rightElbow),
+    maxElbow: Math.max(leftElbow, rightElbow),
     hipBack,
   };
 }
+
+function isVisible(point, threshold = 0.45) {
+  return !!point && (point.visibility ?? 1) >= threshold;
+}
+
+function isInsideZone(point, zone) {
+  return (
+    point.x >= zone.xMin &&
+    point.x <= zone.xMax &&
+    point.y >= zone.yMin &&
+    point.y <= zone.yMax
+  );
+}
+
+export function getExerciseZoneCoverage(
+  landmarks,
+  zone = DEFAULT_EXERCISE_ZONE,
+) {
+  if (!Array.isArray(landmarks) || landmarks.length < 29) {
+    return { ratio: 0, inside: 0, total: 0 };
+  }
+
+  const keyIndices = [
+    POSE_LANDMARKS.LEFT_SHOULDER,
+    POSE_LANDMARKS.RIGHT_SHOULDER,
+    POSE_LANDMARKS.LEFT_HIP,
+    POSE_LANDMARKS.RIGHT_HIP,
+    POSE_LANDMARKS.LEFT_KNEE,
+    POSE_LANDMARKS.RIGHT_KNEE,
+    POSE_LANDMARKS.LEFT_ANKLE,
+    POSE_LANDMARKS.RIGHT_ANKLE,
+  ];
+
+  let total = 0;
+  let inside = 0;
+
+  keyIndices.forEach((index) => {
+    const point = landmarks[index];
+    if (!isVisible(point)) return;
+    total += 1;
+    if (isInsideZone(point, zone)) inside += 1;
+  });
+
+  if (total === 0) return { ratio: 0, inside, total };
+  return { ratio: inside / total, inside, total };
+}
+
+

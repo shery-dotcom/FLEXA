@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 /**
- * FlexorAvatar — Uses the real FLEXOR character image.
+ * FlexaAvatar — Uses the real FLEXA character image.
  * CSS animations: idle float | celebrate bounce | sleep sway
  *
  * Props:
@@ -14,7 +14,7 @@ import React, { useEffect, useState } from "react";
  *   bmiCategory   – string (optional)
  *   size          – pixel height of the image (default 260)
  */
-export default function FlexorAvatar({
+export default function FlexaAvatar({
   avatarClass = "fit",
   animation = "idle",
   streakDays = 0,
@@ -64,11 +64,11 @@ export default function FlexorAvatar({
       {/* Avatar wrapper */}
       <div
         style={{ position: "relative", zIndex: 1 }}
-        className={`flexor-img-wrap ${animClass}`}
+        className={`flexa-img-wrap ${animClass}`}
       >
         <img
-          src="/flexor-avatar.png"
-          alt="FLEXOR"
+          src="/flexa-avatar.png"
+          alt="FLEXA"
           style={{
             height: size,
             width: "auto",
@@ -194,7 +194,7 @@ export default function FlexorAvatar({
             letterSpacing: 3,
           }}
         >
-          FLEXOR
+          FLEXA
         </div>
         <div
           style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 1 }}
@@ -290,3 +290,5 @@ const GLOW = {
   heavy: "rgba(124,58,237,0.45)",
   heavy_plus: "rgba(147,51,234,0.45)",
 };
+
+

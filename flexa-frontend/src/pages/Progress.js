@@ -21,7 +21,7 @@ import {
 } from "recharts";
 import api from "../api/axios";
 import toast from "react-hot-toast";
-import FlexorGuide from "../components/FlexorGuide";
+import FlexaGuide from "../components/FlexaGuide";
 
 /* ── Fitness formula helpers ───────────────────────────────────── */
 const ACTIVITY_MULTIPLIERS = {
@@ -252,7 +252,7 @@ export default function Progress() {
 
   return (
     <div className="page-content">
-      <FlexorGuide pageKey="progress" />
+      <FlexaGuide pageKey="progress" />
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 28, fontWeight: 800 }}>
           Health <span className="text-gold">Report</span>
@@ -1181,3 +1181,5 @@ function MacroCard({ label, grams, pct, color, note }) {
     </div>
   );
 }
+
+

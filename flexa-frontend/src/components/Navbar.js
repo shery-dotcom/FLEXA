@@ -15,7 +15,7 @@ import {
   FiVideo,
 } from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
-import FlexorVideoIntro from "./FlexorVideoIntro";
+import FlexaVideoIntro from "./FlexaVideoIntro";
 
 const NAV_LINKS = [
   { to: "/dashboard", label: "Home", icon: <FiGrid /> },
@@ -23,7 +23,7 @@ const NAV_LINKS = [
   { to: "/diet-planner", label: "Diet", icon: <FiBookOpen /> },
   { to: "/calorie-estimator", label: "Calories", icon: <FiCamera /> },
   { to: "/posture-tracker", label: "Posture", icon: <FiVideo /> },
-  { to: "/chatbot", label: "FLEXOR", icon: <TbRobot /> },
+  { to: "/chatbot", label: "FLEXA", icon: <TbRobot /> },
   { to: "/progress", label: "Report", icon: <FiTrendingUp /> },
 ];
 
@@ -33,7 +33,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
-  const [showFlexorIntro, setShowFlexorIntro] = useState(false);
+  const [showFLEXAIntro, setShowFLEXAIntro] = useState(false);
   const avatarRef = useRef(null);
 
   const handleLogout = () => {
@@ -43,11 +43,11 @@ export default function Navbar() {
 
   const closeMenu = () => setMenuOpen(false);
 
-  const handleFlexorClick = (e) => {
+  const handleFLEXAClick = (e) => {
     e.preventDefault();
     closeMenu();
-    if (!localStorage.getItem("flexor_video_intro_done")) {
-      setShowFlexorIntro(true);
+    if (!localStorage.getItem("flexa_video_intro_done")) {
+      setShowFLEXAIntro(true);
     } else {
       navigate("/chatbot");
     }
@@ -115,7 +115,7 @@ export default function Navbar() {
               to === "/chatbot" ? (
                 <button
                   key={to}
-                  onClick={handleFlexorClick}
+                  onClick={handleFLEXAClick}
                   style={{
                     ...styles.link,
                     background: "none",
@@ -249,7 +249,7 @@ export default function Navbar() {
             to === "/chatbot" ? (
               <button
                 key={to}
-                onClick={handleFlexorClick}
+                onClick={handleFLEXAClick}
                 style={{
                   ...styles.drawerLink,
                   background: "none",
@@ -303,11 +303,11 @@ export default function Navbar() {
       {/* Backdrop */}
       {menuOpen && <div style={styles.backdrop} onClick={closeMenu} />}
 
-      {/* FLEXOR intro video — shown first time FLEXOR nav link is clicked */}
-      <FlexorVideoIntro
-        show={showFlexorIntro}
+      {/* FLEXA intro video — shown first time FLEXA nav link is clicked */}
+      <FlexaVideoIntro
+        show={showFLEXAIntro}
         onClose={() => {
-          setShowFlexorIntro(false);
+          setShowFLEXAIntro(false);
           navigate("/chatbot");
         }}
       />
@@ -469,3 +469,5 @@ const styles = {
     background: "rgba(0,0,0,0.5)",
   },
 };
+
+

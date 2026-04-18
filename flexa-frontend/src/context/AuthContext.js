@@ -35,8 +35,11 @@ export function AuthProvider({ children }) {
     fetchMe();
   }, [fetchMe]);
 
-  const login = async (email, password) => {
-    const res = await api.post("/auth/login", { email, password });
+  const login = async (identifier, password) => {
+    const res = await api.post("/auth/login", {
+      identifier: String(identifier || "").trim(),
+      password,
+    });
     localStorage.setItem("access_token", res.data.access_token);
     localStorage.setItem("refresh_token", res.data.refresh_token);
     await fetchMe();
@@ -77,3 +80,5 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }
+
+

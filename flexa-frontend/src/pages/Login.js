@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 
 export default function Login() {
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ identifier: "", password: "" });
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(form.email, form.password);
+      await login(form.identifier, form.password);
       toast.success("Welcome back!");
       navigate("/dashboard");
     } catch (err) {
@@ -36,13 +36,13 @@ export default function Login() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Email</label>
+            <label className="form-label">Email or Username</label>
             <input
               className="form-input"
-              type="email"
-              name="email"
-              placeholder="you@example.com"
-              value={form.email}
+              type="text"
+              name="identifier"
+              placeholder="you@example.com or your username"
+              value={form.identifier}
               onChange={handleChange}
               required
             />
@@ -131,3 +131,5 @@ function GoogleIcon() {
     </svg>
   );
 }
+
+

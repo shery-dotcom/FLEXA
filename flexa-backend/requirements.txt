@@ -28,7 +28,7 @@ xgboost>=2.0.0              # optional: XGBoost calorie prediction fallback
 # CPU:  pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 # CUDA: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
 
-# Module 1.7.9 — FLEXOR AI Chatbot
+# Module 1.7.9 — FLEXA AI Chatbot
 groq>=1.0.0                 # Groq LLM API (llama-3.3-70b-versatile)
 sentence-transformers>=5.0  # all-MiniLM-L6-v2 embeddings for RAG
 faiss-cpu>=1.7.4            # FAISS vector store (CPU edition)

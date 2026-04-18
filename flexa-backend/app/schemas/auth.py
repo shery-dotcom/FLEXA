@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, validator, root_validator
 from typing import Optional
 import re
 
@@ -16,8 +16,16 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    identifier: str
     password: str
+
+    @root_validator(pre=True)
+    def map_email_to_identifier(cls, values):
+        # Backward compatibility: old clients may still send {email, password}
+        identifier = values.get("identifier") or values.get("email")
+        if identifier is not None:
+            values["identifier"] = str(identifier).strip()
+        return values
 
 
 class TokenResponse(BaseModel):

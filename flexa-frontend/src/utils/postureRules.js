@@ -202,6 +202,80 @@ function evaluateLungePosture(landmarks, angles) {
   return { score, message, flags };
 }
 
+function evaluateShoulderPressPosture(landmarks, angles) {
+  const visibilityIssue = basicVisibilityCheck(landmarks);
+  if (visibilityIssue) return visibilityIssue;
+
+  const flags = [];
+  let score = 100;
+
+  const elbowGap = Math.abs(angles.leftElbow - angles.rightElbow);
+  if (elbowGap > 30) {
+    flags.push("uneven_press");
+    score -= 20;
+  }
+
+  if (angles.hipBack < 150) {
+    flags.push("arching_back");
+    score -= 25;
+  }
+
+  if (angles.minElbow < 55) {
+    flags.push("too_deep");
+    score -= 10;
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  let message = "Good form";
+  if (flags.includes("arching_back")) {
+    message = "Keep your core tight and ribs down";
+  } else if (flags.includes("uneven_press")) {
+    message = "Press both arms evenly";
+  } else if (flags.includes("too_deep")) {
+    message = "Control the bottom position";
+  }
+
+  return { score, message, flags };
+}
+
+function evaluateDeadliftPosture(landmarks, angles) {
+  const visibilityIssue = basicVisibilityCheck(landmarks);
+  if (visibilityIssue) return visibilityIssue;
+
+  const flags = [];
+  let score = 100;
+
+  if (angles.hipBack < 120) {
+    flags.push("too_much_rounding");
+    score -= 30;
+  }
+
+  if (angles.avgKnee < 105) {
+    flags.push("too_much_knee_bend");
+    score -= 15;
+  }
+
+  const kneeGap = Math.abs(angles.leftKnee - angles.rightKnee);
+  if (kneeGap > 35) {
+    flags.push("uneven_drive");
+    score -= 15;
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  let message = "Good form";
+  if (flags.includes("too_much_rounding")) {
+    message = "Keep your back neutral during hinge";
+  } else if (flags.includes("too_much_knee_bend")) {
+    message = "Hinge from hips more than knees";
+  } else if (flags.includes("uneven_drive")) {
+    message = "Push evenly through both legs";
+  }
+
+  return { score, message, flags };
+}
+
 export function evaluateExercisePosture(exercise, landmarks, angles) {
   const mode = normalizeExercise(exercise);
 
@@ -209,9 +283,15 @@ export function evaluateExercisePosture(exercise, landmarks, angles) {
     case "pushup":
       return evaluatePushupPosture(landmarks, angles);
     case "bicep_curl":
+    case "hammer_curl":
+    case "tricep_extension":
       return evaluateBicepCurlPosture(landmarks, angles);
     case "lunge":
       return evaluateLungePosture(landmarks, angles);
+    case "shoulder_press":
+      return evaluateShoulderPressPosture(landmarks, angles);
+    case "deadlift":
+      return evaluateDeadliftPosture(landmarks, angles);
     case "squat":
     default:
       return evaluateSquatPosture(landmarks, angles);
@@ -222,3 +302,5 @@ export function calculateSessionPostureScore(scoreSamples) {
   if (!scoreSamples?.length) return 0;
   return Math.round(average(scoreSamples));
 }
+
+

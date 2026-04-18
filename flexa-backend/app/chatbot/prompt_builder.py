@@ -1,5 +1,5 @@
 """
-prompt_builder.py — Assembles the full prompt for FLEXOR's Groq call.
+prompt_builder.py — Assembles the full prompt for FLEXA's Groq call.
 
 Combines: system persona + user profile + RAG context + memory window + user message.
 """
@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 
-_SYSTEM_TEMPLATE = """You are FLEXOR — FLEXA's AI fitness companion. You are warm, motivating, and knowledgeable.
+_SYSTEM_TEMPLATE = """You are FLEXA — FLEXA's AI fitness companion. You are warm, motivating, and knowledgeable.
 
 PERSONALITY: {personality_mode}
 USER PROFILE:

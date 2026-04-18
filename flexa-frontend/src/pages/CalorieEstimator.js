@@ -16,7 +16,7 @@ import {
   FiInfo,
 } from "react-icons/fi";
 import api from "../api/axios";
-import FlexorGuide from "../components/FlexorGuide";
+import FlexaGuide from "../components/FlexaGuide";
 
 const GOLD = "#D4AF37";
 
@@ -149,7 +149,7 @@ export default function CalorieEstimator() {
         fontFamily: "'Inter', sans-serif",
       }}
     >
-      <FlexorGuide pageKey="calories" />
+      <FlexaGuide pageKey="calories" />
       <Toaster
         position="top-right"
         toastOptions={{ style: { background: "#1a1a1a", color: "#e0e0e0" } }}
@@ -572,3 +572,5 @@ export default function CalorieEstimator() {
     </div>
   );
 }
+
+

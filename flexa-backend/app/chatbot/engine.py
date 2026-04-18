@@ -1,5 +1,5 @@
 """
-engine.py — FLEXOR main orchestrator.
+engine.py — FLEXA main orchestrator.
 
 Flow:
   1. Detect language
@@ -90,7 +90,7 @@ async def process_message(
     user_message: str,
     language_hint: str | None = None,
 ) -> ChatMessageResponse:
-    """Full FLEXOR pipeline. Returns formatted response."""
+    """Full FLEXA pipeline. Returns formatted response."""
 
     # 1. Language detection
     language = language_hint or detect_language(user_message)

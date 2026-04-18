@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
-import FlexorAvatar from "./FlexorAvatar";
+import FlexaAvatar from "./FlexaAvatar";
 
 /**
- * FlexorGuide — Large contextual onboarding card shown once per page.
- * Features the FLEXOR SVG avatar on the left side explaining the section.
+ * FlexaGuide — Large contextual onboarding card shown once per page.
+ * Features the FLEXA SVG avatar on the left side explaining the section.
  *
- * Usage:  <FlexorGuide pageKey="dashboard" />
+ * Usage:  <FlexaGuide pageKey="dashboard" />
  * Supported pageKeys: dashboard | workouts | diet | progress | calories
  *
- * Dismissed state stored in localStorage: flexor_guide_<pageKey>
+ * Dismissed state stored in localStorage: flexa_guide_<pageKey>
  */
 const GUIDE_MESSAGES = {
   dashboard: {
@@ -63,13 +63,13 @@ const GUIDE_MESSAGES = {
   },
 };
 
-export default function FlexorGuide({ pageKey }) {
+export default function FlexaGuide({ pageKey }) {
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     if (!pageKey) return;
-    if (!localStorage.getItem(`flexor_guide_${pageKey}`)) {
+    if (!localStorage.getItem(`flexa_guide_${pageKey}`)) {
       const t = setTimeout(() => setVisible(true), 900);
       return () => clearTimeout(t);
     }
@@ -79,7 +79,7 @@ export default function FlexorGuide({ pageKey }) {
     setLeaving(true);
     setTimeout(() => {
       setVisible(false);
-      localStorage.setItem(`flexor_guide_${pageKey}`, "1");
+      localStorage.setItem(`flexa_guide_${pageKey}`, "1");
     }, 400);
   };
 
@@ -159,14 +159,14 @@ export default function FlexorGuide({ pageKey }) {
             }}
           />
 
-          <FlexorAvatar
+          <FlexaAvatar
             avatarClass={info.avatarClass}
             animation="idle"
             personalityMode="coach"
             size={190}
           />
 
-          {/* "FLEXOR says" badge */}
+          {/* "FLEXA says" badge */}
           <div
             style={{
               background: "rgba(212,175,55,0.14)",
@@ -181,7 +181,7 @@ export default function FlexorGuide({ pageKey }) {
               position: "relative",
             }}
           >
-            FLEXOR says
+            FLEXA says
           </div>
         </div>
 
@@ -357,10 +357,12 @@ export default function FlexorGuide({ pageKey }) {
 }
 
 /** Dev utility — call from browser console to reset all guide dismissals */
-export function resetFlexorGuides() {
+export function resetFlexaGuides() {
   ["dashboard", "workouts", "diet", "progress", "calories"].forEach((k) =>
-    localStorage.removeItem(`flexor_guide_${k}`),
+    localStorage.removeItem(`flexa_guide_${k}`),
   );
-  localStorage.removeItem("flexor_video_intro_done");
-  console.log("FLEXOR guides & video intro reset ✅");
+  localStorage.removeItem("flexa_video_intro_done");
+  console.log("FLEXA guides & video intro reset ✅");
 }
+
+

@@ -2,11 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pose } from "@mediapipe/pose";
 import api from "../api/axios";
 import WebcamCanvas from "./WebcamCanvas";
-import { getJointAngles } from "../utils/angleUtils";
+import {
+  getJointAngles,
+  DEFAULT_EXERCISE_ZONE,
+  getExerciseZoneCoverage,
+} from "../utils/angleUtils";
 import {
   createRepCounter,
   updateRepCounter,
   SUPPORTED_EXERCISES,
+  SENSITIVITY_OPTIONS,
   normalizeExercise,
 } from "../utils/repCounter";
 import {
@@ -16,6 +21,7 @@ import {
 
 const FPS_TARGET = 12;
 const FRAME_INTERVAL_MS = Math.round(1000 / FPS_TARGET);
+const ZONE_MIN_RATIO = 0.45;
 
 const POSE_CONNECTIONS = [
   [11, 13],
@@ -33,7 +39,7 @@ const POSE_CONNECTIONS = [
   [27, 28],
 ];
 
-function drawSkeleton(canvas, landmarks) {
+function drawSkeleton(canvas, landmarks, zone) {
   const ctx = canvas.getContext("2d");
   const width = canvas.width;
   const height = canvas.height;
@@ -63,6 +69,20 @@ function drawSkeleton(canvas, landmarks) {
     ctx.arc(p.x * width, p.y * height, 4, 0, Math.PI * 2);
     ctx.fill();
   });
+
+  if (zone) {
+    ctx.save();
+    ctx.strokeStyle = "#00e5ff";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 6]);
+    ctx.strokeRect(
+      zone.xMin * width,
+      zone.yMin * height,
+      (zone.xMax - zone.xMin) * width,
+      (zone.yMax - zone.yMin) * height,
+    );
+    ctx.restore();
+  }
 }
 
 export default function PoseTracker({ exercise = "squat" }) {
@@ -85,10 +105,21 @@ export default function PoseTracker({ exercise = "squat" }) {
   const [isRunning, setIsRunning] = useState(false);
   const [reps, setReps] = useState(0);
   const [feedback, setFeedback] = useState("Ready");
+  const [repHint, setRepHint] = useState("Start moving to count reps.");
   const [postureScore, setPostureScore] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [history, setHistory] = useState([]);
   const [selectedExercise, setSelectedExercise] = useState(initialExercise);
+  const [sensitivityByExercise, setSensitivityByExercise] = useState(() => {
+    const initial = {};
+    SUPPORTED_EXERCISES.forEach((mode) => {
+      initial[mode] = "lenient";
+    });
+    return initial;
+  });
+
+  const selectedSensitivity =
+    sensitivityByExercise[selectedExercise] || "normal";
 
   useEffect(() => {
     if (isRunning) return;
@@ -115,6 +146,7 @@ export default function PoseTracker({ exercise = "squat" }) {
     scoreSamplesRef.current = [];
     setReps(0);
     setFeedback("Ready");
+    setRepHint("Start moving to count reps.");
     setPostureScore(0);
     setSeconds(0);
     sessionStartRef.current = Date.now();
@@ -172,11 +204,22 @@ export default function PoseTracker({ exercise = "squat" }) {
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
 
-      drawSkeleton(canvas, results.poseLandmarks);
+      drawSkeleton(canvas, results.poseLandmarks, DEFAULT_EXERCISE_ZONE);
 
       if (!results.poseLandmarks?.length) {
         setFeedback("Move into camera frame");
+        setRepHint("No landmarks detected yet.");
         return;
+      }
+
+      const zoneCoverage = getExerciseZoneCoverage(
+        results.poseLandmarks,
+        DEFAULT_EXERCISE_ZONE,
+      );
+      let zoneWarning = "";
+      if (zoneCoverage.ratio < ZONE_MIN_RATIO) {
+        zoneWarning = " Stay near center box.";
+        setRepHint("Move closer to the cyan zone for better tracking.");
       }
 
       const angles = getJointAngles(results.poseLandmarks);
@@ -185,10 +228,14 @@ export default function PoseTracker({ exercise = "squat" }) {
         selectedExercise,
         angles,
         Date.now(),
+        selectedSensitivity,
       );
 
       if (counterState.didCount) {
         setReps(counterState.reps);
+        setRepHint("Great, rep counted.");
+      } else if (counterState.hint) {
+        setRepHint(counterState.hint);
       }
 
       const posture = evaluateExercisePosture(
@@ -198,7 +245,7 @@ export default function PoseTracker({ exercise = "squat" }) {
       );
       scoreSamplesRef.current.push(posture.score);
       setPostureScore(posture.score);
-      setFeedback(posture.message);
+      setFeedback(`${posture.message}${zoneWarning}`.trim());
     });
 
     poseRef.current = pose;
@@ -206,7 +253,7 @@ export default function PoseTracker({ exercise = "squat" }) {
     return () => {
       poseRef.current = null;
     };
-  }, [selectedExercise]);
+  }, [selectedExercise, selectedSensitivity]);
 
   const frameLoop = useCallback(async () => {
     if (!isRunning) return;
@@ -326,6 +373,91 @@ export default function PoseTracker({ exercise = "squat" }) {
             </option>
           ))}
         </select>
+        <p style={{ fontSize: 12, color: "#8a8a8a", margin: 0 }}>
+          Cyan box improves accuracy, but counting still works outside it.
+        </p>
+      </div>
+
+      <div
+        style={{
+          border: "1px solid #2a2a2a",
+          borderRadius: 10,
+          padding: "10px 12px",
+          background: "#111",
+          maxWidth: 420,
+        }}
+      >
+        <p
+          style={{
+            fontSize: 12,
+            color: "#9e9e9e",
+            margin: 0,
+            marginBottom: 8,
+            textTransform: "uppercase",
+          }}
+        >
+          Sensitivity for {selectedExercise.replace(/_/g, " ")}
+        </p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {SENSITIVITY_OPTIONS.map((option) => {
+            const active = selectedSensitivity === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  setSensitivityByExercise((prev) => ({
+                    ...prev,
+                    [selectedExercise]: option.value,
+                  }))
+                }
+                style={{
+                  background: active ? "rgba(212,175,55,0.14)" : "#171717",
+                  border: `1px solid ${active ? "#D4AF37" : "#2a2a2a"}`,
+                  borderRadius: 8,
+                  color: active ? "#D4AF37" : "#c9c9c9",
+                  padding: "7px 10px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        <p style={{ margin: "8px 0 0", fontSize: 11, color: "#777" }}>
+          Default is Lenient for easier recognition. Use Strict only for very
+          controlled form.
+        </p>
+      </div>
+
+      <div
+        style={{
+          border: "1px solid #2a2a2a",
+          borderRadius: 10,
+          padding: "10px 12px",
+          background: "#101418",
+          maxWidth: 520,
+        }}
+      >
+        <p
+          style={{
+            margin: 0,
+            marginBottom: 6,
+            fontSize: 12,
+            color: "#9e9e9e",
+            textTransform: "uppercase",
+          }}
+        >
+          Rep Assistant ({selectedExercise.replace(/_/g, " ")})
+        </p>
+        <p
+          style={{ margin: 0, fontSize: 13, color: "#8fd3ff", fontWeight: 700 }}
+        >
+          {repHint}
+        </p>
       </div>
 
       <div
@@ -409,3 +541,5 @@ function StatCard({ label, value }) {
     </div>
   );
 }
+
+

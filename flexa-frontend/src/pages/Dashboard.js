@@ -1,12 +1,12 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
-import FlexorGuide from "../components/FlexorGuide";
-import FlexorAppTour from "../components/FlexorAppTour";
+import FlexaGuide from "../components/FlexaGuide";
+import FlexaAppTour from "../components/FlexaAppTour";
 
-/* ─── Calorie formula helpers (Mifflin-St Jeor) ────────────────── */
+/* --- Calorie formula helpers (Mifflin-St Jeor) ------------------ */
 const ACTIVITY_MULT = {
   sedentary: 1.2,
   light: 1.375,
@@ -38,12 +38,12 @@ function computeCalories(profile, goalType, activityLevel) {
 const SPLIT_DESC = {
   "Full Body": "All muscles each session",
   PPL: "Push / Pull / Legs",
-  "PPL x2": "Push / Pull / Legs — 6 days",
+  "PPL x2": "Push / Pull / Legs � 6 days",
   "Upper/Lower": "Alternating upper & lower body",
   "Bro Split": "One muscle group per session",
 };
 
-/* ─── Daily inspiration quotes ─────────────────────────────────── */
+/* --- Daily inspiration quotes ----------------------------------- */
 const QUOTES = [
   {
     text: "Discipline is choosing between what you want now and what you want most.",
@@ -200,9 +200,9 @@ function bmiColor(cat) {
   return "#ef5350";
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* ---------------------------------------------------------------
    MAIN COMPONENT
-═══════════════════════════════════════════════════════════════ */
+--------------------------------------------------------------- */
 const TODAY_NAME = new Date().toLocaleDateString("en-US", { weekday: "long" });
 
 export default function Dashboard() {
@@ -265,7 +265,7 @@ export default function Dashboard() {
       </div>
     );
 
-  /* ── Calorie computation (backend value or client fallback) ─── */
+  /* -- Calorie computation (backend value or client fallback) --- */
   const profile = user?.profile;
   const goalType = data?.current_goal || "maintaining";
   const actLevel = data?.activity_level || "moderate";
@@ -277,7 +277,7 @@ export default function Dashboard() {
   const dailyCalories = data?.daily_calories ?? fallbackDaily;
   const targetCalories = data?.target_calories ?? fallbackTarget;
 
-  /* ── Plan metadata derived from fetched workouts ────────────── */
+  /* -- Plan metadata derived from fetched workouts -------------- */
   const planFreq = weekWorkouts.filter((w) => !w.is_rest_day).length || 0;
   const planDifficulty =
     weekWorkouts.find((w) => !w.is_rest_day)?.difficulty || null;
@@ -299,9 +299,9 @@ export default function Dashboard() {
         padding: "20px 24px 48px",
       }}
     >
-      <FlexorAppTour onDone={() => {}} />
-      <FlexorGuide pageKey="dashboard" />
-      {/* ── Welcome Banner ─────────────────────────────────────────── */}
+      <FlexaAppTour onDone={() => {}} />
+      <FlexaGuide pageKey="dashboard" />
+      {/* -- Welcome Banner ------------------------------------------- */}
       <div
         style={{
           display: "flex",
@@ -364,7 +364,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Two-column desktop layout ──────────────────────────────── */}
+      {/* -- Two-column desktop layout -------------------------------- */}
       <div
         style={{
           display: "grid",
@@ -374,9 +374,9 @@ export default function Dashboard() {
           alignItems: "start",
         }}
       >
-        {/* ── LEFT COLUMN ───────────────────────────────────────────── */}
+        {/* -- LEFT COLUMN --------------------------------------------- */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* ── Daily Motivation ───────────────────────────────────────── */}
+          {/* -- Daily Motivation ----------------------------------------- */}
           <div
             style={{
               background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
@@ -423,7 +423,7 @@ export default function Dashboard() {
             </p>
           </div>
 
-          {/* ── 2×2 Stats Grid ─────────────────────────────────────────── */}
+          {/* -- 2�2 Stats Grid ------------------------------------------- */}
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
           >
@@ -483,11 +483,11 @@ export default function Dashboard() {
         </div>
         {/* end LEFT COLUMN */}
 
-        {/* ═══ RIGHT COLUMN ═════════════════════════════════════════ */}
+        {/* --- RIGHT COLUMN ----------------------------------------- */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {/* ── Workout Plan Block ───────────────────────────────────────── */}
+          {/* -- Workout Plan Block ----------------------------------------- */}
           {!data.has_workout_plan && weekWorkouts.length === 0 ? (
-            /* No plan — show CTA */
+            /* No plan � show CTA */
             <div
               style={{
                 background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
@@ -529,7 +529,7 @@ export default function Dashboard() {
               </button>
             </div>
           ) : (
-            /* Plan exists — show plan details + today's workout */
+            /* Plan exists � show plan details + today's workout */
             <div
               style={{
                 background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
@@ -564,7 +564,7 @@ export default function Dashboard() {
                     <p style={{ fontSize: 12, color: "#9e9e9e" }}>
                       {planFreq} day{planFreq !== 1 ? "s" : ""}/week
                       {planDifficulty
-                        ? ` · ${planDifficulty.charAt(0).toUpperCase() + planDifficulty.slice(1)}`
+                        ? ` � ${planDifficulty.charAt(0).toUpperCase() + planDifficulty.slice(1)}`
                         : ""}
                     </p>
                   )}
@@ -612,7 +612,7 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Day dots — Mon-Sun with workout/rest differentiation */}
+              {/* Day dots � Mon-Sun with workout/rest differentiation */}
               <div
                 style={{
                   display: "flex",
@@ -754,7 +754,7 @@ export default function Dashboard() {
                       <p
                         style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}
                       >
-                        Today — {todayWorkout.name}
+                        Today � {todayWorkout.name}
                       </p>
                       <div
                         style={{
@@ -842,7 +842,7 @@ export default function Dashboard() {
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {ex.sets}×{ex.reps}
+                              {ex.sets}�{ex.reps}
                             </span>
                           </div>
                         ))}
@@ -897,7 +897,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* ── Today's Tasks ──────────────────────────────────────────── */}
+          {/* -- Today's Tasks -------------------------------------------- */}
           {data.today_tasks?.length > 0 && (
             <div
               style={{
@@ -939,7 +939,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* ── All-time strip ─────────────────────────────────────────── */}
+          {/* -- All-time strip ------------------------------------------- */}
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
           >
@@ -961,7 +961,7 @@ export default function Dashboard() {
   );
 }
 
-/* ─── StatCard ──────────────────────────────────────────────────── */
+/* --- StatCard ---------------------------------------------------- */
 function StatCard({ label, value, sub, subColor = "#D4AF37" }) {
   return (
     <div
@@ -1000,7 +1000,7 @@ function StatCard({ label, value, sub, subColor = "#D4AF37" }) {
   );
 }
 
-/* ─── MiniStatCard ──────────────────────────────────────────────── */
+/* --- MiniStatCard ------------------------------------------------ */
 function MiniStatCard({ label, value, unit }) {
   return (
     <div
@@ -1034,7 +1034,7 @@ function MiniStatCard({ label, value, unit }) {
   );
 }
 
-/* ─── TaskRow ───────────────────────────────────────────────────── */
+/* --- TaskRow ----------------------------------------------------- */
 function TaskRow({ task }) {
   return (
     <div
@@ -1085,3 +1085,5 @@ function TaskRow({ task }) {
     </div>
   );
 }
+
+

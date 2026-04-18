@@ -26,7 +26,7 @@ import {
 } from "react-icons/fi";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
-import FlexorGuide from "../components/FlexorGuide";
+import FlexaGuide from "../components/FlexaGuide";
 
 // ──────────────────────────────────────── Constants ────────────────────────
 const GOLD = "#D4AF37";
@@ -1468,7 +1468,7 @@ export default function DietPlanner() {
         fontFamily: "'Inter', sans-serif",
       }}
     >
-      <FlexorGuide pageKey="diet" />
+      <FlexaGuide pageKey="diet" />
       <Toaster
         position="top-right"
         toastOptions={{ style: { background: "#1a1a1a", color: "#e0e0e0" } }}
@@ -1641,3 +1641,5 @@ export default function DietPlanner() {
     </div>
   );
 }
+
+

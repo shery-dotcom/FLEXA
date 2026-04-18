@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
-import FlexorAvatar from "../components/FlexorAvatar";
+import FlexaAvatar from "../components/FlexaAvatar";
 import ChatBubble, { TypingIndicator } from "../components/ChatBubble";
 import { FiSend, FiTrash2, FiRefreshCw, FiMic } from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
-import FlexorVideoIntro from "../components/FlexorVideoIntro";
+import FlexaVideoIntro from "../components/FlexaVideoIntro";
 import useSpeechRecognition from "../hooks/useSpeechRecognition";
 
 // ─── API helpers (shared axios instance — token auto-attached via interceptor) ─
@@ -136,7 +136,7 @@ export default function Chatbot() {
               id: "welcome",
               role: "assistant",
               content:
-                "Hey! I'm FLEXOR 💪 — your personal fitness companion. Ask me anything about workouts, nutrition, or your personal goals. آپ اردو میں بھی بات کر سکتے ہیں!",
+                "Hey! I'm FLEXA 💪 — your personal fitness companion. Ask me anything about workouts, nutrition, or your personal goals. آپ اردو میں بھی بات کر سکتے ہیں!",
               timestamp: new Date().toISOString(),
               language: "en",
             },
@@ -270,12 +270,12 @@ export default function Chatbot() {
 
   return (
     <div style={styles.page}>
-      <FlexorVideoIntro />
+      <FlexaVideoIntro />
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerLeft}>
           <TbRobot size={24} color="#D4AF37" />
-          <span style={styles.headerTitle}>FLEXOR</span>
+          <span style={styles.headerTitle}>FLEXA</span>
           <span style={styles.headerSub}>Fitness Companion</span>
         </div>
         <div style={styles.headerActions}>
@@ -327,7 +327,7 @@ export default function Chatbot() {
             display: mobileTab === "avatar" ? "flex" : undefined,
           }}
         >
-          <FlexorAvatar
+          <FlexaAvatar
             avatarClass={avatarState.avatarClass}
             animation={avatarState.animation}
             streakDays={avatarState.streakDays}
@@ -395,7 +395,7 @@ export default function Chatbot() {
               placeholder={
                 language === "ur"
                   ? "یہاں پیغام لکھیں…"
-                  : "Ask FLEXOR anything… (Urdu & English)"
+                  : "Ask FLEXA anything… (Urdu & English)"
               }
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -674,3 +674,5 @@ if (typeof document !== "undefined") {
     document.head.appendChild(style);
   }
 }
+
+

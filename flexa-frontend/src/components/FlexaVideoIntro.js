@@ -1,16 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
 
-const STORAGE_KEY = "flexor_video_intro_done";
+const STORAGE_KEY = "flexa_video_intro_done";
 
 /**
- * FlexorVideoIntro — shows the FLEXOR intro modal.
+ * FlexaVideoIntro — shows the FLEXA intro modal.
  *
  * Self-showing mode (default): shows the first time the user opens the Chatbot.
  * Controlled mode: pass `show` prop (bool) and `onClose` callback to control from parent.
  *   - When `show` becomes true, the modal appears regardless of localStorage.
  *   - On dismiss, `onClose()` is called and the localStorage key is set.
  */
-export default function FlexorVideoIntro({ show: showProp, onClose }) {
+export default function FlexaVideoIntro({ show: showProp, onClose }) {
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const videoRef = useRef(null);
@@ -97,7 +97,7 @@ export default function FlexorVideoIntro({ show: showProp, onClose }) {
             gap: 14,
           }}
         >
-          {/* FLEXOR logo mark */}
+          {/* FLEXA logo mark */}
           <div
             style={{
               width: 42,
@@ -115,8 +115,8 @@ export default function FlexorVideoIntro({ show: showProp, onClose }) {
             }}
           >
             <img
-              src="/flexor-avatar.png"
-              alt="FLEXOR"
+              src="/flexa-avatar.png"
+              alt="FLEXA"
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           </div>
@@ -141,7 +141,7 @@ export default function FlexorVideoIntro({ show: showProp, onClose }) {
                 letterSpacing: 1,
               }}
             >
-              Meet <span style={{ color: "#D4AF37" }}>FLEXOR</span>
+              Meet <span style={{ color: "#D4AF37" }}>FLEXA</span>
             </div>
           </div>
           {/* Skip X */}
@@ -174,7 +174,7 @@ export default function FlexorVideoIntro({ show: showProp, onClose }) {
         >
           <video
             ref={videoRef}
-            src="/flexor-intro.mp4"
+            src="/flexa-intro.mp4"
             autoPlay
             playsInline
             onEnded={dismiss}
@@ -258,3 +258,5 @@ export default function FlexorVideoIntro({ show: showProp, onClose }) {
     </>
   );
 }
+
+

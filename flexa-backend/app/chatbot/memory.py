@@ -1,5 +1,5 @@
 """
-memory.py — Chat memory management for FLEXOR.
+memory.py — Chat memory management for FLEXA.
 
 Strategy:
   • Sliding window: always include last 8 messages from chat_memory
@@ -28,7 +28,7 @@ CACHE_TTL = 7200  # 2 hours
 # ─── Redis helpers ────────────────────────────────────────────────────────────
 
 def _cache_key(user_id: uuid.UUID) -> str:
-    return f"flexor:session:{user_id}"
+    return f"flexa:session:{user_id}"
 
 
 async def _get_redis():

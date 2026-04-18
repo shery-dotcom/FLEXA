@@ -1,5 +1,5 @@
 """
-intent.py — Keyword-based intent classifier for FLEXOR.
+intent.py — Keyword-based intent classifier for FLEXA.
 
 Detects the primary intent of a user message so the engine can
 tailor context retrieval and prompt framing.

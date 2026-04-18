@@ -1,5 +1,5 @@
 """
-build_rag_index.py — Build FAISS + BM25 hybrid indexes for FLEXOR RAG.
+build_rag_index.py — Build FAISS + BM25 hybrid indexes for FLEXA RAG.
 
 Run once (or when data changes):
     python scripts/build_rag_index.py

@@ -1,6 +1,6 @@
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func, or_
 from app.models.user import User
 from app.models.profile import Profile
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
@@ -38,10 +38,29 @@ class AuthService:
 
     @staticmethod
     async def login(db: AsyncSession, data: LoginRequest) -> TokenResponse:
-        result = await db.execute(select(User).where(User.email == data.email))
+        raw_identifier = (data.identifier or "").strip()
+        normalized_identifier = raw_identifier.lower()
+
+        # Supports both full email and username-like local-part (before @).
+        result = await db.execute(
+            select(User).where(
+                or_(
+                    func.lower(User.email) == normalized_identifier,
+                    func.lower(func.split_part(User.email, "@", 1))
+                    == normalized_identifier,
+                )
+            )
+        )
         user = result.scalar_one_or_none()
 
-        if not user or not user.hashed_password:
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        if not user.hashed_password:
+            if user.is_google_user:
+                raise HTTPException(
+                    status_code=400,
+                    detail="This account uses Google sign-in. Use Continue with Google.",
+                )
             raise HTTPException(status_code=401, detail="Invalid credentials")
         if not verify_password(data.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Invalid credentials")

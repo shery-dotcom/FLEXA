@@ -1,5 +1,5 @@
 """
-rag.py — Hybrid (BM25 + FAISS) semantic + lexical retrieval for FLEXOR.
+rag.py — Hybrid (BM25 + FAISS) semantic + lexical retrieval for FLEXA.
 
 At startup, loads two dual-index pairs:
   Fitness:

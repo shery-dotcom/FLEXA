@@ -15,7 +15,7 @@ from app.schemas.chatbot import (
     AvatarStateResponse,
 )
 
-router = APIRouter(prefix="/chatbot", tags=["FLEXOR Chatbot"])
+router = APIRouter(prefix="/chatbot", tags=["FLEXA Chatbot"])
 
 
 # ─── Send Message ─────────────────────────────────────────────────────────────
@@ -27,7 +27,7 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Send a message to FLEXOR.
+    Send a message to FLEXA.
     Returns AI reply + avatar animation event.
     Supports Urdu and English.
     """
@@ -87,7 +87,7 @@ async def get_avatar(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get current FLEXOR avatar state for the user."""
+    """Get current FLEXA avatar state for the user."""
     avatar = await avatar_mod.get_or_create_avatar(db, current_user.id)
     await db.commit()
     return AvatarStateResponse.model_validate(avatar)

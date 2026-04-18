@@ -1,1 +1,1 @@
-# FLEXOR chatbot package
+# FLEXA chatbot package
