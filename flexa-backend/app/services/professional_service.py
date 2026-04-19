@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
+from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from app.models.professional import (
     ProfessionalProfile,
@@ -77,7 +78,9 @@ class ProfessionalService:
         Get professional profile with availability
         """
         prof_res = await db.execute(
-            select(ProfessionalProfile).where(ProfessionalProfile.id == professional_id)
+            select(ProfessionalProfile)
+            .options(selectinload(ProfessionalProfile.user).selectinload(User.profile))
+            .where(ProfessionalProfile.id == professional_id)
         )
         professional = prof_res.scalar_one_or_none()
 
@@ -100,6 +103,7 @@ class ProfessionalService:
         return {
             "id": str(professional.id),
             "name": professional.user.profile.username if professional.user.profile else "Unknown",
+            "contact_email": professional.user.email,
             "specialization": professional.specialization,
             "bio": professional.bio,
             "years_experience": professional.years_experience,
@@ -111,6 +115,7 @@ class ProfessionalService:
             "total_reviews": professional.total_reviews,
             "total_sessions_completed": professional.total_sessions_completed,
             "is_verified": professional.is_verified,
+            "timezone": professional.timezone,
             "available_slots": [
                 {
                     "slot_id": str(slot.id),
@@ -134,7 +139,9 @@ class ProfessionalService:
         """
         Search professionals with filters
         """
-        query = select(ProfessionalProfile).where(
+        query = select(ProfessionalProfile).options(
+            selectinload(ProfessionalProfile.user).selectinload(User.profile)
+        ).where(
             ProfessionalProfile.is_verified == True,
             ProfessionalProfile.is_accepting_clients == True,
         )
@@ -155,7 +162,26 @@ class ProfessionalService:
         query = query.order_by(ProfessionalProfile.average_rating.desc())
 
         # Pagination
-        total_res = await db.execute(select(func.count()).select_from(ProfessionalProfile))
+        total_query = select(func.count()).select_from(ProfessionalProfile).where(
+            ProfessionalProfile.is_verified == True,
+            ProfessionalProfile.is_accepting_clients == True,
+        )
+
+        if specialization:
+            total_query = total_query.where(
+                ProfessionalProfile.specialization.in_([specialization, "both"])
+            )
+
+        if min_rating:
+            total_query = total_query.where(ProfessionalProfile.average_rating >= min_rating)
+
+        if max_price:
+            total_query = total_query.where(ProfessionalProfile.consultation_price_usd <= max_price)
+
+        if timezone:
+            total_query = total_query.where(ProfessionalProfile.timezone == timezone)
+
+        total_res = await db.execute(total_query)
         total = total_res.scalar()
 
         query = query.offset((page - 1) * page_size).limit(page_size)
@@ -197,7 +223,9 @@ class ProfessionalService:
         """
         # Get professional
         prof_res = await db.execute(
-            select(ProfessionalProfile).where(ProfessionalProfile.id == professional_id)
+            select(ProfessionalProfile)
+            .options(selectinload(ProfessionalProfile.user).selectinload(User.profile))
+            .where(ProfessionalProfile.id == professional_id)
         )
         professional = prof_res.scalar_one_or_none()
         if not professional:
@@ -253,8 +281,7 @@ class ProfessionalService:
 
         db.add(session)
         db.add(slot)
-        await db.commit()
-        await db.refresh(session)
+        await db.flush()
 
         return session
 
@@ -275,7 +302,8 @@ class ProfessionalService:
             raise HTTPException(status_code=404, detail="Session not found")
 
         session.status = "confirmed"
-        session.meeting_link = meeting_link
+        if meeting_link is not None:
+            session.meeting_link = meeting_link
         session.payment_status = "completed"
 
         db.add(session)

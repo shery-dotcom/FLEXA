@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     # Frontend
     FRONTEND_URL: str = "http://localhost:3000"
 
+    # Stripe test mode
+    STRIPE_SECRET_KEY: Optional[str] = None
+    STRIPE_CURRENCY: str = "usd"
+    STRIPE_SUCCESS_URL: Optional[str] = None
+    STRIPE_CANCEL_URL: Optional[str] = None
+
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
 

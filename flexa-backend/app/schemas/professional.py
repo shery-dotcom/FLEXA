@@ -135,7 +135,7 @@ class ReviewResponse(BaseModel):
 
 class PaymentConfirmationRequest(BaseModel):
     """Request to confirm payment"""
-    meeting_link: str = Field(..., description="Zoom/Google Meet link")
+    meeting_link: Optional[str] = Field(default=None, description="Zoom/Google Meet link")
 
 
 class SessionCancellationRequest(BaseModel):

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import toast from "react-hot-toast";
@@ -212,10 +212,15 @@ export default function Dashboard() {
   const [todayWorkout, setTodayWorkout] = useState(null);
   const [weekWorkouts, setWeekWorkouts] = useState([]);
   const [mlSplit, setMlSplit] = useState(null);
+  const requestSeqRef = useRef(0);
+  const hasLoadedDashboardRef = useRef(false);
   const navigate = useNavigate();
   const quote = getDayQuote();
 
   useEffect(() => {
+    let isActive = true;
+    const currentRequest = ++requestSeqRef.current;
+
     (async () => {
       try {
         const [dashRes, workoutRes, splitRes] = await Promise.all([
@@ -226,7 +231,10 @@ export default function Dashboard() {
           api.get("/workouts/my-split").catch(() => ({ data: null })),
         ]);
 
+        if (!isActive || currentRequest !== requestSeqRef.current) return;
+
         setData(dashRes.data);
+        hasLoadedDashboardRef.current = Boolean(dashRes.data);
         setLoading(false);
 
         if (splitRes.data?.split) {
@@ -241,15 +249,25 @@ export default function Dashboard() {
           ) || null,
         );
       } catch (err) {
+        if (!isActive || currentRequest !== requestSeqRef.current) return;
+
+        if (err?.code === "ERR_CANCELED" || err?.name === "CanceledError") {
+          return;
+        }
+
         const status = err?.response?.status;
         if (status === 400 || status === 404) {
           setData(null);
-        } else {
+        } else if (!hasLoadedDashboardRef.current) {
           toast.error("Could not load dashboard. Please refresh.");
         }
         setLoading(false);
       }
     })();
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   if (loading)

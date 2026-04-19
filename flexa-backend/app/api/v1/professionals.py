@@ -1,9 +1,14 @@
 import uuid
 from typing import Optional
+import stripe
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+from app.core.config import settings
 from app.dependencies import get_current_user
 from app.database import get_db
+from app.models.professional import ProfessionalProfile, Payment
 from app.models.user import User
 from app.services.professional_service import ProfessionalService
 from app.schemas.professional import (
@@ -117,14 +122,84 @@ async def book_consultation(
         data=data,
         subscription_tier=subscription_tier,
     )
+
+    if not settings.STRIPE_SECRET_KEY:
+        await db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Stripe test mode is not configured. Add STRIPE_SECRET_KEY to flexa-backend/.env.",
+        )
+
+    professional_res = await db.execute(
+        select(ProfessionalProfile)
+        .options(selectinload(ProfessionalProfile.user).selectinload(User.profile))
+        .where(ProfessionalProfile.id == prof_uuid)
+    )
+    professional = professional_res.scalar_one_or_none()
+    if not professional:
+        await db.rollback()
+        raise HTTPException(status_code=404, detail="Professional not found")
+
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    success_url = settings.STRIPE_SUCCESS_URL or (
+        f"{settings.FRONTEND_URL}/marketplace?payment=success&session_id={session.id}&stripe_session_id={{CHECKOUT_SESSION_ID}}"
+    )
+    cancel_url = settings.STRIPE_CANCEL_URL or f"{settings.FRONTEND_URL}/marketplace?payment=cancelled"
+
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            mode="payment",
+            customer_email=current_user.email,
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata={
+                "consultation_session_id": str(session.id),
+                "user_id": str(current_user.id),
+                "professional_id": str(professional.id),
+            },
+            line_items=[
+                {
+                    "quantity": 1,
+                    "price_data": {
+                        "currency": settings.STRIPE_CURRENCY,
+                        "unit_amount": int(round(session.session_price_usd * 100)),
+                        "product_data": {
+                            "name": f"FLEXA consultation with {professional.user.profile.username if professional.user.profile else 'Expert'}",
+                            "description": f"{data.specialization_type.replace('_', ' ').title()} consultation for {session.duration_mins} minutes",
+                        },
+                    },
+                }
+            ],
+        )
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(status_code=502, detail=f"Could not create Stripe checkout session: {exc}")
+
+    payment = Payment(
+        session_id=session.id,
+        user_id=current_user.id,
+        professional_id=professional.id,
+        gross_amount_usd=session.session_price_usd,
+        flexa_commission_usd=session.flexa_commission_usd,
+        professional_payout_usd=session.professional_earnings_usd,
+        payment_status="pending",
+    )
+
+    session.payment_id = checkout_session.id
+    session.payment_status = "pending"
+
+    db.add(payment)
+    db.add(session)
+    await db.commit()
     
     return {
         "session_id": str(session.id),
         "status": "pending_payment",
         "price_usd": session.session_price_usd,
         "session_date": session.session_date.isoformat(),
-        "message": "Proceed to payment. Use Stripe test card 4242 4242 4242 4242 for testing.",
-        "payment_url": f"/api/v1/consultations/{session.id}/payment",  # Frontend will handle Stripe
+        "message": "Proceed to Stripe Checkout. Use test card 4242 4242 4242 4242 for testing.",
+        "checkout_url": checkout_session.url,
+        "stripe_session_id": checkout_session.id,
     }
 
 

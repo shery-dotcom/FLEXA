@@ -158,11 +158,8 @@ function App() {
         />
 
         {/* Default */}
-        <Route
-          path="/"
-          element={<Navigate to={user ? "/dashboard" : "/login"} />}
-        />
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </div>
   );
