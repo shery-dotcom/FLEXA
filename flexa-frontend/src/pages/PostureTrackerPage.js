@@ -29,9 +29,8 @@ export default function PostureTrackerPage() {
           Posture <span className="text-gold">Tracker</span>
         </h1>
         <p style={{ color: "#9e9e9e", fontSize: 14, marginBottom: 18 }}>
-          Real-time multi-exercise tracking (squat, pushup, bicep curl, hammer
-          curl, shoulder press, deadlift, lunge, tricep extension) with
-          MediaPipe Pose. Video stays on-device.
+          Real-time posture tracking grouped by Upper Body, Lower Body, and Core
+          / Stability exercises with MediaPipe Pose. Video stays on-device.
         </p>
 
         {hasWorkoutContext && (
@@ -74,5 +73,3 @@ export default function PostureTrackerPage() {
     </div>
   );
 }
-
-

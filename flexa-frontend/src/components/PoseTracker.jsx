@@ -11,8 +11,10 @@ import {
   createRepCounter,
   updateRepCounter,
   SUPPORTED_EXERCISES,
+  EXERCISE_GROUPS,
   SENSITIVITY_OPTIONS,
   normalizeExercise,
+  getExerciseLabel,
 } from "../utils/repCounter";
 import {
   evaluateExercisePosture,
@@ -128,9 +130,11 @@ export default function PoseTracker({ exercise = "squat" }) {
 
   const exerciseOptions = useMemo(
     () =>
-      SUPPORTED_EXERCISES.map((item) => ({
-        value: item,
-        label: item.replace(/_/g, " "),
+      EXERCISE_GROUPS.map((group) => ({
+        label: group.label,
+        options: group.exercises
+          .filter((mode) => SUPPORTED_EXERCISES.includes(mode))
+          .map((mode) => ({ value: mode, label: getExerciseLabel(mode) })),
       })),
     [],
   );
@@ -337,10 +341,7 @@ export default function PoseTracker({ exercise = "squat" }) {
           gap: 12,
         }}
       >
-        <StatCard
-          label="Exercise"
-          value={selectedExercise.replace(/_/g, " ")}
-        />
+        <StatCard label="Exercise" value={getExerciseLabel(selectedExercise)} />
         <StatCard label="Reps" value={String(reps)} />
         <StatCard label="Time" value={elapsedLabel} />
         <StatCard label="Posture" value={`${postureScore}%`} />
@@ -367,10 +368,14 @@ export default function PoseTracker({ exercise = "squat" }) {
             textTransform: "capitalize",
           }}
         >
-          {exerciseOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
+          {exerciseOptions.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <p style={{ fontSize: 12, color: "#8a8a8a", margin: 0 }}>
@@ -396,7 +401,7 @@ export default function PoseTracker({ exercise = "squat" }) {
             textTransform: "uppercase",
           }}
         >
-          Sensitivity for {selectedExercise.replace(/_/g, " ")}
+          Sensitivity for {getExerciseLabel(selectedExercise)}
         </p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {SENSITIVITY_OPTIONS.map((option) => {
@@ -451,7 +456,7 @@ export default function PoseTracker({ exercise = "squat" }) {
             textTransform: "uppercase",
           }}
         >
-          Rep Assistant ({selectedExercise.replace(/_/g, " ")})
+          Rep Assistant ({getExerciseLabel(selectedExercise)})
         </p>
         <p
           style={{ margin: 0, fontSize: 13, color: "#8fd3ff", fontWeight: 700 }}
@@ -510,7 +515,7 @@ export default function PoseTracker({ exercise = "squat" }) {
                 paddingBottom: 6,
               }}
             >
-              <span>{item.exercise}</span>
+              <span>{getExerciseLabel(item.exercise)}</span>
               <span>{item.reps} reps</span>
               <span>{item.duration}s</span>
               <span>{item.posture_score}%</span>
@@ -541,5 +546,3 @@ function StatCard({ label, value }) {
     </div>
   );
 }
-
-

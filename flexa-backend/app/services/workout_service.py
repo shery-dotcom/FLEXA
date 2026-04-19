@@ -26,9 +26,9 @@ class WorkoutService:
             raise HTTPException(status_code=400, detail="Complete your profile before generating workouts.")
 
         goal_res = await db.execute(
-            select(FitnessGoal).where(FitnessGoal.user_id == user_id, FitnessGoal.is_active == True)
+            select(FitnessGoal).where(FitnessGoal.user_id == user_id).order_by(FitnessGoal.created_at.desc())
         )
-        goal = goal_res.scalar_one_or_none()
+        goal = goal_res.scalars().first()
         if not goal:
             raise HTTPException(status_code=400, detail="Set a fitness goal before generating workouts.")
 

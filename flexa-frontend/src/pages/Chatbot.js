@@ -11,7 +11,7 @@ import useSpeechRecognition from "../hooks/useSpeechRecognition";
 // ─── API helpers (shared axios instance — token auto-attached via interceptor) ─
 
 async function apiPost(endpoint, body) {
-  const res = await api.post(endpoint, body);
+  const res = await api.post(endpoint, body, { timeout: 90000 });
   return res.data;
 }
 
@@ -674,5 +674,3 @@ if (typeof document !== "undefined") {
     document.head.appendChild(style);
   }
 }
-
-

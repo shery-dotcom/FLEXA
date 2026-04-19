@@ -6,7 +6,7 @@ const BASE_URL =
 const api = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
-  timeout: 90000, // 90s — LLM responses can take 10-30s
+  timeout: 20000, // Keep normal pages responsive; long requests can override per-call.
 });
 
 // Attach access token to every request
@@ -21,7 +21,17 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && !original._retry) {
+    const requestUrl = String(original?.url || "");
+    const isAuthEndpoint =
+      /\/auth\/(login|register|refresh|forgot-password|reset-password)/.test(
+        requestUrl,
+      );
+
+    if (
+      error.response?.status === 401 &&
+      !original?._retry &&
+      !isAuthEndpoint
+    ) {
       original._retry = true;
       try {
         const refreshToken = localStorage.getItem("refresh_token");
@@ -43,5 +53,3 @@ api.interceptors.response.use(
 );
 
 export default api;
-
-

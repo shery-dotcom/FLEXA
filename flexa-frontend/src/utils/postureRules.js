@@ -281,17 +281,26 @@ export function evaluateExercisePosture(exercise, landmarks, angles) {
 
   switch (mode) {
     case "pushup":
+    case "bench_press":
+    case "tricep_dip":
       return evaluatePushupPosture(landmarks, angles);
+    case "pullup":
+    case "shoulder_press":
+    case "lateral_raise":
+      return evaluateShoulderPressPosture(landmarks, angles);
     case "bicep_curl":
-    case "hammer_curl":
-    case "tricep_extension":
       return evaluateBicepCurlPosture(landmarks, angles);
     case "lunge":
+    case "mountain_climber":
       return evaluateLungePosture(landmarks, angles);
-    case "shoulder_press":
-      return evaluateShoulderPressPosture(landmarks, angles);
     case "deadlift":
+    case "hip_thrust":
+    case "situp":
       return evaluateDeadliftPosture(landmarks, angles);
+    case "plank":
+      return evaluatePushupPosture(landmarks, angles);
+    case "calf_raise":
+      return evaluateSquatPosture(landmarks, angles);
     case "squat":
     default:
       return evaluateSquatPosture(landmarks, angles);
@@ -302,5 +311,3 @@ export function calculateSessionPostureScore(scoreSamples) {
   if (!scoreSamples?.length) return 0;
   return Math.round(average(scoreSamples));
 }
-
-

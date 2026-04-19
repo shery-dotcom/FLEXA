@@ -9,6 +9,18 @@ import api from "../api/axios";
 
 const AuthContext = createContext(null);
 
+function decodeJwtPayload(token) {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = atob(normalized);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,9 +52,25 @@ export function AuthProvider({ children }) {
       identifier: String(identifier || "").trim(),
       password,
     });
-    localStorage.setItem("access_token", res.data.access_token);
-    localStorage.setItem("refresh_token", res.data.refresh_token);
-    await fetchMe();
+    const accessToken = res.data.access_token;
+    const refreshToken = res.data.refresh_token;
+
+    localStorage.setItem("access_token", accessToken);
+    localStorage.setItem("refresh_token", refreshToken);
+
+    // Optimistic auth hydration makes navigation instant after successful login.
+    const payload = decodeJwtPayload(accessToken);
+    if (payload?.sub || payload?.email) {
+      setUser((prev) => ({
+        id: payload.sub || prev?.id,
+        email: payload.email || prev?.email,
+        role: payload.role || prev?.role || "user",
+        profile: prev?.profile || {},
+      }));
+    }
+
+    // Refresh full user data in the background.
+    fetchMe();
     return res.data;
   };
 
@@ -80,5 +108,3 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }
-
-

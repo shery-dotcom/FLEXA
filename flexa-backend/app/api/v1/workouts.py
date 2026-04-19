@@ -28,12 +28,11 @@ async def get_my_predicted_split(
     profile = profile_res.scalar_one_or_none()
 
     goal_res = await db.execute(
-        select(FitnessGoal).where(
-            FitnessGoal.user_id == current_user.id,
-            FitnessGoal.is_active == True,
-        )
+        select(FitnessGoal)
+        .where(FitnessGoal.user_id == current_user.id)
+        .order_by(FitnessGoal.created_at.desc())
     )
-    goal = goal_res.scalar_one_or_none()
+    goal = goal_res.scalars().first()
 
     if not profile or not goal:
         return {"split": None, "probas": {}, "message": "Complete profile and goal setup first."}

@@ -28,6 +28,10 @@ logger = logging.getLogger(__name__)
 
 # ── Food name / ingredient / allergen cleaning ─────────────────────────────
 _LEADING_NUM_RE   = re.compile(r"^\d[\d\s\-]*\b\s*")
+_MEASUREMENT_UNIT_RE = re.compile(
+    r"^(?:tablespoon|tablespoons|tbsp|t\.|teaspoon|tsp|t\s|cup|cups|c\.|pound|pounds|lb|lbs|ounce|ounces|oz|gram|grams|g\.|kilogram|kg|milliliter|ml|liter|l\.|minute|minutes|min\.|hour|hours|hr\.?)\s+",
+    re.IGNORECASE,
+)
 _FILLER_PREFIX_RE = re.compile(
     r"^(?:"
     r"a\s+(?:new\s+|great\s+|easy\s+|quick\s+|can\s+of[\s\w]+?(?:and|&)[\s\w]+?\s+)?"
@@ -40,6 +44,10 @@ _JUNK_SUFFIX_RE  = re.compile(
     r"\s+\(?\s*(?:ver(?:sion)?\s*[.\d]+|#\d+|recipe)\s*\)?$",
     re.IGNORECASE,
 )
+_NAME_POSSESSIVE_PREFIX_RE = re.compile(
+     r"^(?:[a-z]+(?:\s+[a-z]+){1,4}\s+s\s+)(?=(?:chinese|japanese|thai|korean|indian|pakistani|mediterranean|mexican|italian|greek|chicken|beef|pork|shrimp|salmon|tuna|tofu|vegetable|noodle|rice)\b)",
+     re.IGNORECASE,
+)
 _MULTI_SPACE_RE  = re.compile(r"\s{2,}")
 
 
@@ -49,6 +57,8 @@ def _clean_food_name(name: str) -> str:
         return name
     name = str(name).strip()
     name = _LEADING_NUM_RE.sub("", name).strip()
+    name = _MEASUREMENT_UNIT_RE.sub("", name).strip()
+    name = _NAME_POSSESSIVE_PREFIX_RE.sub("", name).strip()
     for _ in range(2):  # apply twice for nested matches
         name = _FILLER_PREFIX_RE.sub("", name).strip()
     name = _JUNK_SUFFIX_RE.sub("", name).strip()
@@ -704,3 +714,4 @@ async def generate_meal_plan(
         water_ml        = 2500.0,
         tips            = tips,
     )
+

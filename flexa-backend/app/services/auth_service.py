@@ -1,6 +1,7 @@
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, func, or_
+from sqlalchemy.exc import IntegrityError
 from app.models.user import User
 from app.models.profile import Profile
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
@@ -20,20 +21,43 @@ class AuthService:
 
     @staticmethod
     async def register(db: AsyncSession, data: RegisterRequest) -> dict:
-        # Check if user exists
-        result = await db.execute(select(User).where(User.email == data.email))
+        email = str(data.email).strip().lower()
+        phone = (str(data.phone).strip() if data.phone else None) or None
+
+        # Check if email already exists (case-insensitive)
+        result = await db.execute(
+            select(User).where(func.lower(User.email) == email)
+        )
         if result.scalar_one_or_none():
             raise HTTPException(status_code=400, detail="Email already registered")
 
+        # Check if phone already exists when provided
+        if phone:
+            phone_result = await db.execute(select(User).where(User.phone == phone))
+            if phone_result.scalar_one_or_none():
+                raise HTTPException(status_code=400, detail="Phone number already registered")
+
         user = User(
-            email=data.email,
-            phone=data.phone,
+            email=email,
+            phone=phone,
             hashed_password=hash_password(data.password),
             is_active=True,
         )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
+        try:
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+        except IntegrityError as exc:
+            await db.rollback()
+            error_text = str(getattr(exc, "orig", exc)).lower()
+            if "users_phone_key" in error_text or "phone" in error_text:
+                raise HTTPException(status_code=400, detail="Phone number already registered")
+            if "users_email_key" in error_text or "email" in error_text:
+                raise HTTPException(status_code=400, detail="Email already registered")
+            raise HTTPException(
+                status_code=400,
+                detail="Registration failed due to invalid or duplicate data",
+            )
         return {"message": "Registration successful. Please complete your profile."}
 
     @staticmethod
@@ -41,13 +65,16 @@ class AuthService:
         raw_identifier = (data.identifier or "").strip()
         normalized_identifier = raw_identifier.lower()
 
-        # Supports both full email and username-like local-part (before @).
+        # Supports full email, email local-part, and profile username.
         result = await db.execute(
-            select(User).where(
+            select(User)
+            .outerjoin(Profile, Profile.user_id == User.id)
+            .where(
                 or_(
                     func.lower(User.email) == normalized_identifier,
                     func.lower(func.split_part(User.email, "@", 1))
                     == normalized_identifier,
+                    func.lower(Profile.username) == normalized_identifier,
                 )
             )
         )

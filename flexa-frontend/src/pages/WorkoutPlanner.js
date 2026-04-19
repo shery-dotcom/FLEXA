@@ -106,13 +106,20 @@ function mapExerciseToPostureMode(exercise) {
   const raw =
     `${exercise?.name || ""} ${exercise?.muscle_group || ""}`.toLowerCase();
 
+  if (/mountain climber/.test(raw)) return "mountain_climber";
+  if (/plank/.test(raw)) return "plank";
+  if (/sit ?up|crunch/.test(raw)) return "situp";
+  if (/pull ?up|pull-up|chin ?up|chin-up/.test(raw)) return "pullup";
+  if (/lateral raise|side raise/.test(raw)) return "lateral_raise";
+  if (/bench|chest press/.test(raw)) return "bench_press";
+  if (/dip/.test(raw)) return "tricep_dip";
   if (/curl|bicep|biceps|hammer/.test(raw)) return "bicep_curl";
+  if (/calf raise/.test(raw)) return "calf_raise";
+  if (/glute bridge|hip thrust/.test(raw)) return "hip_thrust";
+  if (/deadlift|romanian deadlift|rdl/.test(raw)) return "deadlift";
   if (/lunge|split squat|bulgarian|step up/.test(raw)) return "lunge";
-  if (
-    /push ?up|push-up|bench|chest press|dip|shoulder press|overhead press/.test(
-      raw,
-    )
-  ) {
+  if (/shoulder press|overhead press/.test(raw)) return "shoulder_press";
+  if (/push ?up|push-up/.test(raw)) {
     return "pushup";
   }
   if (/squat|leg press|hack squat|front squat|back squat|goblet/.test(raw)) {
@@ -2180,5 +2187,3 @@ function ChangePlanOverlay({
     </div>
   );
 }
-
-

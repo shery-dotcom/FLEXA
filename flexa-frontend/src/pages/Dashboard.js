@@ -38,7 +38,7 @@ function computeCalories(profile, goalType, activityLevel) {
 const SPLIT_DESC = {
   "Full Body": "All muscles each session",
   PPL: "Push / Pull / Legs",
-  "PPL x2": "Push / Pull / Legs — 6 days",
+  "PPL x2": "Push / Pull / Legs ï¿½ 6 days",
   "Upper/Lower": "Alternating upper & lower body",
   "Bro Split": "One muscle group per session",
 };
@@ -218,24 +218,30 @@ export default function Dashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const [dashRes, workoutRes, splitRes] = await Promise.all([
-          api.get("/dashboard/"),
+        const dashRes = await api.get("/dashboard/");
+        setData(dashRes.data);
+        setLoading(false);
+
+        const [workoutRes, splitRes] = await Promise.all([
           api
             .get("/workouts/", { params: { week: 1 } })
             .catch(() => ({ data: [] })),
           api.get("/workouts/my-split").catch(() => ({ data: null })),
         ]);
-        setData(dashRes.data);
-        if (splitRes.data?.split) setMlSplit(splitRes.data);
+
+        if (splitRes.data?.split) {
+          setMlSplit(splitRes.data);
+        }
+
         const allWorkouts = workoutRes.data || [];
         setWeekWorkouts(allWorkouts);
-        const match = allWorkouts.find(
-          (w) => w.day_of_week?.toLowerCase() === TODAY_NAME.toLowerCase(),
+        setTodayWorkout(
+          allWorkouts.find(
+            (w) => w.day_of_week?.toLowerCase() === TODAY_NAME.toLowerCase(),
+          ) || null,
         );
-        setTodayWorkout(match || null);
       } catch {
         toast.error("Could not load dashboard.");
-      } finally {
         setLoading(false);
       }
     })();
@@ -423,7 +429,7 @@ export default function Dashboard() {
             </p>
           </div>
 
-          {/* -- 2×2 Stats Grid ------------------------------------------- */}
+          {/* -- 2ï¿½2 Stats Grid ------------------------------------------- */}
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
           >
@@ -487,7 +493,7 @@ export default function Dashboard() {
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {/* -- Workout Plan Block ----------------------------------------- */}
           {!data.has_workout_plan && weekWorkouts.length === 0 ? (
-            /* No plan — show CTA */
+            /* No plan ï¿½ show CTA */
             <div
               style={{
                 background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
@@ -529,7 +535,7 @@ export default function Dashboard() {
               </button>
             </div>
           ) : (
-            /* Plan exists — show plan details + today's workout */
+            /* Plan exists ï¿½ show plan details + today's workout */
             <div
               style={{
                 background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
@@ -564,7 +570,7 @@ export default function Dashboard() {
                     <p style={{ fontSize: 12, color: "#9e9e9e" }}>
                       {planFreq} day{planFreq !== 1 ? "s" : ""}/week
                       {planDifficulty
-                        ? ` · ${planDifficulty.charAt(0).toUpperCase() + planDifficulty.slice(1)}`
+                        ? ` ï¿½ ${planDifficulty.charAt(0).toUpperCase() + planDifficulty.slice(1)}`
                         : ""}
                     </p>
                   )}
@@ -612,7 +618,7 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Day dots — Mon-Sun with workout/rest differentiation */}
+              {/* Day dots ï¿½ Mon-Sun with workout/rest differentiation */}
               <div
                 style={{
                   display: "flex",
@@ -754,7 +760,7 @@ export default function Dashboard() {
                       <p
                         style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}
                       >
-                        Today — {todayWorkout.name}
+                        Today ï¿½ {todayWorkout.name}
                       </p>
                       <div
                         style={{
@@ -842,7 +848,7 @@ export default function Dashboard() {
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {ex.sets}×{ex.reps}
+                              {ex.sets}ï¿½{ex.reps}
                             </span>
                           </div>
                         ))}
@@ -1085,5 +1091,3 @@ function TaskRow({ task }) {
     </div>
   );
 }
-
-
