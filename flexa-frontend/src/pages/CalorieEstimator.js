@@ -1,10 +1,3 @@
-/**
- * CalorieEstimator.js — Module 3: AI Food Image Calorie Estimator
- * - Upload a food photo → AI predicts food class (ResNet50 / Food-101)
- * - Maps prediction to USDA nutrition database
- * - Returns calorie + macro estimates for a given portion size
- * - Option to log the detected meal directly to daily diary
- */
 import { useState, useRef } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import {
@@ -171,8 +164,7 @@ export default function CalorieEstimator() {
             Calorie Estimator
           </h1>
           <p style={{ color: "#555", fontSize: 13 }}>
-            Snap or upload a photo of your meal — our AI estimates its calories
-            and macros instantly.
+            Snap or upload a meal photo to estimate calories and macros quickly.
           </p>
         </div>
 
@@ -196,13 +188,12 @@ export default function CalorieEstimator() {
           />
           <div style={{ fontSize: 12, color: "#666", lineHeight: 1.6 }}>
             <strong style={{ color: "#888" }}>How it works:</strong> Upload a
-            food image → ResNet50 (trained on Food-101 dataset) predicts the
-            food class → macros are looked up in the USDA nutrition database for
-            your specified portion size.
+            food image, set your portion size, and Flexa estimates calories and
+            macros for your meal.
             <br />
             <em style={{ color: "#444" }}>
-              For best results: single food item, good lighting, clear angle. If
-              model is not yet trained, a keyword fallback is used.
+              Best results: clear lighting, one main dish in frame, and a front
+              angle.
             </em>
           </div>
         </div>
@@ -572,5 +563,3 @@ export default function CalorieEstimator() {
     </div>
   );
 }
-
-

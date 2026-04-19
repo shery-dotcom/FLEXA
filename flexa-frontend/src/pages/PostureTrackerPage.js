@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import PoseTracker from "../components/PoseTracker";
 import { normalizeExercise } from "../utils/repCounter";
@@ -13,14 +13,7 @@ export default function PostureTrackerPage() {
   const requestedExerciseName =
     searchParams.get("exerciseName") || "Active exercise";
   const hasWorkoutContext = searchParams.get("mode") === "workout";
-  const [trackingMode, setTrackingMode] = useState(
-    hasWorkoutContext ? "workout" : "manual",
-  );
-
-  const trackerExercise =
-    trackingMode === "workout" && hasWorkoutContext
-      ? requestedExercise
-      : "squat";
+  const trackerExercise = hasWorkoutContext ? requestedExercise : "squat";
 
   return (
     <div className="page-content">
@@ -29,46 +22,16 @@ export default function PostureTrackerPage() {
           Posture <span className="text-gold">Tracker</span>
         </h1>
         <p style={{ color: "#9e9e9e", fontSize: 14, marginBottom: 18 }}>
-          Real-time posture tracking grouped by Upper Body, Lower Body, and Core
-          / Stability exercises with MediaPipe Pose. Video stays on-device.
+          Select body part and exercise to start real-time posture tracking.
         </p>
 
         {hasWorkoutContext && (
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              marginBottom: 14,
-              flexWrap: "wrap",
-            }}
-          >
-            <button
-              className="btn btn-ghost"
-              onClick={() => setTrackingMode("workout")}
-              style={{
-                borderColor: trackingMode === "workout" ? "#00e5ff" : undefined,
-                color: trackingMode === "workout" ? "#00e5ff" : undefined,
-              }}
-            >
-              Use active workout: {requestedExerciseName}
-            </button>
-            <button
-              className="btn btn-ghost"
-              onClick={() => setTrackingMode("manual")}
-              style={{
-                borderColor: trackingMode === "manual" ? "#D4AF37" : undefined,
-                color: trackingMode === "manual" ? "#D4AF37" : undefined,
-              }}
-            >
-              Manual mode (any exercise)
-            </button>
-          </div>
+          <p style={{ color: "#7f7f7f", fontSize: 12, marginBottom: 12 }}>
+            Active workout detected: {requestedExerciseName}
+          </p>
         )}
 
-        <PoseTracker
-          key={`${trackingMode}-${trackerExercise}`}
-          exercise={trackerExercise}
-        />
+        <PoseTracker key={trackerExercise} exercise={trackerExercise} />
       </div>
     </div>
   );

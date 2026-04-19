@@ -218,16 +218,16 @@ export default function Dashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const dashRes = await api.get("/dashboard/");
-        setData(dashRes.data);
-        setLoading(false);
-
-        const [workoutRes, splitRes] = await Promise.all([
+        const [dashRes, workoutRes, splitRes] = await Promise.all([
+          api.get("/dashboard/"),
           api
             .get("/workouts/", { params: { week: 1 } })
             .catch(() => ({ data: [] })),
           api.get("/workouts/my-split").catch(() => ({ data: null })),
         ]);
+
+        setData(dashRes.data);
+        setLoading(false);
 
         if (splitRes.data?.split) {
           setMlSplit(splitRes.data);
@@ -240,8 +240,13 @@ export default function Dashboard() {
             (w) => w.day_of_week?.toLowerCase() === TODAY_NAME.toLowerCase(),
           ) || null,
         );
-      } catch {
-        toast.error("Could not load dashboard.");
+      } catch (err) {
+        const status = err?.response?.status;
+        if (status === 400 || status === 404) {
+          setData(null);
+        } else {
+          toast.error("Could not load dashboard. Please refresh.");
+        }
         setLoading(false);
       }
     })();

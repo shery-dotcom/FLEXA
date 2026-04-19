@@ -13,6 +13,7 @@ import {
   FiBookOpen,
   FiCamera,
   FiVideo,
+  FiBriefcase,
 } from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
 import FlexaVideoIntro from "./FlexaVideoIntro";
@@ -23,6 +24,7 @@ const NAV_LINKS = [
   { to: "/diet-planner", label: "Diet", icon: <FiBookOpen /> },
   { to: "/calorie-estimator", label: "Calories", icon: <FiCamera /> },
   { to: "/posture-tracker", label: "Posture", icon: <FiVideo /> },
+  { to: "/marketplace", label: "Experts", icon: <FiBriefcase /> },
   { to: "/chatbot", label: "FLEXA", icon: <TbRobot /> },
   { to: "/progress", label: "Report", icon: <FiTrendingUp /> },
 ];
@@ -469,5 +471,3 @@ const styles = {
     background: "rgba(0,0,0,0.5)",
   },
 };
-
-

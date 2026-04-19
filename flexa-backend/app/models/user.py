@@ -29,3 +29,5 @@ class User(Base):
     dashboard_tasks: Mapped[list["DashboardTask"]] = relationship("DashboardTask", back_populates="user", cascade="all, delete-orphan")
     achievements: Mapped[list["Achievement"]] = relationship("Achievement", back_populates="user", cascade="all, delete-orphan")
     water_logs: Mapped[list["WaterLog"]] = relationship("WaterLog", back_populates="user", cascade="all, delete-orphan")
+    professional_profile: Mapped["ProfessionalProfile"] = relationship("ProfessionalProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    consultation_sessions: Mapped[list["ConsultationSession"]] = relationship("ConsultationSession", back_populates="user", cascade="all, delete-orphan")

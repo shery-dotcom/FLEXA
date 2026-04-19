@@ -34,10 +34,13 @@ export function AuthProvider({ children }) {
     try {
       const res = await api.get("/users/me");
       setUser(res.data);
-    } catch {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      setUser(null);
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 401 || status === 403) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }

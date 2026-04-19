@@ -17,6 +17,7 @@ import CalorieEstimator from "./pages/CalorieEstimator";
 import Chatbot from "./pages/Chatbot";
 import GoogleAuthSuccess from "./pages/GoogleAuthSuccess";
 import PostureTrackerPage from "./pages/PostureTrackerPage";
+import Marketplace from "./pages/Marketplace";
 
 // Guard: logged in but no profile → send to profile-setup
 function OnboardingGuard({ children }) {
@@ -147,6 +148,14 @@ function App() {
             </OnboardingGuard>
           }
         />
+        <Route
+          path="/marketplace"
+          element={
+            <OnboardingGuard>
+              <Marketplace />
+            </OnboardingGuard>
+          }
+        />
 
         {/* Default */}
         <Route
@@ -160,5 +169,3 @@ function App() {
 }
 
 export default App;
-
-

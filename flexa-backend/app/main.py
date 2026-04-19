@@ -19,11 +19,14 @@ async def lifespan(app: FastAPI):
     await init_db()
     # Invalidate ML meal recommender so it refits with merged BUILTIN_FOODS on first request
     get_recommender().invalidate()
-    # Warm up RAG assets so the first chatbot request does not pay the cold-start cost.
-    try:
-        await asyncio.to_thread(rag_mod.retrieve, "warmup", 1, "general")
-    except Exception as e:
-        print(f"[WARN] RAG warmup skipped: {e}")
+    # Warm up RAG assets in background so startup stays fast.
+    async def _warmup_rag():
+        try:
+            await asyncio.to_thread(rag_mod.retrieve, "warmup", 1, "general")
+        except Exception as e:
+            print(f"[WARN] RAG warmup skipped: {e}")
+
+    asyncio.create_task(_warmup_rag())
     print(f"[OK] {settings.APP_NAME} v{settings.APP_VERSION} started")
     yield
     # Shutdown: release Redis connection

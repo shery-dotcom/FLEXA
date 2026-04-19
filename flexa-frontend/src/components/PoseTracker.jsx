@@ -12,7 +12,6 @@ import {
   updateRepCounter,
   SUPPORTED_EXERCISES,
   EXERCISE_GROUPS,
-  SENSITIVITY_OPTIONS,
   normalizeExercise,
   getExerciseLabel,
 } from "../utils/repCounter";
@@ -110,34 +109,56 @@ export default function PoseTracker({ exercise = "squat" }) {
   const [repHint, setRepHint] = useState("Start moving to count reps.");
   const [postureScore, setPostureScore] = useState(0);
   const [seconds, setSeconds] = useState(0);
-  const [history, setHistory] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState("lower");
   const [selectedExercise, setSelectedExercise] = useState(initialExercise);
-  const [sensitivityByExercise, setSensitivityByExercise] = useState(() => {
-    const initial = {};
-    SUPPORTED_EXERCISES.forEach((mode) => {
-      initial[mode] = "lenient";
-    });
-    return initial;
-  });
-
-  const selectedSensitivity =
-    sensitivityByExercise[selectedExercise] || "normal";
 
   useEffect(() => {
     if (isRunning) return;
     setSelectedExercise(initialExercise);
+    if ((EXERCISE_GROUPS[0]?.exercises || []).includes(initialExercise)) {
+      setSelectedGroup("upper");
+    } else if (
+      (EXERCISE_GROUPS[2]?.exercises || []).includes(initialExercise)
+    ) {
+      setSelectedGroup("core");
+    } else {
+      setSelectedGroup("lower");
+    }
   }, [initialExercise, isRunning]);
+
+  const groupOptions = useMemo(
+    () => [
+      { value: "upper", label: "Upper" },
+      { value: "lower", label: "Lower" },
+      { value: "core", label: "Core" },
+    ],
+    [],
+  );
+
+  const exercisesByGroup = useMemo(
+    () => ({
+      upper: EXERCISE_GROUPS[0]?.exercises || [],
+      lower: EXERCISE_GROUPS[1]?.exercises || [],
+      core: EXERCISE_GROUPS[2]?.exercises || [],
+    }),
+    [],
+  );
 
   const exerciseOptions = useMemo(
     () =>
-      EXERCISE_GROUPS.map((group) => ({
-        label: group.label,
-        options: group.exercises
-          .filter((mode) => SUPPORTED_EXERCISES.includes(mode))
-          .map((mode) => ({ value: mode, label: getExerciseLabel(mode) })),
-      })),
-    [],
+      (exercisesByGroup[selectedGroup] || [])
+        .filter((mode) => SUPPORTED_EXERCISES.includes(mode))
+        .map((mode) => ({ value: mode, label: getExerciseLabel(mode) })),
+    [exercisesByGroup, selectedGroup],
   );
+
+  useEffect(() => {
+    if (isRunning) return;
+    const nextOptions = exercisesByGroup[selectedGroup] || [];
+    if (!nextOptions.includes(selectedExercise) && nextOptions.length > 0) {
+      setSelectedExercise(nextOptions[0]);
+    }
+  }, [selectedGroup, selectedExercise, exercisesByGroup, isRunning]);
 
   const elapsedLabel = useMemo(() => {
     const m = Math.floor(seconds / 60);
@@ -161,22 +182,9 @@ export default function PoseTracker({ exercise = "squat" }) {
     resetSession();
   }, [selectedExercise, isRunning, resetSession]);
 
-  const loadHistory = useCallback(async () => {
-    try {
-      const data = await api.get("/workout/history?limit=10");
-      setHistory(data.data || []);
-    } catch {
-      setHistory([]);
-    }
-  }, []);
-
   const handleCameraReady = useCallback(() => {
     // Reserved for future hooks (permissions, warmup telemetry).
   }, []);
-
-  useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -232,7 +240,7 @@ export default function PoseTracker({ exercise = "squat" }) {
         selectedExercise,
         angles,
         Date.now(),
-        selectedSensitivity,
+        "lenient",
       );
 
       if (counterState.didCount) {
@@ -257,7 +265,7 @@ export default function PoseTracker({ exercise = "squat" }) {
     return () => {
       poseRef.current = null;
     };
-  }, [selectedExercise, selectedSensitivity]);
+  }, [selectedExercise]);
 
   const frameLoop = useCallback(async () => {
     if (!isRunning) return;
@@ -317,7 +325,6 @@ export default function PoseTracker({ exercise = "squat" }) {
         duration,
         posture_score: sessionPostureScore,
       });
-      await loadHistory();
     } catch {
       // Keep UI responsive; history section indicates persistence state on next load.
     }
@@ -347,17 +354,43 @@ export default function PoseTracker({ exercise = "squat" }) {
         <StatCard label="Posture" value={`${postureScore}%`} />
       </div>
 
-      <div style={{ display: "grid", gap: 6, maxWidth: 320 }}>
+      <div style={{ display: "grid", gap: 10, maxWidth: 420 }}>
+        <label
+          htmlFor="body-part-picker"
+          style={{ fontSize: 12, color: "#9e9e9e", textTransform: "uppercase" }}
+        >
+          Body Part
+        </label>
+        <select
+          id="body-part-picker"
+          value={selectedGroup}
+          disabled={isRunning}
+          onChange={(e) => setSelectedGroup(e.target.value)}
+          style={{
+            background: "#111",
+            color: "#d7d7d7",
+            border: "1px solid #2a2a2a",
+            borderRadius: 8,
+            padding: "10px 12px",
+          }}
+        >
+          {groupOptions.map((group) => (
+            <option key={group.value} value={group.value}>
+              {group.label}
+            </option>
+          ))}
+        </select>
+
         <label
           htmlFor="exercise-picker"
           style={{ fontSize: 12, color: "#9e9e9e", textTransform: "uppercase" }}
         >
-          Exercise Mode
+          Exercise
         </label>
         <select
           id="exercise-picker"
           value={selectedExercise}
-          disabled={isRunning}
+          disabled={isRunning || exerciseOptions.length === 0}
           onChange={(e) => setSelectedExercise(e.target.value)}
           style={{
             background: "#111",
@@ -368,74 +401,13 @@ export default function PoseTracker({ exercise = "squat" }) {
             textTransform: "capitalize",
           }}
         >
-          {exerciseOptions.map((group) => (
-            <optgroup key={group.label} label={group.label}>
-              {group.options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </optgroup>
+          {exerciseOptions.length === 0 && <option>No exercises</option>}
+          {exerciseOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
           ))}
         </select>
-        <p style={{ fontSize: 12, color: "#8a8a8a", margin: 0 }}>
-          Cyan box improves accuracy, but counting still works outside it.
-        </p>
-      </div>
-
-      <div
-        style={{
-          border: "1px solid #2a2a2a",
-          borderRadius: 10,
-          padding: "10px 12px",
-          background: "#111",
-          maxWidth: 420,
-        }}
-      >
-        <p
-          style={{
-            fontSize: 12,
-            color: "#9e9e9e",
-            margin: 0,
-            marginBottom: 8,
-            textTransform: "uppercase",
-          }}
-        >
-          Sensitivity for {getExerciseLabel(selectedExercise)}
-        </p>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {SENSITIVITY_OPTIONS.map((option) => {
-            const active = selectedSensitivity === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() =>
-                  setSensitivityByExercise((prev) => ({
-                    ...prev,
-                    [selectedExercise]: option.value,
-                  }))
-                }
-                style={{
-                  background: active ? "rgba(212,175,55,0.14)" : "#171717",
-                  border: `1px solid ${active ? "#D4AF37" : "#2a2a2a"}`,
-                  borderRadius: 8,
-                  color: active ? "#D4AF37" : "#c9c9c9",
-                  padding: "7px 10px",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-        <p style={{ margin: "8px 0 0", fontSize: 11, color: "#777" }}>
-          Default is Lenient for easier recognition. Use Strict only for very
-          controlled form.
-        </p>
       </div>
 
       <div
@@ -488,40 +460,6 @@ export default function PoseTracker({ exercise = "squat" }) {
             Stop & Save Session
           </button>
         )}
-      </div>
-
-      <div
-        style={{ border: "1px solid #2a2a2a", borderRadius: 10, padding: 12 }}
-      >
-        <h3 style={{ fontSize: 15, marginBottom: 8 }}>
-          Recent Posture Sessions
-        </h3>
-        <div style={{ display: "grid", gap: 6 }}>
-          {history.length === 0 && (
-            <p style={{ color: "#777", fontSize: 13 }}>
-              No posture sessions yet.
-            </p>
-          )}
-          {history.map((item) => (
-            <div
-              key={item.id}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 10,
-                fontSize: 13,
-                color: "#cfcfcf",
-                borderBottom: "1px solid #1e1e1e",
-                paddingBottom: 6,
-              }}
-            >
-              <span>{getExerciseLabel(item.exercise)}</span>
-              <span>{item.reps} reps</span>
-              <span>{item.duration}s</span>
-              <span>{item.posture_score}%</span>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );
