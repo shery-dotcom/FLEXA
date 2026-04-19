@@ -116,6 +116,10 @@ export default function Marketplace() {
         },
       );
 
+      if (res.data?.demo_mode) {
+        toast("Stripe demo mode: showing presentation checkout flow.");
+      }
+
       if (res.data?.checkout_url) {
         window.location.href = res.data.checkout_url;
         return;

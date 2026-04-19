@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     STRIPE_CURRENCY: str = "usd"
     STRIPE_SUCCESS_URL: Optional[str] = None
     STRIPE_CANCEL_URL: Optional[str] = None
+    STRIPE_DEMO_MODE: bool = True
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"

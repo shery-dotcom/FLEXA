@@ -123,13 +123,6 @@ async def book_consultation(
         subscription_tier=subscription_tier,
     )
 
-    if not settings.STRIPE_SECRET_KEY:
-        await db.rollback()
-        raise HTTPException(
-            status_code=503,
-            detail="Stripe test mode is not configured. Add STRIPE_SECRET_KEY to flexa-backend/.env.",
-        )
-
     professional_res = await db.execute(
         select(ProfessionalProfile)
         .options(selectinload(ProfessionalProfile.user).selectinload(User.profile))
@@ -139,6 +132,44 @@ async def book_consultation(
     if not professional:
         await db.rollback()
         raise HTTPException(status_code=404, detail="Professional not found")
+
+    if settings.STRIPE_DEMO_MODE:
+        demo_checkout_id = f"cs_test_demo_{str(session.id).replace('-', '')[:18]}"
+        payment = Payment(
+            session_id=session.id,
+            user_id=current_user.id,
+            professional_id=professional.id,
+            gross_amount_usd=session.session_price_usd,
+            flexa_commission_usd=session.flexa_commission_usd,
+            professional_payout_usd=session.professional_earnings_usd,
+            payment_status="pending",
+            stripe_payment_intent_id=demo_checkout_id,
+        )
+
+        session.payment_id = demo_checkout_id
+        session.payment_status = "pending"
+
+        db.add(payment)
+        db.add(session)
+        await db.commit()
+
+        return {
+            "session_id": str(session.id),
+            "status": "pending_payment",
+            "price_usd": session.session_price_usd,
+            "session_date": session.session_date.isoformat(),
+            "message": "Stripe demo checkout created. This is a presentation-only flow.",
+            "checkout_url": f"{settings.FRONTEND_URL}/marketplace?payment=success&session_id={session.id}&stripe_session_id={demo_checkout_id}",
+            "stripe_session_id": demo_checkout_id,
+            "demo_mode": True,
+        }
+
+    if not settings.STRIPE_SECRET_KEY:
+        await db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Stripe key is missing. Add STRIPE_SECRET_KEY or enable STRIPE_DEMO_MODE.",
+        )
 
     stripe.api_key = settings.STRIPE_SECRET_KEY
     success_url = settings.STRIPE_SUCCESS_URL or (
@@ -200,6 +231,7 @@ async def book_consultation(
         "message": "Proceed to Stripe Checkout. Use test card 4242 4242 4242 4242 for testing.",
         "checkout_url": checkout_session.url,
         "stripe_session_id": checkout_session.id,
+        "demo_mode": False,
     }
 
 
