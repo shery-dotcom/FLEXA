@@ -23,6 +23,110 @@ import {
 const FPS_TARGET = 12;
 const FRAME_INTERVAL_MS = Math.round(1000 / FPS_TARGET);
 const ZONE_MIN_RATIO = 0.45;
+const INJURY_TRIGGER_STREAK = 8;
+const INJURY_RELEASE_STREAK = 4;
+const BEEP_COOLDOWN_MS = 2200;
+
+const FLAG_RISK_RULES = {
+  back_not_straight: {
+    severity: "high",
+    hint: "Keep your spine neutral and avoid rounding your back.",
+  },
+  too_much_rounding: {
+    severity: "high",
+    hint: "Reduce load and keep chest lifted to protect your lower back.",
+  },
+  hips_sagging: {
+    severity: "high",
+    hint: "Brace your core and keep your hips in line with your shoulders.",
+  },
+  arching_back: {
+    severity: "high",
+    hint: "Do not over-arch. Keep ribs down and core tight.",
+  },
+  elbows_moving: {
+    severity: "medium",
+    hint: "Keep elbows stable and close to your torso.",
+  },
+  knees_not_aligned: {
+    severity: "high",
+    hint: "Track your knees over your toes and avoid inward collapse.",
+  },
+  uneven_depth: {
+    severity: "medium",
+    hint: "Control depth evenly on both sides.",
+  },
+  too_deep_or_collapsing: {
+    severity: "medium",
+    hint: "Do not force depth. Keep control through the full rep.",
+  },
+  too_deep: {
+    severity: "medium",
+    hint: "Reduce depth slightly and maintain control.",
+  },
+  torso_lean: {
+    severity: "medium",
+    hint: "Keep torso more upright and engage your core.",
+  },
+  torso_swinging: {
+    severity: "medium",
+    hint: "Avoid swinging. Slow down the rep and isolate the movement.",
+  },
+  uneven_elbow_drive: {
+    severity: "medium",
+    hint: "Press evenly from both arms.",
+  },
+  uneven_press: {
+    severity: "medium",
+    hint: "Keep both arms moving symmetrically.",
+  },
+  uneven_drive: {
+    severity: "medium",
+    hint: "Push through both legs evenly.",
+  },
+  too_much_knee_bend: {
+    severity: "medium",
+    hint: "Hinge from your hips more and keep shins controlled.",
+  },
+};
+
+function assessInjuryRisk(posture, zoneCoverageRatio) {
+  const flags = posture?.flags || [];
+  const hints = [];
+  let highRiskFlagCount = 0;
+
+  flags.forEach((flag) => {
+    const rule = FLAG_RISK_RULES[flag];
+    if (!rule) return;
+    if (rule.severity === "high") highRiskFlagCount += 1;
+    if (!hints.includes(rule.hint)) hints.push(rule.hint);
+  });
+
+  if (zoneCoverageRatio < 0.3) {
+    hints.push("Stay centered in frame so tracking remains accurate.");
+  }
+
+  const lowScoreRisk = (posture?.score ?? 100) <= 45;
+  const isRisk = highRiskFlagCount > 0 || lowScoreRisk;
+  const severity =
+    highRiskFlagCount > 0 ? "high" : lowScoreRisk ? "medium" : "none";
+
+  if (!hints.length && isRisk) {
+    hints.push("Slow down and reset your posture before the next rep.");
+  }
+
+  return {
+    isRisk,
+    severity,
+    title:
+      severity === "high"
+        ? "Injury Risk Alert"
+        : severity === "medium"
+          ? "Posture Warning"
+          : "",
+    hints,
+  };
+}
 
 const POSE_CONNECTIONS = [
   [11, 13],
@@ -102,6 +206,10 @@ export default function PoseTracker({ exercise = "squat" }) {
   const sessionStartRef = useRef(null);
   const repCounterRef = useRef(createRepCounter(initialExercise));
   const scoreSamplesRef = useRef([]);
+  const riskStreakRef = useRef(0);
+  const safeStreakRef = useRef(0);
+  const lastBeepAtRef = useRef(0);
+  const audioContextRef = useRef(null);
 
   const [isRunning, setIsRunning] = useState(false);
   const [reps, setReps] = useState(0);
@@ -111,6 +219,40 @@ export default function PoseTracker({ exercise = "squat" }) {
   const [seconds, setSeconds] = useState(0);
   const [selectedGroup, setSelectedGroup] = useState("lower");
   const [selectedExercise, setSelectedExercise] = useState(initialExercise);
+  const [injuryAlert, setInjuryAlert] = useState({
+    active: false,
+    title: "",
+    hints: [],
+    severity: "none",
+  });
+
+  const playAlertBeep = useCallback(() => {
+    try {
+      const now = Date.now();
+      if (now - lastBeepAtRef.current < BEEP_COOLDOWN_MS) return;
+      lastBeepAtRef.current = now;
+
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = audioContextRef.current || new Ctx();
+      audioContextRef.current = ctx;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(820, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(680, ctx.currentTime + 0.16);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.16, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.18);
+    } catch {
+      // Audio can fail on some browsers without prior gesture; keep UI alerts active.
+    }
+  }, []);
 
   useEffect(() => {
     if (isRunning) return;
@@ -174,8 +316,12 @@ export default function PoseTracker({ exercise = "squat" }) {
     setRepHint("Start moving to count reps.");
     setPostureScore(0);
     setSeconds(0);
+    riskStreakRef.current = 0;
+    safeStreakRef.current = 0;
+    lastBeepAtRef.current = 0;
+    setInjuryAlert({ active: false, title: "", hints: [], severity: "none" });
     sessionStartRef.current = Date.now();
-  }, [selectedExercise]);
+  }, [selectedExercise, playAlertBeep]);
 
   useEffect(() => {
     if (isRunning) return;
@@ -221,6 +367,16 @@ export default function PoseTracker({ exercise = "squat" }) {
       if (!results.poseLandmarks?.length) {
         setFeedback("Move into camera frame");
         setRepHint("No landmarks detected yet.");
+        safeStreakRef.current += 1;
+        if (safeStreakRef.current >= INJURY_RELEASE_STREAK) {
+          riskStreakRef.current = 0;
+          setInjuryAlert({
+            active: false,
+            title: "",
+            hints: [],
+            severity: "none",
+          });
+        }
         return;
       }
 
@@ -255,6 +411,34 @@ export default function PoseTracker({ exercise = "squat" }) {
         results.poseLandmarks,
         angles,
       );
+
+      const injuryRisk = assessInjuryRisk(posture, zoneCoverage.ratio);
+      if (injuryRisk.isRisk) {
+        riskStreakRef.current += 1;
+        safeStreakRef.current = 0;
+
+        if (riskStreakRef.current >= INJURY_TRIGGER_STREAK) {
+          setInjuryAlert({
+            active: true,
+            title: injuryRisk.title,
+            hints: injuryRisk.hints,
+            severity: injuryRisk.severity,
+          });
+          playAlertBeep();
+        }
+      } else {
+        safeStreakRef.current += 1;
+        if (safeStreakRef.current >= INJURY_RELEASE_STREAK) {
+          riskStreakRef.current = 0;
+          setInjuryAlert({
+            active: false,
+            title: "",
+            hints: [],
+            severity: "none",
+          });
+        }
+      }
+
       scoreSamplesRef.current.push(posture.score);
       setPostureScore(posture.score);
       setFeedback(`${posture.message}${zoneWarning}`.trim());
@@ -334,12 +518,51 @@ export default function PoseTracker({ exercise = "squat" }) {
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
-      <WebcamCanvas
-        videoRef={videoRef}
-        canvasRef={canvasRef}
-        isRunning={isRunning}
-        onReady={handleCameraReady}
-      />
+      <div
+        style={{
+          position: "relative",
+          borderRadius: 12,
+          border: injuryAlert.active
+            ? "2px solid rgba(255,82,82,0.9)"
+            : "1px solid transparent",
+          boxShadow: injuryAlert.active
+            ? "0 0 0 3px rgba(255,82,82,0.22), 0 0 28px rgba(255,82,82,0.2)"
+            : "none",
+          overflow: "hidden",
+        }}
+      >
+        <WebcamCanvas
+          videoRef={videoRef}
+          canvasRef={canvasRef}
+          isRunning={isRunning}
+          onReady={handleCameraReady}
+        />
+
+        {injuryAlert.active && (
+          <div
+            style={{
+              position: "absolute",
+              left: 12,
+              right: 12,
+              bottom: 12,
+              background: "rgba(120, 12, 18, 0.88)",
+              border: "1px solid rgba(255,120,120,0.8)",
+              borderRadius: 10,
+              padding: "10px 12px",
+              color: "#ffdede",
+            }}
+          >
+            <p style={{ margin: 0, fontWeight: 800, fontSize: 13 }}>
+              {injuryAlert.title}
+            </p>
+            {injuryAlert.hints.slice(0, 2).map((hint) => (
+              <p key={hint} style={{ margin: "6px 0 0", fontSize: 12 }}>
+                - {hint}
+              </p>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div
         style={{
@@ -439,15 +662,21 @@ export default function PoseTracker({ exercise = "squat" }) {
 
       <div
         style={{
-          border: "1px solid #2a2a2a",
+          border: injuryAlert.active
+            ? "1px solid rgba(255,82,82,0.65)"
+            : "1px solid #2a2a2a",
           borderRadius: 10,
           padding: "12px 14px",
-          color: feedback === "Good form" ? "#4caf50" : "#ff9800",
+          color: injuryAlert.active
+            ? "#ff9c9c"
+            : feedback === "Good form"
+              ? "#4caf50"
+              : "#ff9800",
           fontWeight: 700,
-          background: "#111",
+          background: injuryAlert.active ? "#2a0d10" : "#111",
         }}
       >
-        {feedback}
+        {injuryAlert.active ? `${injuryAlert.title}: ${feedback}` : feedback}
       </div>
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
