@@ -33,14 +33,6 @@ const EXPERIENCE_OPTIONS = [
   { value: "advanced", label: "Advanced", desc: "3+ years" },
 ];
 
-const SPLIT_INFO = {
-  "Full Body": { desc: "All muscles every session — best for beginners" },
-  PPL: { desc: "Push / Pull / Legs 3-day cycle" },
-  "PPL x2": { desc: "Push / Pull / Legs — twice per week" },
-  "Upper/Lower": { desc: "Alternating upper and lower body days" },
-  "Bro Split": { desc: "One muscle group per session" },
-};
-
 const ALL_DAYS = [
   "Monday",
   "Tuesday",
@@ -138,7 +130,6 @@ export default function WorkoutPlanner() {
   const [generating, setGenerating] = useState(false);
   const [freq, setFreq] = useState(4);
   const [week, setWeek] = useState(1);
-  const [mlSplit, setMlSplit] = useState(null);
   const [hasPlan, setHasPlan] = useState(false);
   const [experienceLevel, setExperienceLevel] = useState("intermediate");
   const [changePlanOpen, setChangePlanOpen] = useState(false);
@@ -150,15 +141,6 @@ export default function WorkoutPlanner() {
   const [selectedWorkout, setSelectedWorkout] = useState(null);
 
   /* ── fetch ── */
-  const fetchMlSplit = async () => {
-    try {
-      const res = await api.get("/workouts/my-split");
-      if (res.data?.split) setMlSplit(res.data);
-    } catch {
-      /* ignore */
-    }
-  };
-
   const fetchWorkouts = useCallback(async () => {
     setLoading(true);
     try {
@@ -179,9 +161,6 @@ export default function WorkoutPlanner() {
   useEffect(() => {
     fetchWorkouts();
   }, [fetchWorkouts]);
-  useEffect(() => {
-    fetchMlSplit();
-  }, []);
 
   /* ── generate ── */
   const generate = async (
@@ -624,113 +603,6 @@ function SectionLabel({ icon, label, color }) {
   );
 }
 
-function SimpleDetailRow({ name, right, rightColor }) {
-  return (
-    <div
-      style={{
-        background: "#111",
-        borderRadius: 8,
-        padding: "12px 16px",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        border: "1px solid #1e1e1e",
-      }}
-    >
-      <p style={{ fontSize: 14, color: "#e0e0e0" }}>{name}</p>
-      <span
-        style={{
-          fontSize: 13,
-          color: rightColor || "#9e9e9e",
-          fontWeight: 600,
-        }}
-      >
-        {right}
-      </span>
-    </div>
-  );
-}
-
-function ExerciseDetailCard({ index, ex }) {
-  return (
-    <div
-      style={{
-        background: "#111",
-        border: "1px solid #1e1e1e",
-        borderRadius: 10,
-        padding: "14px 16px",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 12,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 12,
-            flex: 1,
-          }}
-        >
-          <span
-            style={{
-              width: 26,
-              height: 26,
-              borderRadius: "50%",
-              background: "rgba(212,175,55,0.1)",
-              border: "1px solid rgba(212,175,55,0.25)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 11,
-              fontWeight: 700,
-              color: "#D4AF37",
-              flexShrink: 0,
-              marginTop: 1,
-            }}
-          >
-            {index + 1}
-          </span>
-          <div>
-            <p
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: "#e0e0e0",
-                marginBottom: 4,
-              }}
-            >
-              {ex.name}
-            </p>
-            <p style={{ fontSize: 12, color: "#616161" }}>
-              {ex.muscle_group
-                ? ex.muscle_group.charAt(0).toUpperCase() +
-                  ex.muscle_group.slice(1)
-                : ""}
-              {ex.equipment && ex.equipment !== "none"
-                ? ` · ${ex.equipment.replace(/_/g, " ")}`
-                : ""}
-            </p>
-          </div>
-        </div>
-        <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <p style={{ fontSize: 15, fontWeight: 800, color: "#D4AF37" }}>
-            {ex.sets} × {ex.reps}
-          </p>
-          <p style={{ fontSize: 11, color: "#616161", marginTop: 2 }}>
-            {ex.rest_seconds}s rest
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─────────────────────────────────────────────────────────────────
    WorkoutSessionScreen — unified workout day view with set logging,
    anti-cheat timer, and inline rest suggestions
@@ -806,7 +678,6 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
 
   /* ── anti-cheat refs ── */
   const exerciseStartedAt = useRef({}); // { [exIdx]: timestamp }
-  const lastSetDoneAt = useRef({}); // { [exIdx]: timestamp }
   const rapidTimestamps = useRef([]); // timestamps of recent set completions (any exercise)
 
   const [completing, setCompleting] = useState(false);

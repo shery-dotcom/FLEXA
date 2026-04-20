@@ -106,7 +106,7 @@ export default function Profile() {
         weight_kg: p.weight_kg || "",
       });
     }
-  }, [user]);
+  }, [p]);
 
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
