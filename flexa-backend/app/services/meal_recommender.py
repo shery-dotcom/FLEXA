@@ -1,5 +1,5 @@
-"""
-Module 3 – Meal Recommendation Engine
+﻿"""
+Module 3 â€“ Meal Recommendation Engine
 Strategy: ML-powered content-based filtering.
   1. StandardScaler normalises the 5-dimensional macro feature space
      [calories, protein_g, carbs_g, fat_g, fiber_g] across all 8 000+ foods.
@@ -26,7 +26,7 @@ from app.ml.meal_recommender_ml import get_recommender
 
 logger = logging.getLogger(__name__)
 
-# ── Food name / ingredient / allergen cleaning ─────────────────────────────
+# â”€â”€ Food name / ingredient / allergen cleaning â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 _LEADING_NUM_RE   = re.compile(r"^\d[\d\s\-]*\b\s*")
 _MEASUREMENT_UNIT_RE = re.compile(
     r"^(?:tablespoon|tablespoons|tbsp|t\.|teaspoon|tsp|t\s|cup|cups|c\.|pound|pounds|lb|lbs|ounce|ounces|oz|gram|grams|g\.|kilogram|kg|milliliter|ml|liter|l\.|minute|minutes|min\.|hour|hours|hr\.?)\s+",
@@ -100,14 +100,14 @@ def _clean_allergens(raw: str) -> str:
 DIET_TIPS = [
     "Drink at least 8 glasses of water daily.",
     "Eat slowly and chew thoroughly to aid digestion.",
-    "Front-load calories — eat larger meals earlier in the day.",
+    "Front-load calories â€” eat larger meals earlier in the day.",
     "Add green vegetables to every meal for micronutrients.",
     "Avoid processed sugar; opt for natural sweeteners like dates.",
     "Protein at each meal helps maintain satiety and muscle mass.",
-    "Do not skip breakfast — it kick-starts your metabolism.",
-    "Sleep 7–8 hours; poor sleep increases hunger hormones.",
+    "Do not skip breakfast â€” it kick-starts your metabolism.",
+    "Sleep 7â€“8 hours; poor sleep increases hunger hormones.",
     "Plan your meals the night before to avoid impulsive choices.",
-    "Track consistency over perfection — 80/20 rule works.",
+    "Track consistency over perfection â€” 80/20 rule works.",
 ]
 
 # Meal slot distribution as ordered list of (category, calorie_fraction)
@@ -128,13 +128,49 @@ SLOT_ORDER = ["breakfast", "lunch", "dinner", "snack"]
 # Snacks stay at 1 item.
 _SLOT_ITEM_COUNTS = {"breakfast": 2, "lunch": 2, "dinner": 2, "snack": 1}
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Built-in food library — used when the DB is empty.
+# Portion bounds tuned for practical one-day intake.
+_SLOT_QTY_BOUNDS_G = {
+     "breakfast": (80.0, 250.0),
+     "lunch": (110.0, 320.0),
+     "dinner": (100.0, 300.0),
+     "snack": (40.0, 160.0),
+}
+
+
+def _clamp_quantity_by_context(slot: str, food, raw_qty: float) -> float:
+     min_q, max_q = _SLOT_QTY_BOUNDS_G.get(slot, (80.0, 300.0))
+
+     # Base clamp by slot.
+     qty = max(min_q, min(max_q, raw_qty))
+
+     # Use serving size as an additional realism guardrail.
+     serving = float(getattr(food, "serving_size_g", 100.0) or 100.0)
+     mult_caps = {
+          "breakfast": 2.0,
+          "lunch": 2.4,
+          "dinner": 2.2,
+          "snack": 1.6,
+     }
+     qty = min(qty, serving * mult_caps.get(slot, 2.2))
+
+     # Energy-dense foods should have lower gram quantities.
+     kcal_100 = float(getattr(food, "calories", 0.0) or 0.0)
+     if kcal_100 >= 430:
+          qty = min(qty, 150.0)
+     elif kcal_100 >= 330:
+          qty = min(qty, 190.0)
+     elif kcal_100 >= 260:
+          qty = min(qty, 230.0)
+
+     return round(max(40.0, qty), 1)
+
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# Built-in food library â€” used when the DB is empty.
 # Fields per entry: food_name, calories per 100g, protein_g, carbs_g, fat_g,
 #                   meal_type, diet_type, region, allergens, ingredients
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 BUILTIN_FOODS = [
-    # ── Breakfast — Pakistani ────────────────────────────────────────────────
+    # â”€â”€ Breakfast â€” Pakistani â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     dict(food_name="Aloo Paratha", calories=260, protein_g=6, carbs_g=40, fat_g=10,
          meal_type="breakfast", diet_type="vegetarian", region="pakistani", allergens="gluten",
          ingredients="whole wheat flour, potato, cumin, green chilli, ghee"),
@@ -154,7 +190,7 @@ BUILTIN_FOODS = [
          meal_type="breakfast", diet_type="non-vegetarian", region="pakistani", allergens="",
          ingredients="goat trotters, whole spices, onion, ginger, garlic, coriander"),
 
-    # ── Breakfast — Continental ──────────────────────────────────────────────
+    # â”€â”€ Breakfast â€” Continental â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     dict(food_name="Egg Omelette with Vegetables", calories=155, protein_g=11, carbs_g=3, fat_g=11,
          meal_type="breakfast", diet_type="non-vegetarian", region="general", allergens="eggs",
          ingredients="eggs, bell pepper, onion, olive oil, salt"),
@@ -174,7 +210,7 @@ BUILTIN_FOODS = [
          meal_type="breakfast", diet_type="vegetarian", region="general", allergens="dairy",
          ingredients="mixed seasonal fruit, cottage cheese, honey, mint"),
 
-    # ── Breakfast — Asian ────────────────────────────────────────────────────
+    # â”€â”€ Breakfast â€” Asian â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     dict(food_name="Congee with Soft-Boiled Egg", calories=180, protein_g=8, carbs_g=30, fat_g=4,
          meal_type="breakfast", diet_type="non-vegetarian", region="asian", allergens="eggs",
          ingredients="jasmine rice, soft-boiled egg, ginger, spring onion, soy sauce, sesame oil"),
@@ -185,7 +221,7 @@ BUILTIN_FOODS = [
          meal_type="breakfast", diet_type="vegetarian", region="asian", allergens="eggs,soy",
          ingredients="eggs, spring onion, mushroom, soy sauce, sesame oil"),
 
-    # ── Breakfast — Mediterranean ────────────────────────────────────────────
+    # â”€â”€ Breakfast â€” Mediterranean â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     dict(food_name="Shakshuka (Eggs in Tomato Sauce)", calories=200, protein_g=12, carbs_g=14, fat_g=11,
          meal_type="breakfast", diet_type="vegetarian", region="mediterranean", allergens="eggs",
          ingredients="eggs, tomatoes, bell pepper, onion, garlic, cumin, paprika, olive oil"),
@@ -196,7 +232,7 @@ BUILTIN_FOODS = [
          meal_type="breakfast", diet_type="vegetarian", region="mediterranean", allergens="dairy",
          ingredients="strained yogurt, olive oil, za'atar, olives, cucumber, tomato"),
 
-    # ── Lunch — Pakistani ────────────────────────────────────────────────────
+    # â”€â”€ Lunch â€” Pakistani â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     dict(food_name="Chicken Biryani", calories=350, protein_g=22, carbs_g=45, fat_g=9,
          meal_type="lunch", diet_type="non-vegetarian", region="pakistani", allergens="",
          ingredients="basmati rice, chicken, yogurt, whole spices, saffron, onion, ghee"),
@@ -222,7 +258,7 @@ BUILTIN_FOODS = [
          meal_type="lunch", diet_type="non-vegetarian", region="pakistani", allergens="",
          ingredients="mutton, mustard greens, spinach, garlic, ginger, butter, spices"),
 
-    # ── Lunch — Continental ──────────────────────────────────────────────────
+    # â”€â”€ Lunch â€” Continental â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     dict(food_name="Grilled Chicken Salad", calories=280, protein_g=32, carbs_g=10, fat_g=12,
          meal_type="lunch", diet_type="non-vegetarian", region="general", allergens="",
          ingredients="grilled chicken breast, lettuce, tomato, cucumber, olive oil, lemon"),
@@ -242,7 +278,7 @@ BUILTIN_FOODS = [
          meal_type="lunch", diet_type="vegetarian", region="general", allergens="gluten,dairy",
          ingredients="sourdough bread, cheddar cheese, tomato, butter, dijon mustard"),
 
-    # ── Lunch — Asian ────────────────────────────────────────────────────────
+    # â”€â”€ Lunch â€” Asian â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     dict(food_name="Chicken Fried Rice", calories=340, protein_g=20, carbs_g=48, fat_g=9,
          meal_type="lunch", diet_type="non-vegetarian", region="asian", allergens="soy,eggs",
          ingredients="jasmine rice, chicken, egg, spring onion, carrot, peas, soy sauce, sesame oil"),
@@ -259,7 +295,7 @@ BUILTIN_FOODS = [
          meal_type="lunch", diet_type="vegan", region="asian", allergens="soy",
          ingredients="steamed rice, tofu, spinach, carrot, zucchini, mushroom, gochujang, sesame oil"),
 
-    # ── Lunch — Mediterranean ────────────────────────────────────────────────
+    # â”€â”€ Lunch â€” Mediterranean â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     dict(food_name="Falafel Wrap with Tzatziki", calories=420, protein_g=16, carbs_g=52, fat_g=16,
          meal_type="lunch", diet_type="vegetarian", region="mediterranean", allergens="gluten,dairy",
          ingredients="falafel, pita bread, tzatziki, lettuce, tomato, cucumber, red onion"),
@@ -273,7 +309,7 @@ BUILTIN_FOODS = [
          meal_type="lunch", diet_type="non-vegetarian", region="mediterranean", allergens="fish,eggs",
          ingredients="tuna, green beans, boiled egg, olives, cherry tomatoes, capers, olive oil"),
 
-    # ── Dinner — Pakistani ───────────────────────────────────────────────────
+    # â”€â”€ Dinner â€” Pakistani â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     dict(food_name="Chicken Qorma", calories=340, protein_g=26, carbs_g=10, fat_g=22,
          meal_type="dinner", diet_type="non-vegetarian", region="pakistani", allergens="dairy,nuts",
          ingredients="chicken, yogurt, fried onion, almonds, cream, whole spices, oil"),
@@ -296,7 +332,7 @@ BUILTIN_FOODS = [
          meal_type="dinner", diet_type="vegetarian", region="pakistani", allergens="dairy",
          ingredients="black lentils, kidney beans, butter, cream, tomato, garlic, ginger, spices"),
 
-    # ── Dinner — Continental ─────────────────────────────────────────────────
+    # â”€â”€ Dinner â€” Continental â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     dict(food_name="Baked Salmon with Steamed Vegetables", calories=360, protein_g=38, carbs_g=12, fat_g=18,
          meal_type="dinner", diet_type="non-vegetarian", region="general", allergens="fish",
          ingredients="salmon fillet, broccoli, carrot, olive oil, lemon, garlic, herbs"),
@@ -316,7 +352,7 @@ BUILTIN_FOODS = [
          meal_type="dinner", diet_type="non-vegetarian", region="general", allergens="",
          ingredients="chicken thighs, potato, carrot, onion, olive oil, rosemary, garlic"),
 
-    # ── Dinner — Asian ───────────────────────────────────────────────────────
+    # â”€â”€ Dinner â€” Asian â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     dict(food_name="Honey Garlic Salmon with Bok Choy", calories=340, protein_g=34, carbs_g=18, fat_g=14,
          meal_type="dinner", diet_type="non-vegetarian", region="asian", allergens="fish,soy",
          ingredients="salmon, honey, garlic, soy sauce, bok choy, sesame oil, steamed rice"),
@@ -330,7 +366,7 @@ BUILTIN_FOODS = [
          meal_type="dinner", diet_type="non-vegetarian", region="asian", allergens="soy",
          ingredients="ground chicken, thai basil, chilli, garlic, oyster sauce, soy sauce, steamed rice"),
 
-    # ── Dinner — Mediterranean ───────────────────────────────────────────────
+    # â”€â”€ Dinner â€” Mediterranean â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     dict(food_name="Baked Sea Bass with Herbs", calories=290, protein_g=32, carbs_g=4, fat_g=16,
          meal_type="dinner", diet_type="non-vegetarian", region="mediterranean", allergens="fish",
          ingredients="sea bass, lemon, olive oil, garlic, thyme, rosemary, capers"),
@@ -344,7 +380,7 @@ BUILTIN_FOODS = [
          meal_type="dinner", diet_type="vegetarian", region="mediterranean", allergens="dairy",
          ingredients="halloumi cheese, zucchini, eggplant, cherry tomatoes, olive oil, herbs"),
 
-    # ── Snacks — General / Pakistani ─────────────────────────────────────────
+    # â”€â”€ Snacks â€” General / Pakistani â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     dict(food_name="Mixed Nuts", calories=600, protein_g=20, carbs_g=20, fat_g=52,
          meal_type="snack", diet_type="vegan", region="general", allergens="nuts",
          ingredients="almonds, walnuts, cashews, pistachios"),
@@ -385,7 +421,7 @@ BUILTIN_FOODS = [
          meal_type="snack", diet_type="vegetarian", region="mediterranean", allergens="dairy,gluten",
          ingredients="strained yogurt, cucumber, garlic, dill, olive oil, pita chips"),
 
-    # ── Multi-purpose ─────────────────────────────────────────────────────────
+    # â”€â”€ Multi-purpose â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     dict(food_name="Brown Rice with Grilled Chicken", calories=380, protein_g=32, carbs_g=44, fat_g=8,
          meal_type="lunch", diet_type="non-vegetarian", region="general", allergens="",
          ingredients="brown rice, chicken breast, olive oil, herbs, lemon"),
@@ -445,27 +481,28 @@ async def _ensure_seeded(db: AsyncSession) -> bool:
     return False
 
 
-def _scale_meal(food, target_calories: float) -> MealSuggestion:
-    if food.calories and food.calories > 0:
-        raw_qty = (target_calories / food.calories) * 100
-    else:
-        raw_qty = 200.0
-    qty   = round(min(600.0, max(80.0, raw_qty)), 1)
-    scale = qty / 100.0
+def _scale_meal(food, target_calories: float, slot: str) -> MealSuggestion:
+     if food.calories and food.calories > 0:
+          raw_qty = (target_calories / food.calories) * 100
+     else:
+          raw_qty = 160.0
 
-    return MealSuggestion(
-        id         = food.id or 0,
-        food_name  = food.food_name,
-        meal_type  = food.meal_type,
-        quantity_g = qty,
-        calories   = round(food.calories   * scale, 1),
-        protein_g  = round(food.protein_g  * scale, 1),
-        carbs_g    = round(food.carbs_g    * scale, 1),
-        fat_g      = round(food.fat_g      * scale, 1),
-        cuisine    = getattr(food, "cuisine", None) or "general",
-        ingredients= getattr(food, "ingredients", None) or "",
-        allergens  = getattr(food, "allergens", None) or "",
-    )
+     qty = _clamp_quantity_by_context(slot, food, raw_qty)
+     scale = qty / 100.0
+
+     return MealSuggestion(
+          id=food.id or 0,
+          food_name=food.food_name,
+          meal_type=food.meal_type,
+          quantity_g=qty,
+          calories=round(food.calories * scale, 1),
+          protein_g=round(food.protein_g * scale, 1),
+          carbs_g=round(food.carbs_g * scale, 1),
+          fat_g=round(food.fat_g * scale, 1),
+          cuisine=getattr(food, "cuisine", None) or "general",
+          ingredients=getattr(food, "ingredients", None) or "",
+          allergens=getattr(food, "allergens", None) or "",
+     )
 
 
 def _food_to_dict(food: NutritionFood) -> dict:
@@ -507,7 +544,7 @@ async def _ensure_ml_fitted(db: AsyncSession) -> None:
     if foods:
         db_dicts = [_food_to_dict(f) for f in foods]
         # Merge BUILTIN_FOODS to ensure rich variety for all regions.
-        # Deduplicate by lowercase name — DB entries take precedence.
+        # Deduplicate by lowercase name â€” DB entries take precedence.
         existing_names = {d["food_name"].lower() for d in db_dicts}
         extras = [
             f for f in BUILTIN_FOODS
@@ -520,13 +557,13 @@ async def _ensure_ml_fitted(db: AsyncSession) -> None:
             len(db_dicts), len(extras), len(merged),
         )
     else:
-        # DB empty — fit on built-in library so model is still usable
+        # DB empty â€” fit on built-in library so model is still usable
         rec.fit(BUILTIN_FOODS)
-        logger.warning("DB empty — ML recommender fitted on built-in library (%d items).", len(BUILTIN_FOODS))
+        logger.warning("DB empty â€” ML recommender fitted on built-in library (%d items).", len(BUILTIN_FOODS))
 
 
 def _filter_builtin(meal_type: str, diet_types: List[str], allergies: List[str], region: str):
-    """Pure-Python hard-filter over BUILTIN_FOODS — used as last-resort fallback."""
+    """Pure-Python hard-filter over BUILTIN_FOODS â€” used as last-resort fallback."""
     compatible_diets = {"any"} | set(diet_types)
     if "non-vegetarian" in diet_types:
         compatible_diets.update({"vegetarian", "vegan"})
@@ -584,16 +621,28 @@ def _pick_one_food(
     best_idx = novel_idx if novel_idx else ranked_idx
 
     # Protein-density preference: applied only to anchor items in main meals.
-    # Threshold: ≥5 g protein per 100 kcal filters out pure-bread/grain items.
-    # Falls back gracefully when all candidates are low-protein.
+    # Threshold: >=5 g protein per 100 kcal filters out pure bread/grain picks.
     if apply_protein_filter and slot in ("breakfast", "lunch", "dinner") and best_idx:
         protein_ok = [
-            i for i in best_idx
+            i
+            for i in best_idx
             if (rec.get_food(i).get("protein_g") or 0)
-            / max(rec.get_food(i).get("calories") or 1, 1) * 100 >= 5.0
+            / max(rec.get_food(i).get("calories") or 1, 1)
+            * 100
+            >= 5.0
         ]
         if protein_ok:
-            best_idx = protein_ok   # prefer protein-bearing anchor items
+            best_idx = protein_ok
+
+    # Avoid very low calorie-density picks in main meals because they force
+    # unrealistic gram quantities to satisfy slot-level calorie targets.
+    if slot in ("breakfast", "lunch", "dinner") and best_idx:
+        min_kcal_100 = 120.0 if slot == "breakfast" else 95.0
+        dense_enough = [
+            i for i in best_idx if (rec.get_food(i).get("calories") or 0) >= min_kcal_100
+        ]
+        if dense_enough:
+            best_idx = dense_enough
 
     if best_idx:
         pick_from = best_idx[:5]
@@ -673,7 +722,7 @@ async def generate_meal_plan(
         slot_foods = []  # Track foods picked in this slot
         
         for item_idx in range(n_items):
-            # Anchor (first) item: protein filter on → picks protein-rich dish.
+            # Anchor (first) item: protein filter on â†’ picks protein-rich dish.
             # Complement (second) item: check if first was bread/carb; if so, apply protein filter
             # to avoid naan+roti or rice+bread combos.
             first_is_bread = False
@@ -692,7 +741,7 @@ async def generate_meal_plan(
             )
             chosen_names.add(food_obj.food_name)
             slot_foods.append(food_obj)
-            item = _scale_meal(food_obj, per_cal)
+            item = _scale_meal(food_obj, per_cal, slot)
             plan[slot].append(item)
             total_cal  += item.calories
             total_pro  += item.protein_g

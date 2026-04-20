@@ -52,6 +52,20 @@ ASIAN_SUBREGIONS = frozenset({"asian", "east_asian", "chinese", "japanese", "tha
 # Mediterranean sub-types
 MEDITERRANEAN_SUBREGIONS = frozenset({"mediterranean", "middle_eastern", "greek", "italian"})
 
+# Heuristic tokens for deciding whether a generic/"any" food is breakfast-appropriate.
+BREAKFAST_POSITIVE_TOKENS = frozenset({
+    "breakfast", "egg", "omelette", "omelet", "oat", "oatmeal", "porridge",
+    "toast", "yogurt", "labneh", "fruit", "banana", "berries", "granola",
+    "pancake", "waffle", "shakshuka", "paratha", "halwa", "puri", "nihari",
+    "paye", "chana", "lassi", "smoothie", "cottage cheese",
+})
+
+BREAKFAST_NEGATIVE_TOKENS = frozenset({
+    "biryani", "pulao", "karahi", "korma", "curry", "steak", "burger",
+    "pizza", "pasta", "lasagna", "noodle", "ramen", "taco", "fajita",
+    "shawarma", "bbq", "barbecue", "fried rice", "sandwich", "wings",
+})
+
 
 class MealRecommenderML:
     """
@@ -287,6 +301,20 @@ class MealRecommenderML:
         return compatible
 
     @staticmethod
+    def _looks_breakfast_compatible(food: dict) -> bool:
+        name = (food.get("food_name") or "").lower()
+        ingredients = (food.get("ingredients") or "").lower()
+        combined = f"{name} {ingredients}"
+
+        if any(tok in combined for tok in BREAKFAST_NEGATIVE_TOKENS):
+            return False
+        if any(tok in combined for tok in BREAKFAST_POSITIVE_TOKENS):
+            return True
+
+        # If unknown, avoid forcing ambiguous all-day foods into breakfast.
+        return False
+
+    @staticmethod
     def _passes_hard_filter(
         food: dict,
         meal_type: str,
@@ -297,6 +325,11 @@ class MealRecommenderML:
         food_mt = (food.get("meal_type") or "any").lower()
         if food_mt not in (meal_type.lower(), "any"):
             return False
+
+        # Tighten breakfast quality: generic "any" foods must look breakfast-like.
+        if meal_type.lower() == "breakfast" and food_mt == "any":
+            if not MealRecommenderML._looks_breakfast_compatible(food):
+                return False
 
         # diet_type
         food_dt = (food.get("diet_type") or "any").lower()
