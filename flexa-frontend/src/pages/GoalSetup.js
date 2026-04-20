@@ -217,12 +217,6 @@ export default function GoalSetup() {
 }
 
 function AIReportCard({ report, loading, onAdoptGoal, onContinue }) {
-  const GOAL_DESCRIPTIONS = {
-    bulking: "Build muscle mass with a calorie surplus",
-    cutting: "Lose fat while preserving lean muscle",
-    recomp: "Simultaneously build muscle and burn fat",
-  };
-
   return (
     <div className="card-gold-border">
       <div
@@ -412,5 +406,3 @@ function AIReportCard({ report, loading, onAdoptGoal, onContinue }) {
     </div>
   );
 }
-
-

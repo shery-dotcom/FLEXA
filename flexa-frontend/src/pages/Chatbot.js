@@ -220,7 +220,7 @@ export default function Chatbot() {
         inputRef.current?.focus();
       }
     },
-    [input, isTyping, user],
+    [input, isTyping],
   );
 
   const handleKeyDown = (e) => {

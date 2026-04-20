@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
 import toast from "react-hot-toast";
@@ -55,7 +54,6 @@ const ACTIVITY_OPTIONS = [
 
 export default function Profile() {
   const { user, refreshUser } = useAuth();
-  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [goal, setGoal] = useState(null);
@@ -1095,5 +1093,3 @@ function ProfileDetailRow({ label, value }) {
     </div>
   );
 }
-
-

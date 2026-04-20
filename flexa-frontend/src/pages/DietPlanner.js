@@ -111,26 +111,6 @@ function StepDot({ label, idx, active, done }) {
   );
 }
 
-function MacroPill({ label, value, unit, color }) {
-  return (
-    <div
-      style={{
-        background: "rgba(255,255,255,0.04)",
-        border: `1px solid ${color}33`,
-        borderRadius: 12,
-        padding: "14px 20px",
-        textAlign: "center",
-        flex: 1,
-      }}
-    >
-      <div style={{ fontSize: 24, fontWeight: 800, color }}>{value}</div>
-      <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
-        {label} ({unit})
-      </div>
-    </div>
-  );
-}
-
 // Parse Python list-repr ingredients string → clean comma-separated string
 function parseIngredients(raw) {
   if (!raw || ["0.0", "0", "nan", "None"].includes(String(raw).trim()))
@@ -1641,5 +1621,3 @@ export default function DietPlanner() {
     </div>
   );
 }
-
-
