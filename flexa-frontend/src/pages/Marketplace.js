@@ -9,6 +9,8 @@ const FILTERS = [
   { value: "fitness_trainer", label: "Fitness" },
 ];
 
+const STATIC_LOCATION_LABEL = "G-13 Vostro World";
+
 export default function Marketplace() {
   const location = useLocation();
   const [loading, setLoading] = useState(true);
@@ -276,7 +278,7 @@ export default function Marketplace() {
                 }}
               >
                 <Badge label={formatSpecialization(p.specialization)} />
-                <LocationBadge location={p.location} />
+                <Badge label={`Location: ${STATIC_LOCATION_LABEL}`} />
                 <Badge label={`Rating: ${p.average_rating ?? "-"}`} />
                 <Badge label={`${p.total_sessions_completed ?? 0} sessions`} />
               </div>
@@ -376,7 +378,7 @@ export default function Marketplace() {
                 </Section>
 
                 <Section title="Location">
-                  <LocationBadge location={selectedProfessional.location} />
+                  <Badge label={`Location: ${STATIC_LOCATION_LABEL}`} />
                 </Section>
 
                 <Section title="Available Slots">
@@ -469,76 +471,6 @@ function Badge({ label }) {
     >
       {label}
     </span>
-  );
-}
-
-function LocationBadge({ location }) {
-  if (!location) {
-    return <Badge label="Location: -" />;
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => openGoogleMapsLocation(location)}
-      title="Open live directions in Google Maps"
-      style={{
-        border: "1px solid #2a2a2a",
-        borderRadius: 999,
-        padding: 0,
-        color: "#d0d0d0",
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        background: "transparent",
-        cursor: "pointer",
-      }}
-    >
-      <span
-        style={{
-          padding: "4px 9px",
-          color: "#d0d0d0",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-        }}
-      >
-        <span>Location: {location}</span>
-        <span style={{ color: "#D4AF37", fontWeight: 700 }}>Live Map</span>
-      </span>
-    </button>
-  );
-}
-
-function getGoogleMapsSearchUrl(location) {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    location || "",
-  )}`;
-}
-
-function openGoogleMapsLocation(location) {
-  const destination = encodeURIComponent(location || "");
-  const fallbackUrl = getGoogleMapsSearchUrl(location);
-
-  if (!navigator.geolocation) {
-    window.open(fallbackUrl, "_blank", "noopener,noreferrer");
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      const origin = `${position.coords.latitude},${position.coords.longitude}`;
-      const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${destination}&travelmode=driving`;
-      window.open(directionsUrl, "_blank", "noopener,noreferrer");
-    },
-    () => {
-      window.open(fallbackUrl, "_blank", "noopener,noreferrer");
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 8000,
-      maximumAge: 60000,
-    },
   );
 }
 
