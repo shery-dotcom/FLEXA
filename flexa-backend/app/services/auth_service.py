@@ -20,6 +20,31 @@ _reset_tokens: dict = {}
 class AuthService:
 
     @staticmethod
+    async def _find_user_for_login(db: AsyncSession, identifier: str) -> User | None:
+        normalized_identifier = (identifier or "").strip().lower()
+        if not normalized_identifier:
+            return None
+
+        lookup_attempts = [
+            select(User).where(func.lower(User.email) == normalized_identifier).limit(1),
+            select(User)
+            .where(func.lower(func.split_part(User.email, "@", 1)) == normalized_identifier)
+            .limit(1),
+            select(User)
+            .join(Profile, Profile.user_id == User.id)
+            .where(func.lower(Profile.username) == normalized_identifier)
+            .order_by(User.created_at.desc())
+            .limit(1),
+        ]
+
+        for query in lookup_attempts:
+            result = await db.execute(query)
+            user = result.scalars().first()
+            if user:
+                return user
+        return None
+
+    @staticmethod
     async def register(db: AsyncSession, data: RegisterRequest) -> dict:
         email = str(data.email).strip().lower()
         phone = (str(data.phone).strip() if data.phone else None) or None
@@ -53,7 +78,7 @@ class AuthService:
             if "users_phone_key" in error_text or "phone" in error_text:
                 raise HTTPException(status_code=400, detail="Phone number already registered")
             if "users_email_key" in error_text or "email" in error_text:
-                raise HTTPException(status_code=400, detail="Email already registered")
+                return {"message": "Email already registered. Please sign in instead."}
             raise HTTPException(
                 status_code=400,
                 detail="Registration failed due to invalid or duplicate data",
@@ -62,23 +87,7 @@ class AuthService:
 
     @staticmethod
     async def login(db: AsyncSession, data: LoginRequest) -> TokenResponse:
-        raw_identifier = (data.identifier or "").strip()
-        normalized_identifier = raw_identifier.lower()
-
-        # Supports full email, email local-part, and profile username.
-        result = await db.execute(
-            select(User)
-            .outerjoin(Profile, Profile.user_id == User.id)
-            .where(
-                or_(
-                    func.lower(User.email) == normalized_identifier,
-                    func.lower(func.split_part(User.email, "@", 1))
-                    == normalized_identifier,
-                    func.lower(Profile.username) == normalized_identifier,
-                )
-            )
-        )
-        user = result.scalar_one_or_none()
+        user = await AuthService._find_user_for_login(db, data.identifier)
 
         if not user:
             raise HTTPException(status_code=401, detail="Invalid credentials")

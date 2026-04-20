@@ -73,13 +73,22 @@ export function AuthProvider({ children }) {
     }
 
     // Refresh full user data in the background.
-    fetchMe();
+    await fetchMe();
     return res.data;
   };
 
   const register = async (email, password, phone) => {
-    const res = await api.post("/auth/register", { email, password, phone });
-    return res.data;
+    try {
+      const res = await api.post("/auth/register", { email, password, phone });
+      return res.data;
+    } catch (err) {
+      const detail = String(err?.response?.data?.detail || "").toLowerCase();
+      if (detail.includes("already registered")) {
+        await login(email, password);
+        return { message: "Account already existed. Signed you in instead." };
+      }
+      throw err;
+    }
   };
 
   const logout = async () => {
