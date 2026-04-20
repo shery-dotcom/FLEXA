@@ -67,7 +67,7 @@ Use JWT Bearer tokens. Get tokens via `/api/v1/auth/login`.
     # CORS - allow React frontend
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[settings.FRONTEND_URL, "http://localhost:3000", "http://localhost:5173"],
+        allow_origins=settings.allowed_origins_list,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

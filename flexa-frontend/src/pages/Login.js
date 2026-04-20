@@ -3,6 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1";
+const GOOGLE_AUTH_URL = `${API_BASE_URL.replace(/\/$/, "")}/auth/google`;
+
 export default function Login() {
   const [form, setForm] = useState({ identifier: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -84,9 +88,7 @@ export default function Login() {
         <button
           className="btn btn-ghost"
           style={{ width: "100%" }}
-          onClick={() =>
-            (window.location.href = "http://localhost:8000/api/v1/auth/google")
-          }
+          onClick={() => (window.location.href = GOOGLE_AUTH_URL)}
         >
           <GoogleIcon /> Continue with Google
         </button>
@@ -131,5 +133,3 @@ function GoogleIcon() {
     </svg>
   );
 }
-
-

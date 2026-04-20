@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     # Frontend
     FRONTEND_URL: str = "http://localhost:3000"
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
 
     # Stripe test mode
     STRIPE_SECRET_KEY: Optional[str] = None
@@ -45,6 +46,11 @@ class Settings(BaseSettings):
     class Config:
         env_file = str(_ENV_FILE)
         case_sensitive = True
+
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        origins = [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+        return [origin for origin in origins if origin]
 
 
 settings = Settings()

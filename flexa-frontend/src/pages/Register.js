@@ -4,6 +4,10 @@ import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import { FiCamera } from "react-icons/fi";
 
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1";
+const GOOGLE_AUTH_URL = `${API_BASE_URL.replace(/\/$/, "")}/auth/google`;
+
 export default function Register() {
   const [form, setForm] = useState({ email: "", password: "", phone: "" });
   const [loading, setLoading] = useState(false);
@@ -202,9 +206,7 @@ export default function Register() {
         <button
           className="btn btn-ghost"
           style={{ width: "100%" }}
-          onClick={() =>
-            (window.location.href = "http://localhost:8000/api/v1/auth/google")
-          }
+          onClick={() => (window.location.href = GOOGLE_AUTH_URL)}
         >
           <svg
             width="18"
@@ -249,5 +251,3 @@ export default function Register() {
     </div>
   );
 }
-
-

@@ -321,7 +321,7 @@ export default function PoseTracker({ exercise = "squat" }) {
     lastBeepAtRef.current = 0;
     setInjuryAlert({ active: false, title: "", hints: [], severity: "none" });
     sessionStartRef.current = Date.now();
-  }, [selectedExercise, playAlertBeep]);
+  }, [selectedExercise]);
 
   useEffect(() => {
     if (isRunning) return;
@@ -449,7 +449,7 @@ export default function PoseTracker({ exercise = "squat" }) {
     return () => {
       poseRef.current = null;
     };
-  }, [selectedExercise]);
+  }, [selectedExercise, playAlertBeep]);
 
   const frameLoop = useCallback(async () => {
     if (!isRunning) return;
