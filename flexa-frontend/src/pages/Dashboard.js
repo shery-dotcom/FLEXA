@@ -277,34 +277,35 @@ export default function Dashboard() {
       </div>
     );
 
-  if (!data)
-    return (
-      <div style={{ textAlign: "center", padding: "80px 24px" }}>
-        <h2 style={{ color: "#e0e0e0" }}>
-          Complete your{" "}
-          <span
-            className="text-gold"
-            style={{ cursor: "pointer" }}
-            onClick={() => navigate("/profile-setup")}
-          >
-            profile
-          </span>{" "}
-          to access the dashboard.
-        </h2>
-      </div>
-    );
+  const safeData = data || {
+    user_name:
+      user?.profile?.username || user?.email?.split("@")[0] || "Athlete",
+    bmi: user?.profile?.bmi ?? null,
+    bmi_category: user?.profile?.bmi_category ?? null,
+    current_goal: "maintaining",
+    activity_level: "moderate",
+    daily_calories: null,
+    target_calories: null,
+    has_workout_plan: false,
+    motivation_message: "Complete your setup to unlock personalized insights.",
+    motivation_score: 0,
+    today_tasks: [],
+    milestones: [],
+    weekly_sessions: 0,
+    total_workouts_completed: 0,
+  };
 
   /* -- Calorie computation (backend value or client fallback) --- */
   const profile = user?.profile;
-  const goalType = data?.current_goal || "maintaining";
-  const actLevel = data?.activity_level || "moderate";
+  const goalType = safeData.current_goal || "maintaining";
+  const actLevel = safeData.activity_level || "moderate";
   const [fallbackDaily, fallbackTarget] = computeCalories(
     profile,
     goalType,
     actLevel,
   );
-  const dailyCalories = data?.daily_calories ?? fallbackDaily;
-  const targetCalories = data?.target_calories ?? fallbackTarget;
+  const dailyCalories = safeData.daily_calories ?? fallbackDaily;
+  const targetCalories = safeData.target_calories ?? fallbackTarget;
 
   /* -- Plan metadata derived from fetched workouts -------------- */
   const planFreq = weekWorkouts.filter((w) => !w.is_rest_day).length || 0;
@@ -385,7 +386,7 @@ export default function Dashboard() {
               marginBottom: 5,
             }}
           >
-            {getGreeting()}, {data.user_name}!
+            {getGreeting()}, {safeData.user_name}!
           </p>
           <p style={{ fontSize: 12, color: "#9e9e9e" }}>
             {getDayLabel()} &middot; Ready to crush your goals?
@@ -458,22 +459,22 @@ export default function Dashboard() {
           >
             <StatCard
               label="Current Goal"
-              value={fmtGoal(data.current_goal)}
+              value={fmtGoal(safeData.current_goal)}
               sub={
-                data.current_goal === "cutting"
+                safeData.current_goal === "cutting"
                   ? "Calorie Deficit"
-                  : data.current_goal === "bulking"
+                  : safeData.current_goal === "bulking"
                     ? "Calorie Surplus"
-                    : data.current_goal === "recomp"
+                    : safeData.current_goal === "recomp"
                       ? "Body Recomp"
                       : "Maintenance"
               }
             />
             <StatCard
               label="BMI"
-              value={data.bmi ? data.bmi.toFixed(2) : "\u2014"}
-              sub={data.bmi_category || "Not measured"}
-              subColor={bmiColor(data.bmi_category)}
+              value={safeData.bmi ? safeData.bmi.toFixed(2) : "\u2014"}
+              sub={safeData.bmi_category || "Not measured"}
+              subColor={bmiColor(safeData.bmi_category)}
             />
             <StatCard
               label="Daily Calories"
@@ -515,7 +516,7 @@ export default function Dashboard() {
         {/* --- RIGHT COLUMN ----------------------------------------- */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {/* -- Workout Plan Block ----------------------------------------- */}
-          {!data.has_workout_plan && weekWorkouts.length === 0 ? (
+          {!safeData.has_workout_plan && weekWorkouts.length === 0 ? (
             /* No plan � show CTA */
             <div
               style={{
@@ -599,8 +600,8 @@ export default function Dashboard() {
                   )}
                 </div>
                 <span style={{ fontSize: 12, color: "#9e9e9e", paddingTop: 2 }}>
-                  {data.weekly_sessions} session
-                  {data.weekly_sessions !== 1 ? "s" : ""} done
+                  {safeData.weekly_sessions} session
+                  {safeData.weekly_sessions !== 1 ? "s" : ""} done
                 </span>
               </div>
 
@@ -658,7 +659,9 @@ export default function Dashboard() {
                   );
                   const isWorkoutDay = dayWorkout && !dayWorkout.is_rest_day;
                   const done =
-                    isWorkoutDay && i < todayIdx && i < data.weekly_sessions;
+                    isWorkoutDay &&
+                    i < todayIdx &&
+                    i < safeData.weekly_sessions;
                   return (
                     <div
                       key={i}
@@ -927,7 +930,7 @@ export default function Dashboard() {
           )}
 
           {/* -- Today's Tasks -------------------------------------------- */}
-          {data.today_tasks?.length > 0 && (
+          {safeData.today_tasks?.length > 0 && (
             <div
               style={{
                 background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
@@ -956,12 +959,12 @@ export default function Dashboard() {
                   Today&apos;s Tasks
                 </p>
                 <span style={{ fontSize: 11, color: "#616161" }}>
-                  {data.today_tasks.filter((t) => t.is_completed).length}/
-                  {data.today_tasks.length} done
+                  {safeData.today_tasks.filter((t) => t.is_completed).length}/
+                  {safeData.today_tasks.length} done
                 </span>
               </div>
               <div style={{ display: "flex", flexDirection: "column" }}>
-                {data.today_tasks.map((task) => (
+                {safeData.today_tasks.map((task) => (
                   <TaskRow key={task.id} task={task} />
                 ))}
               </div>
@@ -974,11 +977,11 @@ export default function Dashboard() {
           >
             <MiniStatCard
               label="Total Sessions"
-              value={data.total_workouts_completed}
+              value={safeData.total_workouts_completed}
             />
             <MiniStatCard
               label="This Week"
-              value={data.weekly_sessions}
+              value={safeData.weekly_sessions}
               unit="sessions"
             />
           </div>
