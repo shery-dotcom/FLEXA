@@ -144,9 +144,11 @@ export default function Marketplace() {
 
   return (
     <div
+      className="marketplace-page-wrap"
       style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 24px 40px" }}
     >
       <div
+        className="marketplace-toolbar"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -169,7 +171,7 @@ export default function Marketplace() {
           )}
         </div>
 
-        <div style={{ minWidth: 220 }}>
+        <div className="marketplace-filter-block" style={{ minWidth: 220 }}>
           <label
             style={{
               display: "block",
@@ -218,6 +220,7 @@ export default function Marketplace() {
         </div>
       ) : (
         <div
+          className="marketplace-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",

@@ -214,8 +214,15 @@ export default function Dashboard() {
   const [mlSplit, setMlSplit] = useState(null);
   const requestSeqRef = useRef(0);
   const hasLoadedDashboardRef = useRef(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const navigate = useNavigate();
   const quote = getDayQuote();
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -323,6 +330,7 @@ export default function Dashboard() {
 
   return (
     <div
+      className="dashboard-page-wrap"
       style={{
         maxWidth: 1280,
         margin: "0 auto",
@@ -333,6 +341,7 @@ export default function Dashboard() {
       <FlexaGuide pageKey="dashboard" />
       {/* -- Welcome Banner ------------------------------------------- */}
       <div
+        className="dashboard-banner-wrap"
         style={{
           display: "flex",
           alignItems: "stretch",
@@ -346,6 +355,7 @@ export default function Dashboard() {
       >
         {/* FLEXA logo block */}
         <div
+          className="dashboard-logo-block"
           style={{
             background: "linear-gradient(160deg, #D4AF37 0%, #8c7520 100%)",
             display: "flex",
@@ -396,9 +406,10 @@ export default function Dashboard() {
 
       {/* -- Two-column desktop layout -------------------------------- */}
       <div
+        className="dashboard-main-grid"
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(0,1fr) 420px",
+          gridTemplateColumns: isMobile ? "1fr" : "minmax(0,1fr) 420px",
           gap: 20,
           marginTop: 16,
           alignItems: "start",
@@ -455,6 +466,7 @@ export default function Dashboard() {
 
           {/* -- 2�2 Stats Grid ------------------------------------------- */}
           <div
+            className="dashboard-stats-grid"
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
           >
             <StatCard
@@ -973,6 +985,7 @@ export default function Dashboard() {
 
           {/* -- All-time strip ------------------------------------------- */}
           <div
+            className="dashboard-bottom-grid"
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
           >
             <MiniStatCard
