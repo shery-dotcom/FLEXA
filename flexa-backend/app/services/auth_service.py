@@ -100,7 +100,25 @@ class AuthService:
             if "users_phone_key" in error_text or "phone" in error_text:
                 raise HTTPException(status_code=400, detail="Phone number already registered")
             if "users_email_key" in error_text or "email" in error_text:
-                return {"message": "Email already registered. Please sign in instead."}
+                existing_res = await db.execute(
+                    select(User).where(func.lower(User.email) == email)
+                )
+                existing_user = existing_res.scalar_one_or_none()
+                if existing_user and existing_user.hashed_password and verify_password(data.password, existing_user.hashed_password):
+                    token_data = {
+                        "sub": str(existing_user.id),
+                        "email": existing_user.email,
+                        "role": existing_user.role,
+                    }
+                    return RegisterResponse(
+                        message="Account already existed. Signed you in.",
+                        access_token=create_access_token(token_data),
+                        refresh_token=create_refresh_token(token_data),
+                    )
+                raise HTTPException(
+                    status_code=400,
+                    detail="Email already registered. Use the existing password to sign in.",
+                )
             raise HTTPException(
                 status_code=400,
                 detail="Registration failed due to invalid or duplicate data",

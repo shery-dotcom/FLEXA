@@ -87,10 +87,24 @@ export function AuthProvider({ children }) {
         localStorage.setItem("access_token", accessToken);
         localStorage.setItem("refresh_token", refreshToken);
         await fetchMe();
+        return res.data;
       }
 
-      return res.data;
+      // Backward compatibility for servers returning only {message} from /auth/register.
+      await login(email, password);
+      return {
+        ...res.data,
+        message: res.data?.message || "Account created and signed in.",
+      };
     } catch (err) {
+      const detail = String(err?.response?.data?.detail || "").toLowerCase();
+      if (
+        detail.includes("already registered") ||
+        detail.includes("already exists")
+      ) {
+        await login(email, password);
+        return { message: "Account already exists. Signed you in." };
+      }
       throw err;
     }
   };

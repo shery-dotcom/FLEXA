@@ -155,6 +155,9 @@ export default function Register() {
               onChange={handleChange}
               required
             />
+            <p style={{ marginTop: 6, fontSize: 12, color: "#9e9e9e" }}>
+              Use your email here. You will set your username on the next step.
+            </p>
           </div>
           <div className="form-group">
             <label className="form-label">Phone (optional)</label>

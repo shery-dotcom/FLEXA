@@ -18,6 +18,16 @@ import {
 } from "react-icons/fi";
 
 const GENDERS = ["male", "female", "other"];
+const REGIONS = [
+  "Punjab",
+  "Sindh",
+  "Khyber Pakhtunkhwa (KPK)",
+  "Balochistan",
+  "Gilgit-Baltistan",
+  "Azad Jammu & Kashmir (AJK)",
+  "Islamabad Capital Territory",
+  "Other",
+];
 
 const GOAL_OPTIONS = [
   {
@@ -937,13 +947,19 @@ export default function Profile() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Region</label>
-                  <input
-                    className="form-input"
+                  <select
+                    className="form-select"
                     name="region"
-                    placeholder="e.g. Karachi"
                     value={form.region}
                     onChange={handleChange}
-                  />
+                  >
+                    <option value="">Select region</option>
+                    {REGIONS.map((region) => (
+                      <option key={region} value={region}>
+                        {region}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

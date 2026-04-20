@@ -5,6 +5,16 @@ import api from "../api/axios";
 import toast from "react-hot-toast";
 
 const GENDERS = ["male", "female", "other"];
+const REGIONS = [
+  "Punjab",
+  "Sindh",
+  "Khyber Pakhtunkhwa (KPK)",
+  "Balochistan",
+  "Gilgit-Baltistan",
+  "Azad Jammu & Kashmir (AJK)",
+  "Islamabad Capital Territory",
+  "Other",
+];
 
 export default function ProfileSetup() {
   const { refreshUser } = useAuth();
@@ -131,13 +141,19 @@ export default function ProfileSetup() {
             </div>
             <div className="form-group">
               <label className="form-label">Region</label>
-              <input
-                className="form-input"
+              <select
+                className="form-select"
                 name="region"
-                placeholder="e.g. New York"
                 value={form.region}
                 onChange={handleChange}
-              />
+              >
+                <option value="">Select region</option>
+                {REGIONS.map((region) => (
+                  <option key={region} value={region}>
+                    {region}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -213,5 +229,3 @@ export default function ProfileSetup() {
     </div>
   );
 }
-
-
