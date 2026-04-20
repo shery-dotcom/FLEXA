@@ -16,6 +16,8 @@ import os
 import io
 import json
 import logging
+import re
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -232,8 +234,8 @@ def _try_load_model():
         model.eval()
 
         transform = T.Compose([
-            T.Resize(256),
-            T.CenterCrop(img_size),
+            # Preserve full mobile frame instead of hard center-cropping portrait shots.
+            T.Resize((img_size, img_size)),
             T.ToTensor(),
             T.Normalize(mean=mean, std=std),
         ])
@@ -349,29 +351,57 @@ async def map_prediction_to_nutrition(
     Find the closest NutritionFood row matching the predicted class name.
     Uses case-insensitive LIKE match, then returns scaled macros.
     """
-    from sqlalchemy import select, func
+    from sqlalchemy import select, or_
     from app.models.diet import NutritionFood
 
+    def _norm(text: str) -> str:
+        return re.sub(r"[^a-z0-9 ]+", " ", (text or "").lower()).strip()
+
+    def _tokens(text: str) -> list:
+        return [t for t in _norm(text).split() if len(t) > 2]
+
+    def _score(pred: str, food: str) -> float:
+        pred_n = _norm(pred)
+        food_n = _norm(food)
+        if not pred_n or not food_n:
+            return 0.0
+
+        seq = SequenceMatcher(None, pred_n, food_n).ratio()
+        pred_t = set(_tokens(pred_n))
+        food_t = set(_tokens(food_n))
+        overlap = len(pred_t & food_t) / max(1, len(pred_t | food_t))
+        contains_bonus = 0.15 if pred_n in food_n or food_n in pred_n else 0.0
+        return (0.62 * seq) + (0.38 * overlap) + contains_bonus
+
     try:
-        # Try exact → partial match
-        for pattern in [predicted_class, predicted_class.split()[0] if predicted_class else ""]:
-            stmt = (
-                select(NutritionFood)
-                .where(NutritionFood.food_name.ilike(f"%{pattern}%"))
-                .limit(1)
-            )
-            result = await db.execute(stmt)
-            food = result.scalar_one_or_none()
-            if food:
-                scale = portion_g / 100.0
-                return {
-                    "food_id":    food.id,
-                    "food_name":  food.food_name,
-                    "calories":   round(food.calories   * scale, 1),
-                    "protein_g":  round(food.protein_g  * scale, 1),
-                    "carbs_g":    round(food.carbs_g    * scale, 1),
-                    "fat_g":      round(food.fat_g      * scale, 1),
-                }
+        pred = (predicted_class or "").strip()
+        if not pred:
+            return None
+
+        token_patterns = [NutritionFood.food_name.ilike(f"%{tok}%") for tok in _tokens(pred)]
+        predicates = [NutritionFood.food_name.ilike(f"%{pred}%")]
+        if token_patterns:
+            predicates.extend(token_patterns)
+
+        stmt = select(NutritionFood).where(or_(*predicates)).limit(80)
+        result = await db.execute(stmt)
+        candidates = result.scalars().all()
+        if not candidates:
+            return None
+
+        best = max(candidates, key=lambda row: _score(pred, row.food_name or ""))
+        if _score(pred, best.food_name or "") < 0.22:
+            return None
+
+        scale = portion_g / 100.0
+        return {
+            "food_id": best.id,
+            "food_name": best.food_name,
+            "calories": round(best.calories * scale, 1),
+            "protein_g": round(best.protein_g * scale, 1),
+            "carbs_g": round(best.carbs_g * scale, 1),
+            "fat_g": round(best.fat_g * scale, 1),
+        }
     except Exception as e:
         logger.error("Nutrition mapping error: %s", e)
 

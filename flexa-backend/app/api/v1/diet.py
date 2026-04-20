@@ -599,6 +599,7 @@ async def upload_meal_image(
     background_tasks: BackgroundTasks,
     image: UploadFile = File(..., description="JPEG or PNG food image"),
     portion_g: float = Query(150.0, ge=10, le=2000, description="Estimated portion weight in grams"),
+    confirmed_food_name: Optional[str] = Query(None, description="Optional food name selected by user from top predictions"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -624,13 +625,28 @@ async def upload_meal_image(
     confidence      = top3[0]["confidence"]
     second_conf     = top3[1]["confidence"] if len(top3) > 1 else 0.0
     conf_margin     = confidence - second_conf
+    used_user_confirmation = False
+
+    if confirmed_food_name:
+        want = confirmed_food_name.strip().lower()
+        selected = next(
+            (p for p in top3 if p.get("food_name", "").strip().lower() == want),
+            None,
+        )
+        if selected is None:
+            raise HTTPException(status_code=400, detail="Selected food must be one of the suggested predictions.")
+        predicted_class = selected["food_name"]
+        confidence = selected["confidence"]
+        used_user_confirmation = True
 
     # Reject only when confidence is low AND either absolute confidence is too low
     # or top-1 is not clearly separated from top-2.
-    low_confidence = (
-        confidence < CONFIDENCE_THRESHOLD
-        and (confidence < TOP1_MIN_CONFIDENCE or conf_margin < TOP1_TOP2_MARGIN)
-    )
+    low_confidence = False
+    if not used_user_confirmation:
+        low_confidence = (
+            confidence < CONFIDENCE_THRESHOLD
+            and (confidence < TOP1_MIN_CONFIDENCE or conf_margin < TOP1_TOP2_MARGIN)
+        )
     requires_conf   = low_confidence
 
     # ── Reject foods below confidence threshold ──────────────────────────────
@@ -699,7 +715,10 @@ async def upload_meal_image(
             matched = FoodSearchResult.model_validate(food_row)
 
     # ── User-facing message ──────────────────────────────────────────────────────
-    msg = f"✅ Detected: {predicted_class.title()} ({confidence:.0%} confidence)"
+    if used_user_confirmation:
+        msg = f"✅ Using your selected food: {predicted_class.title()}"
+    else:
+        msg = f"✅ Detected: {predicted_class.title()} ({confidence:.0%} confidence)"
 
     return ImageAnalysisResponse(
         predicted_class=predicted_class,
