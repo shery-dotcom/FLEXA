@@ -66,6 +66,13 @@ const GUIDE_MESSAGES = {
 export default function FlexaGuide({ pageKey }) {
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     if (!pageKey) return;
@@ -111,7 +118,9 @@ export default function FlexaGuide({ pageKey }) {
           left: "50%",
           transform: "translate(-50%, -50%)",
           zIndex: 1200,
-          width: "min(700px, 92vw)",
+          width: isMobile ? "94vw" : "min(700px, 92vw)",
+          maxHeight: "92dvh",
+          overflowY: "auto",
           background: "linear-gradient(155deg, #13111a 0%, #0c0a12 100%)",
           border: "1px solid rgba(212,175,55,0.28)",
           borderRadius: 28,
@@ -122,23 +131,24 @@ export default function FlexaGuide({ pageKey }) {
             ? "fg-card-out 0.4s cubic-bezier(.4,0,1,1) forwards"
             : "fg-card-in 0.5s cubic-bezier(.2,.8,.3,1)",
           display: "flex",
-          flexDirection: "row",
-          minHeight: 360,
+          flexDirection: isMobile ? "column" : "row",
+          minHeight: isMobile ? 0 : 360,
         }}
       >
         {/* ── Left column — avatar ────────────────────────────── */}
         <div
           style={{
-            width: 200,
+            width: isMobile ? "100%" : 200,
             flexShrink: 0,
             background: "linear-gradient(160deg, #1a1628 0%, #100e18 100%)",
-            borderRight: "1px solid rgba(212,175,55,0.12)",
+            borderRight: isMobile ? "none" : "1px solid rgba(212,175,55,0.12)",
+            borderBottom: isMobile ? "1px solid rgba(212,175,55,0.12)" : "none",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            padding: "28px 12px 20px",
-            gap: 12,
+            padding: isMobile ? "16px 12px" : "28px 12px 20px",
+            gap: isMobile ? 8 : 12,
             position: "relative",
             overflow: "hidden",
           }}
@@ -163,7 +173,7 @@ export default function FlexaGuide({ pageKey }) {
             avatarClass={info.avatarClass}
             animation="idle"
             personalityMode="coach"
-            size={190}
+            size={isMobile ? 128 : 190}
           />
 
           {/* "FLEXA says" badge */}
@@ -189,7 +199,7 @@ export default function FlexaGuide({ pageKey }) {
         <div
           style={{
             flex: 1,
-            padding: "30px 28px 24px",
+            padding: isMobile ? "16px 14px 14px" : "30px 28px 24px",
             display: "flex",
             flexDirection: "column",
           }}
@@ -206,7 +216,7 @@ export default function FlexaGuide({ pageKey }) {
             <span style={{ fontSize: 30 }}>{info.emoji}</span>
             <span
               style={{
-                fontSize: 10,
+                fontSize: isMobile ? 9 : 10,
                 fontWeight: 700,
                 letterSpacing: 3,
                 color: "rgba(212,175,55,0.6)",
@@ -221,7 +231,7 @@ export default function FlexaGuide({ pageKey }) {
           <h2
             style={{
               margin: "0 0 20px 0",
-              fontSize: 22,
+              fontSize: isMobile ? 19 : 22,
               fontWeight: 900,
               color: "#fff",
               lineHeight: 1.2,
@@ -267,7 +277,7 @@ export default function FlexaGuide({ pageKey }) {
                 <p
                   style={{
                     margin: 0,
-                    fontSize: 14,
+                    fontSize: isMobile ? 13 : 14,
                     color: "rgba(255,255,255,0.82)",
                     lineHeight: 1.65,
                   }}
@@ -284,6 +294,8 @@ export default function FlexaGuide({ pageKey }) {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
+              gap: 10,
+              flexDirection: isMobile ? "column" : "row",
             }}
           >
             <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>
@@ -292,13 +304,14 @@ export default function FlexaGuide({ pageKey }) {
             <button
               onClick={handleDismiss}
               style={{
-                padding: "11px 30px",
+                padding: isMobile ? "11px 20px" : "11px 30px",
                 borderRadius: 14,
                 border: "none",
                 background: "linear-gradient(135deg, #D4AF37 0%, #B8962E 100%)",
                 color: "#0a0c14",
                 fontWeight: 900,
                 fontSize: 14,
+                width: isMobile ? "100%" : "auto",
                 cursor: "pointer",
                 boxShadow: "0 4px 20px rgba(212,175,55,0.45)",
                 letterSpacing: 0.5,
@@ -321,19 +334,21 @@ export default function FlexaGuide({ pageKey }) {
         </div>
 
         {/* Pulsing dot top-right */}
-        <div
-          style={{
-            position: "absolute",
-            top: 16,
-            right: 16,
-            width: 9,
-            height: 9,
-            borderRadius: "50%",
-            background: "#D4AF37",
-            boxShadow: "0 0 10px #D4AF37",
-            animation: "fg-dot-pulse 2s ease-in-out infinite",
-          }}
-        />
+        {!isMobile && (
+          <div
+            style={{
+              position: "absolute",
+              top: 16,
+              right: 16,
+              width: 9,
+              height: 9,
+              borderRadius: "50%",
+              background: "#D4AF37",
+              boxShadow: "0 0 10px #D4AF37",
+              animation: "fg-dot-pulse 2s ease-in-out infinite",
+            }}
+          />
+        )}
       </div>
 
       <style>{`
@@ -364,5 +379,3 @@ export function resetFlexaGuides() {
   localStorage.removeItem("flexa_video_intro_done");
   console.log("FLEXA guides & video intro reset ✅");
 }
-
-

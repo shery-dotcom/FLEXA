@@ -75,9 +75,16 @@ export default function Chatbot() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [mobileTab, setMobileTab] = useState("chat"); // "chat" | "avatar"
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   // Speech-to-text
   const speechLang = language === "ur" ? "ur-PK" : "en-US";
@@ -297,34 +304,48 @@ export default function Chatbot() {
       </div>
 
       {/* Mobile tab switcher */}
-      <div style={styles.mobileTabs}>
-        <button
-          style={{
-            ...styles.mobileTab,
-            ...(mobileTab === "chat" ? styles.mobileTabActive : {}),
-          }}
-          onClick={() => setMobileTab("chat")}
-        >
-          Chat
-        </button>
-        <button
-          style={{
-            ...styles.mobileTab,
-            ...(mobileTab === "avatar" ? styles.mobileTabActive : {}),
-          }}
-          onClick={() => setMobileTab("avatar")}
-        >
-          Avatar
-        </button>
-      </div>
+      {isMobile && (
+        <div style={styles.mobileTabs}>
+          <button
+            style={{
+              ...styles.mobileTab,
+              ...(mobileTab === "chat" ? styles.mobileTabActive : {}),
+            }}
+            onClick={() => setMobileTab("chat")}
+          >
+            Chat
+          </button>
+          <button
+            style={{
+              ...styles.mobileTab,
+              ...(mobileTab === "avatar" ? styles.mobileTabActive : {}),
+            }}
+            onClick={() => setMobileTab("avatar")}
+          >
+            Avatar
+          </button>
+        </div>
+      )}
 
       {/* Main layout */}
-      <div style={styles.main}>
+      <div
+        style={{
+          ...styles.main,
+          overflow: isMobile ? "visible" : "hidden",
+        }}
+      >
         {/* Left panel — Avatar */}
         <div
           style={{
             ...styles.avatarPanel,
-            display: mobileTab === "avatar" ? "flex" : undefined,
+            width: isMobile ? "100%" : 280,
+            minWidth: isMobile ? 0 : 280,
+            borderRight: isMobile ? "none" : styles.avatarPanel.borderRight,
+            display: isMobile
+              ? mobileTab === "avatar"
+                ? "flex"
+                : "none"
+              : "flex",
           }}
         >
           <FlexaAvatar
@@ -357,7 +378,12 @@ export default function Chatbot() {
         <div
           style={{
             ...styles.chatPanel,
-            display: mobileTab === "chat" ? "flex" : undefined,
+            display: isMobile
+              ? mobileTab === "chat"
+                ? "flex"
+                : "none"
+              : "flex",
+            minHeight: 0,
           }}
         >
           {/* Messages */}
@@ -390,6 +416,7 @@ export default function Chatbot() {
               ref={inputRef}
               style={{
                 ...styles.textarea,
+                fontSize: isMobile ? 16 : 14,
                 direction: /[\u0600-\u06FF]/.test(input) ? "rtl" : "ltr",
               }}
               placeholder={
@@ -458,7 +485,7 @@ export default function Chatbot() {
 
 const styles = {
   page: {
-    minHeight: "100vh",
+    minHeight: "100dvh",
     background: "#0a0a0a",
     color: "#e8e8e8",
     display: "flex",
@@ -509,8 +536,9 @@ const styles = {
     transition: "all 0.2s",
   },
   mobileTabs: {
-    display: "none",
-    "@media (max-width: 768px)": { display: "flex" },
+    display: "flex",
+    borderBottom: "1px solid rgba(255,255,255,0.08)",
+    background: "rgba(255,255,255,0.02)",
   },
   mobileTab: {
     flex: 1,
@@ -582,7 +610,7 @@ const styles = {
   messages: {
     flex: 1,
     overflowY: "auto",
-    padding: "16px 0 8px",
+    padding: "16px 0 12px",
     display: "flex",
     flexDirection: "column",
   },
@@ -607,6 +635,11 @@ const styles = {
     padding: "8px 12px",
     borderTop: "1px solid rgba(255,255,255,0.07)",
     alignItems: "flex-end",
+    background: "#0a0a0a",
+    paddingBottom: "max(8px, env(safe-area-inset-bottom))",
+    position: "sticky",
+    bottom: 0,
+    zIndex: 2,
   },
   textarea: {
     flex: 1,

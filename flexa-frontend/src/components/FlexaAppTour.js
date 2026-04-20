@@ -112,7 +112,14 @@ export default function FlexaAppTour({ onDone }) {
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [step, setStep] = useState(0);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     if (!localStorage.getItem(STORAGE_KEY)) {
@@ -198,7 +205,7 @@ export default function FlexaAppTour({ onDone }) {
           left: "50%",
           transform: "translate(-50%,-50%)",
           zIndex: 1500,
-          width: "min(720px, 94vw)",
+          width: isMobile ? "95vw" : "min(720px, 94vw)",
           maxHeight: "90vh",
           overflowY: "auto",
           background: "linear-gradient(155deg,#13111a 0%,#0c0a12 100%)",
@@ -211,7 +218,7 @@ export default function FlexaAppTour({ onDone }) {
             : "fat-card-in 0.5s cubic-bezier(.2,.8,.3,1)",
           display: "flex",
           flexDirection: "column",
-          minHeight: 380,
+          minHeight: isMobile ? 0 : 380,
         }}
       >
         {/* ── Gold top bar ── */}
@@ -220,10 +227,11 @@ export default function FlexaAppTour({ onDone }) {
             background:
               "linear-gradient(90deg,#0d0b14 0%,rgba(212,175,55,0.10) 50%,#0d0b14 100%)",
             borderBottom: "1px solid rgba(212,175,55,0.18)",
-            padding: "13px 20px",
+            padding: isMobile ? "10px 12px" : "13px 20px",
             display: "flex",
             alignItems: "center",
-            gap: 12,
+            gap: isMobile ? 8 : 12,
+            flexWrap: isMobile ? "wrap" : "nowrap",
           }}
         >
           <div
@@ -269,7 +277,7 @@ export default function FlexaAppTour({ onDone }) {
           {/* Step counter */}
           <div
             style={{
-              marginLeft: "auto",
+              marginLeft: isMobile ? 0 : "auto",
               fontSize: 12,
               color: "rgba(255,255,255,0.35)",
               fontWeight: 600,
@@ -306,23 +314,28 @@ export default function FlexaAppTour({ onDone }) {
         <div
           style={{
             display: "flex",
-            flexDirection: "row",
+            flexDirection: isMobile ? "column" : "row",
             flex: 1,
           }}
         >
           {/* Left — avatar panel */}
           <div
             style={{
-              width: 190,
+              width: isMobile ? "100%" : 190,
               flexShrink: 0,
               background: "linear-gradient(160deg,#1a1628 0%,#100e18 100%)",
-              borderRight: "1px solid rgba(212,175,55,0.10)",
+              borderRight: isMobile
+                ? "none"
+                : "1px solid rgba(212,175,55,0.10)",
+              borderBottom: isMobile
+                ? "1px solid rgba(212,175,55,0.10)"
+                : "none",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              padding: "24px 12px 20px",
-              gap: 10,
+              padding: isMobile ? "14px 12px 12px" : "24px 12px 20px",
+              gap: isMobile ? 8 : 10,
               position: "relative",
               overflow: "hidden",
             }}
@@ -346,7 +359,7 @@ export default function FlexaAppTour({ onDone }) {
               avatarClass={slide.avatarClass}
               animation={slide.animation}
               personalityMode="coach"
-              size={180}
+              size={isMobile ? 124 : 180}
             />
             <div
               style={{
@@ -370,7 +383,7 @@ export default function FlexaAppTour({ onDone }) {
             key={step}
             style={{
               flex: 1,
-              padding: "28px 26px 22px",
+              padding: isMobile ? "14px 12px 14px" : "28px 26px 22px",
               display: "flex",
               flexDirection: "column",
               animation: "fat-slide-in 0.32s ease",
@@ -403,7 +416,7 @@ export default function FlexaAppTour({ onDone }) {
             <h2
               style={{
                 margin: "0 0 18px 0",
-                fontSize: 22,
+                fontSize: isMobile ? 19 : 22,
                 fontWeight: 900,
                 color: "#fff",
                 lineHeight: 1.2,
@@ -449,7 +462,7 @@ export default function FlexaAppTour({ onDone }) {
                   <p
                     style={{
                       margin: 0,
-                      fontSize: 13.5,
+                      fontSize: isMobile ? 13 : 13.5,
                       color: "rgba(255,255,255,0.80)",
                       lineHeight: 1.65,
                     }}
@@ -467,6 +480,7 @@ export default function FlexaAppTour({ onDone }) {
                 alignItems: "center",
                 gap: 10,
                 flexWrap: "wrap",
+                justifyContent: isMobile ? "center" : "flex-start",
               }}
             >
               {/* Back */}
@@ -505,6 +519,7 @@ export default function FlexaAppTour({ onDone }) {
                   alignItems: "center",
                   flex: 1,
                   justifyContent: "center",
+                  minWidth: isMobile ? "100%" : "auto",
                 }}
               >
                 {SLIDES.map((_, i) => (
@@ -569,5 +584,3 @@ export default function FlexaAppTour({ onDone }) {
     </>
   );
 }
-
-
