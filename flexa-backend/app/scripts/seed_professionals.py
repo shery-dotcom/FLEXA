@@ -1,5 +1,5 @@
 """
-Seed script to create mock professionals for testing
+Seed script to create real professionals for marketplace.
 Run with: python -m app.scripts.seed_professionals
 """
 
@@ -9,6 +9,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import select
 
 from app.core.config import settings
 from app.models.user import User
@@ -16,77 +17,126 @@ from app.models.profile import Profile
 from app.models.professional import ProfessionalProfile, AvailabilitySlot
 from app.database import Base
 
-# Mock professional data
-MOCK_PROFESSIONALS = [
+# Previous demo/mock emails to purge from marketplace.
+OLD_MOCK_EMAILS = [
+    "sarah.khan@flexa.com",
+    "ahmed.malik@flexa.com",
+    "fatima.hassan@flexa.com",
+    "usman.ali@flexa.com",
+]
+
+# Real professional data for production-facing experts section.
+REAL_PROFESSIONALS = [
     {
-        "email": "sarah.khan@flexa.com",
-        "username": "Dr. Sarah Khan",
-        "phone": "+92-300-1234567",
-        "specialization": "nutritionist",
-        "bio": "Certified Registered Dietitian (RD) with 12+ years of experience in sports nutrition and medical nutrition therapy. Specializes in personalized meal planning for athletes and fitness enthusiasts. Certified Sports Dietitian (CSSD).",
-        "years_experience": 12,
-        "certifications": ["RD", "CSSD", "Masters in Clinical Nutrition"],
+        "email": "ameer.ahmed.khan@flexa.com",
+        "username": "Ameer Ahmed Khan",
+        "phone": "+92-300-1000101",
+        "specialization": "fitness_trainer",
+        "bio": "Location: Vostro World G-13. Personal Trainer with UAE coaching exposure. EFBB men's physique athlete and coach with focus on body composition, conditioning, and performance-based training.",
+        "years_experience": 8,
+        "certifications": [
+            "EFBB Men's Physique Athlete (UAE)",
+            "EFBB Men's Physique Coach (UAE)",
+            "Certified Boxercise Instructor (REPS) (UAE)",
+            "Certified Level-2 QCF (UAE)",
+        ],
         "languages": ["English", "Urdu"],
-        "consultation_price_usd": 75,
+        "consultation_price_usd": 60,
         "consultation_duration_mins": 60,
         "average_rating": 4.9,
-        "total_reviews": 48,
-        "total_sessions_completed": 120,
+        "total_reviews": 0,
+        "total_sessions_completed": 0,
         "timezone": "Asia/Karachi",
     },
     {
-        "email": "ahmed.malik@flexa.com",
-        "username": "Ahmed Malik",
-        "phone": "+92-300-2345678",
+        "email": "samiya.malik@flexa.com",
+        "username": "Samiya Malik",
+        "phone": "+92-300-1000102",
         "specialization": "fitness_trainer",
-        "bio": "Certified Personal Trainer (NASM-CPT) with 8 years of experience in strength training, functional fitness, and body transformation. Specializes in designing personalized workout programs for all fitness levels.",
-        "years_experience": 8,
-        "certifications": ["NASM-CPT", "Functional Movement Systems (FMS)", "ACE Fitness"],
+        "bio": "Location: VostroWorld. Fitness Instructor with practical group-training and studio coaching experience. Helps improve strength, conditioning, and sustainable fitness habits.",
+        "years_experience": 6,
+        "certifications": [
+            "Level 3 Gactiveig",
+            "Certified Glesmills / BODYPUMP",
+            "Certified Grts.global",
+            "Archer PAAAL Pakistan",
+        ],
         "languages": ["English", "Urdu", "Hindi"],
-        "consultation_price_usd": 65,
+        "consultation_price_usd": 50,
         "consultation_duration_mins": 45,
         "average_rating": 4.7,
-        "total_reviews": 35,
-        "total_sessions_completed": 95,
+        "total_reviews": 0,
+        "total_sessions_completed": 0,
         "timezone": "Asia/Karachi",
     },
     {
-        "email": "fatima.hassan@flexa.com",
-        "username": "Dr. Fatima Hassan",
-        "phone": "+92-300-3456789",
-        "specialization": "both",
-        "bio": "Holistic health specialist combining nutrition science with fitness coaching. 15+ years experience. Helps clients achieve sustainable lifestyle changes through integrated nutrition and exercise programs.",
-        "years_experience": 15,
-        "certifications": ["RD", "ISSA-CPT", "Health Coach Certification", "PhD Nutrition Science"],
+        "email": "fazal.ghilmaan.javaid@flexa.com",
+        "username": "Fazal Ghilmaan Javaid",
+        "phone": "+92-300-1000103",
+        "specialization": "fitness_trainer",
+        "bio": "ISSA-certified trainer focused on strength, conditioning, and physique transformation. Supports evidence-based training plans with practical nutrition guidance and safe session progression.",
+        "years_experience": 7,
+        "certifications": [
+            "ISSA Certified Personal Trainer",
+            "Strength and Conditioning Specialist",
+            "Bodybuilding Specialist",
+            "Nutritionist",
+            "CPR & AED Certified",
+        ],
         "languages": ["English", "Urdu", "Arabic"],
-        "consultation_price_usd": 85,
+        "consultation_price_usd": 55,
         "consultation_duration_mins": 60,
         "average_rating": 4.8,
-        "total_reviews": 62,
-        "total_sessions_completed": 180,
+        "total_reviews": 0,
+        "total_sessions_completed": 0,
         "timezone": "Asia/Karachi",
     },
     {
-        "email": "usman.ali@flexa.com",
-        "username": "Usman Ali",
-        "phone": "+92-300-4567890",
-        "specialization": "fitness_trainer",
-        "bio": "Bodybuilding coach and transformation specialist. IFBB Pro Card holder with 6 years of coaching experience. Specializes in muscle building, strength training, and competition prep.",
-        "years_experience": 6,
-        "certifications": ["IFBB Pro Card", "ACE Fitness", "Bodybuilding Coach"],
+        "email": "samra.munir@flexa.com",
+        "username": "Samra Munir",
+        "phone": "+92-300-1000104",
+        "specialization": "nutritionist",
+        "bio": "Location: VostroWorld. Nutritionist helping clients lose fat, gain muscle strength, and manage disease-specific nutrition needs. Supports structured plans aligned with long-term health outcomes.",
+        "years_experience": 5,
+        "certifications": [
+            "Nutritionist",
+            "10K+ Healthy Transformations",
+            "Fat Loss and Muscle Gain Guidance",
+            "Disease Management Nutrition",
+        ],
         "languages": ["English", "Urdu"],
-        "consultation_price_usd": 55,
+        "consultation_price_usd": 65,
         "consultation_duration_mins": 45,
-        "average_rating": 4.5,
-        "total_reviews": 22,
-        "total_sessions_completed": 60,
+        "average_rating": 4.8,
+        "total_reviews": 0,
+        "total_sessions_completed": 0,
+        "timezone": "Asia/Karachi",
+    },
+    {
+        "email": "dr.muneeba.mehmood@flexa.com",
+        "username": "Dr Muneeba Mehmood",
+        "phone": "+92-300-1000105",
+        "specialization": "fitness_trainer",
+        "bio": "Orthopaedic Physiotherapist at VostroWorld with sports medicine and spine manual therapy specialization. Focuses on pain-aware training progression, movement quality, and safe return-to-activity plans.",
+        "years_experience": 9,
+        "certifications": [
+            "Certified Spine Manual Therapist",
+            "Sports Medicine",
+            "Orthopaedic Physiotherapist",
+        ],
+        "languages": ["English", "Urdu"],
+        "consultation_price_usd": 70,
+        "consultation_duration_mins": 60,
+        "average_rating": 4.9,
+        "total_reviews": 0,
+        "total_sessions_completed": 0,
         "timezone": "Asia/Karachi",
     },
 ]
 
 
 async def seed_professionals():
-    """Create mock professional profiles with availability slots"""
+    """Replace old seeded experts and create updated real professional profiles with availability slots."""
     
     # Create async engine and session
     engine = create_async_engine(
@@ -102,16 +152,23 @@ async def seed_professionals():
         # Don't create tables here - let Alembic handle migrations
         pass
     
+    target_emails = set(OLD_MOCK_EMAILS + [p["email"] for p in REAL_PROFESSIONALS])
+
     async with async_session() as db:
-        for prof_data in MOCK_PROFESSIONALS:
-            # Check if user already exists
-            from sqlalchemy import select
-            existing_user = await db.execute(
-                select(User).where(User.email == prof_data["email"])
-            )
-            if existing_user.scalar_one_or_none():
-                print(f"⏭️  {prof_data['username']} already exists, skipping...")
-                continue
+        # Purge old seeded profiles so Experts section does not show mock entries.
+        existing_users_res = await db.execute(
+            select(User).where(User.email.in_(target_emails))
+        )
+        existing_users = existing_users_res.scalars().all()
+
+        for existing_user in existing_users:
+            await db.delete(existing_user)
+
+        if existing_users:
+            await db.commit()
+            print(f"🧹 Removed {len(existing_users)} old seeded professional users")
+
+        for prof_data in REAL_PROFESSIONALS:
             
             try:
                 # Create user account
