@@ -473,24 +473,29 @@ function Badge({ label }) {
 }
 
 function LocationBadge({ location }) {
-  const mapsUrl = getGoogleMapsSearchUrl(location);
-
   if (!location) {
     return <Badge label="Location: -" />;
   }
 
   return (
-    <a
-      href={mapsUrl}
-      target="_blank"
-      rel="noreferrer"
-      title="Open location in Google Maps"
-      style={{ textDecoration: "none" }}
+    <button
+      type="button"
+      onClick={() => openGoogleMapsLocation(location)}
+      title="Open live directions in Google Maps"
+      style={{
+        border: "1px solid #2a2a2a",
+        borderRadius: 999,
+        padding: 0,
+        color: "#d0d0d0",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        background: "transparent",
+        cursor: "pointer",
+      }}
     >
       <span
         style={{
-          border: "1px solid #2a2a2a",
-          borderRadius: 999,
           padding: "4px 9px",
           color: "#d0d0d0",
           display: "inline-flex",
@@ -499,9 +504,9 @@ function LocationBadge({ location }) {
         }}
       >
         <span>Location: {location}</span>
-        <span style={{ color: "#D4AF37", fontWeight: 700 }}>Map</span>
+        <span style={{ color: "#D4AF37", fontWeight: 700 }}>Live Map</span>
       </span>
-    </a>
+    </button>
   );
 }
 
@@ -509,6 +514,32 @@ function getGoogleMapsSearchUrl(location) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     location || "",
   )}`;
+}
+
+function openGoogleMapsLocation(location) {
+  const destination = encodeURIComponent(location || "");
+  const fallbackUrl = getGoogleMapsSearchUrl(location);
+
+  if (!navigator.geolocation) {
+    window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const origin = `${position.coords.latitude},${position.coords.longitude}`;
+      const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${destination}&travelmode=driving`;
+      window.open(directionsUrl, "_blank", "noopener,noreferrer");
+    },
+    () => {
+      window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 8000,
+      maximumAge: 60000,
+    },
+  );
 }
 
 function formatSpecialization(value) {

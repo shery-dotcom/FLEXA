@@ -54,7 +54,7 @@ REAL_PROFESSIONALS = [
         "username": "Samiya Malik",
         "phone": "+92-300-1000102",
         "specialization": "fitness_trainer",
-        "location": "VostroWorld",
+        "location": "Gulberg III, Lahore",
         "bio": "Fitness instructor with group-training and studio coaching experience. Focuses on foundational strength, mobility, and sustainable lifestyle routines for beginners and returning clients.",
         "years_experience": 6,
         "certifications": [
@@ -76,7 +76,7 @@ REAL_PROFESSIONALS = [
         "username": "Fazal Ghilmaan Javaid",
         "phone": "+92-300-1000103",
         "specialization": "fitness_trainer",
-        "location": "Islamabad",
+        "location": "F-7 Markaz, Islamabad",
         "bio": "ISSA-certified trainer focused on strength development and physique transformation. Delivers evidence-based training plans with practical nutrition support and progressive load management.",
         "years_experience": 7,
         "certifications": [
@@ -99,7 +99,7 @@ REAL_PROFESSIONALS = [
         "username": "Samra Munir",
         "phone": "+92-300-1000104",
         "specialization": "nutritionist",
-        "location": "VostroWorld",
+        "location": "DHA Phase 6, Karachi",
         "bio": "Nutritionist supporting fat loss, muscle gain, and disease-specific meal planning. Builds practical, culture-aware nutrition plans designed for adherence and long-term metabolic health.",
         "years_experience": 5,
         "certifications": [
@@ -121,7 +121,7 @@ REAL_PROFESSIONALS = [
         "username": "Dr Muneeba Mehmood",
         "phone": "+92-300-1000105",
         "specialization": "fitness_trainer",
-        "location": "VostroWorld",
+        "location": "Johar Town, Lahore",
         "bio": "Orthopaedic physiotherapist specializing in sports medicine and spine manual therapy. Designs pain-aware rehabilitation-to-performance programs that restore movement quality and safe activity tolerance.",
         "years_experience": 9,
         "certifications": [
