@@ -7,7 +7,7 @@ from app.models.profile import Profile
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from app.core.cache import cache_set
 from app.core.config import settings
-from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse
+from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, RegisterResponse
 from fastapi import HTTPException, status
 import uuid
 import time
@@ -45,7 +45,7 @@ class AuthService:
         return None
 
     @staticmethod
-    async def register(db: AsyncSession, data: RegisterRequest) -> dict:
+    async def register(db: AsyncSession, data: RegisterRequest) -> RegisterResponse:
         email = str(data.email).strip().lower()
         phone = (str(data.phone).strip() if data.phone else None) or None
 
@@ -53,8 +53,30 @@ class AuthService:
         result = await db.execute(
             select(User).where(func.lower(User.email) == email)
         )
-        if result.scalar_one_or_none():
-            raise HTTPException(status_code=400, detail="Email already registered")
+        existing_user = result.scalar_one_or_none()
+        if existing_user:
+            if not existing_user.hashed_password:
+                raise HTTPException(
+                    status_code=400,
+                    detail="This account uses Google sign-in. Use Continue with Google.",
+                )
+
+            if verify_password(data.password, existing_user.hashed_password):
+                token_data = {
+                    "sub": str(existing_user.id),
+                    "email": existing_user.email,
+                    "role": existing_user.role,
+                }
+                return RegisterResponse(
+                    message="Account already existed. Signed you in.",
+                    access_token=create_access_token(token_data),
+                    refresh_token=create_refresh_token(token_data),
+                )
+
+            raise HTTPException(
+                status_code=400,
+                detail="Email already registered. Use the existing password to sign in.",
+            )
 
         # Check if phone already exists when provided
         if phone:
@@ -83,7 +105,12 @@ class AuthService:
                 status_code=400,
                 detail="Registration failed due to invalid or duplicate data",
             )
-        return {"message": "Registration successful. Please complete your profile."}
+        token_data = {"sub": str(user.id), "email": user.email, "role": user.role}
+        return RegisterResponse(
+            message="Registration successful. Please complete your profile.",
+            access_token=create_access_token(token_data),
+            refresh_token=create_refresh_token(token_data),
+        )
 
     @staticmethod
     async def login(db: AsyncSession, data: LoginRequest) -> TokenResponse:

@@ -13,7 +13,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [profilePic, setProfilePic] = useState(null); // base64 data URL
   const picInputRef = useRef(null);
-  const { register, login } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) =>
@@ -43,10 +43,14 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      await register(form.email, form.password, form.phone || undefined);
-      // Auto-login immediately after registration
-      await login(form.email, form.password);
-      toast.success("Account created! Let's build your profile.");
+      const result = await register(
+        form.email,
+        form.password,
+        form.phone || undefined,
+      );
+      toast.success(
+        result?.message || "Account created! Let's build your profile.",
+      );
       navigate("/profile-setup");
     } catch (err) {
       toast.error(err.response?.data?.detail || "Registration failed.");

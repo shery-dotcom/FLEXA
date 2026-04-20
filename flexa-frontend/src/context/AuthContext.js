@@ -80,13 +80,17 @@ export function AuthProvider({ children }) {
   const register = async (email, password, phone) => {
     try {
       const res = await api.post("/auth/register", { email, password, phone });
+      const accessToken = res.data?.access_token;
+      const refreshToken = res.data?.refresh_token;
+
+      if (accessToken && refreshToken) {
+        localStorage.setItem("access_token", accessToken);
+        localStorage.setItem("refresh_token", refreshToken);
+        await fetchMe();
+      }
+
       return res.data;
     } catch (err) {
-      const detail = String(err?.response?.data?.detail || "").toLowerCase();
-      if (detail.includes("already registered")) {
-        await login(email, password);
-        return { message: "Account already existed. Signed you in instead." };
-      }
       throw err;
     }
   };

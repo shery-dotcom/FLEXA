@@ -5,12 +5,12 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
 from app.services.auth_service import AuthService
-from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, RefreshRequest, MessageResponse, ForgotPasswordRequest, ResetPasswordRequest
+from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, RefreshRequest, MessageResponse, ForgotPasswordRequest, ResetPasswordRequest, RegisterResponse
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.post("/register", response_model=MessageResponse, status_code=201)
+@router.post("/register", response_model=RegisterResponse, status_code=201)
 async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
     return await AuthService.register(db, data)
 
