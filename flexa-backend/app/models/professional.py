@@ -31,6 +31,7 @@ class ProfessionalProfile(Base):
 
     # Profile Info
     specialization: Mapped[str] = mapped_column(String(50), nullable=False)  # "nutritionist", "fitness_trainer", "both"
+    location: Mapped[str | None] = mapped_column(String(150), nullable=True)
     bio: Mapped[str] = mapped_column(Text, nullable=False)
     years_experience: Mapped[int] = mapped_column(Integer, nullable=False)
     certifications: Mapped[str] = mapped_column(Text, nullable=False)  # JSON array stored as string

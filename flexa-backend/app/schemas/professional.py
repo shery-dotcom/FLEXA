@@ -6,7 +6,8 @@ import uuid
 
 class ProfessionalRegistrationRequest(BaseModel):
     """Request to register as a professional"""
-    specialization: str = Field(..., description="nutritionist, fitness_trainer, or both")
+    specialization: str = Field(..., description="nutritionist or fitness_trainer")
+    location: Optional[str] = Field(None, max_length=150, description="Primary consultation location")
     bio: str = Field(..., min_length=50, max_length=1000, description="Professional bio")
     years_experience: int = Field(..., ge=0, le=60)
     certifications: List[str] = Field(..., description="List of certifications")
@@ -22,6 +23,7 @@ class ProfessionalProfileResponse(BaseModel):
     id: str
     name: str
     specialization: str
+    location: Optional[str]
     bio: str
     years_experience: int
     certifications: List[str]
@@ -51,6 +53,7 @@ class ProfessionalDetailResponse(BaseModel):
     id: str
     name: str
     specialization: str
+    location: Optional[str]
     bio: str
     years_experience: int
     certifications: List[str]

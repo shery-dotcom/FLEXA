@@ -7,7 +7,6 @@ const FILTERS = [
   { value: "", label: "All" },
   { value: "nutritionist", label: "Nutrition" },
   { value: "fitness_trainer", label: "Fitness" },
-  { value: "both", label: "Both" },
 ];
 
 export default function Marketplace() {
@@ -277,6 +276,7 @@ export default function Marketplace() {
                 }}
               >
                 <Badge label={formatSpecialization(p.specialization)} />
+                <Badge label={`Location: ${p.location || "-"}`} />
                 <Badge label={`Rating: ${p.average_rating ?? "-"}`} />
                 <Badge label={`${p.total_sessions_completed ?? 0} sessions`} />
               </div>
@@ -352,6 +352,10 @@ export default function Marketplace() {
                   <InfoItem
                     label="Timezone"
                     value={selectedProfessional.timezone || "-"}
+                  />
+                  <InfoItem
+                    label="Location"
+                    value={selectedProfessional.location || "-"}
                   />
                 </div>
 
