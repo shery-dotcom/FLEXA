@@ -276,7 +276,7 @@ export default function Marketplace() {
                 }}
               >
                 <Badge label={formatSpecialization(p.specialization)} />
-                <Badge label={`Location: ${p.location || "-"}`} />
+                <LocationBadge location={p.location} />
                 <Badge label={`Rating: ${p.average_rating ?? "-"}`} />
                 <Badge label={`${p.total_sessions_completed ?? 0} sessions`} />
               </div>
@@ -375,6 +375,10 @@ export default function Marketplace() {
                   </div>
                 </Section>
 
+                <Section title="Location">
+                  <LocationBadge location={selectedProfessional.location} />
+                </Section>
+
                 <Section title="Available Slots">
                   {selectedProfessional.available_slots?.length ? (
                     <select
@@ -466,6 +470,45 @@ function Badge({ label }) {
       {label}
     </span>
   );
+}
+
+function LocationBadge({ location }) {
+  const mapsUrl = getGoogleMapsSearchUrl(location);
+
+  if (!location) {
+    return <Badge label="Location: -" />;
+  }
+
+  return (
+    <a
+      href={mapsUrl}
+      target="_blank"
+      rel="noreferrer"
+      title="Open location in Google Maps"
+      style={{ textDecoration: "none" }}
+    >
+      <span
+        style={{
+          border: "1px solid #2a2a2a",
+          borderRadius: 999,
+          padding: "4px 9px",
+          color: "#d0d0d0",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <span>Location: {location}</span>
+        <span style={{ color: "#D4AF37", fontWeight: 700 }}>Map</span>
+      </span>
+    </a>
+  );
+}
+
+function getGoogleMapsSearchUrl(location) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    location || "",
+  )}`;
 }
 
 function formatSpecialization(value) {
