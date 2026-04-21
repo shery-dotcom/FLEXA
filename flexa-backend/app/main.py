@@ -56,8 +56,8 @@ A production-ready AI-powered fitness planning system.
 Use JWT Bearer tokens. Get tokens via `/api/v1/auth/login`.
         """,
         lifespan=lifespan,
-        docs_url="/docs",
-        redoc_url="/redoc",
+        docs_url="/api/v1/docs",
+        redoc_url="/api/v1/redoc",
     )
 
     # Rate limiting
