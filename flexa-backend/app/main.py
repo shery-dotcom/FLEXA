@@ -64,15 +64,15 @@ Use JWT Bearer tokens. Get tokens via `/api/v1/auth/login`.
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-    # CORS - allow React frontend
+    # CORS - allow React frontend and ngrok deployments
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins_list,
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         allow_headers=["*"],
         expose_headers=["*"],
-        max_age=3600,
+        max_age=86400,
     )
 
     # Include all routers

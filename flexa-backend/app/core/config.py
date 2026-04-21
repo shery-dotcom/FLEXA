@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     @property
     def allowed_origins_list(self) -> list[str]:
         origins = [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+        # Add support for ngrok URLs dynamically (they change with each restart)
+        if self.DEBUG:
+            origins.append("*")  # Allow all origins in DEBUG mode
         return [origin for origin in origins if origin]
 
 
