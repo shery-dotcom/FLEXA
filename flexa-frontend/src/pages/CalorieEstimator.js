@@ -155,8 +155,12 @@ export default function CalorieEstimator() {
     try {
       const formData = new FormData();
       formData.append("image", file);
+      const confirmedFoodLabel =
+        typeof confirmedFoodName === "string"
+          ? confirmedFoodName
+          : confirmedFoodName?.food_name || confirmedFoodName?.name || "";
       const confirmedParam = confirmedFoodName
-        ? `&confirmed_food_name=${encodeURIComponent(confirmedFoodName)}`
+        ? `&confirmed_food_name=${encodeURIComponent(confirmedFoodLabel)}`
         : "";
 
       // Do NOT set Content-Type manually — axios auto-adds boundary for FormData
