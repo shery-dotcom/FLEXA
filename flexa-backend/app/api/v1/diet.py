@@ -42,6 +42,7 @@ from app.ml.food_classifier import (
     predict_top3_from_image_bytes,
     map_prediction_to_nutrition,
     get_model_runtime_info,
+    get_common_foods,
 )
 from app.core.cache import cache_get, cache_set, cache_delete
 from app.core.rate_limit import limiter
@@ -592,6 +593,23 @@ async def image_model_config(
     info["confidence_threshold"] = CONFIDENCE_THRESHOLD
     return info
 
+
+@router.get("/common-foods")
+async def get_common_foods_list(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Returns a list of common foods from Pakistani, Food-101, and vegetable datasets.
+    Used as fallback when the AI model is unavailable or when user wants to manually select food.
+    Helpful for: image upload fallback, manual food selection, and suggesting options.
+    """
+    foods = get_common_foods()
+    return {
+        "foods": foods,
+        "count": len(foods),
+        "message": "Common foods available for manual selection",
+    }
+
 @router.post("/upload-meal-image", response_model=ImageAnalysisResponse)
 @limiter.limit("5/minute")
 async def upload_meal_image(
@@ -652,6 +670,12 @@ async def upload_meal_image(
     # ── Reject foods below confidence threshold ──────────────────────────────
     if low_confidence:
         # Don't guess — return rejection with top-3 alternatives for user selection
+        # For fallback mode (confidence ≤ 0.35), provide a friendlier message
+        if confidence <= 0.35:
+            msg = "🤔 I couldn't recognize this food from the image. Here are some common options — pick the closest match:"
+        else:
+            msg = f"❌ I'm not confident about this food (only {confidence:.0%} sure). Please pick the correct one below:"
+        
         return ImageAnalysisResponse(
             predicted_class="unknown",
             confidence=0.0,
@@ -662,7 +686,7 @@ async def upload_meal_image(
             estimated_fat_g=0.0,
             low_confidence=True,
             matched_food=None,
-            message=f"❌ I'm not confident about this food (only {confidence:.0%} sure). Please pick the correct one below:",
+            message=msg,
             top_predictions=[TopPrediction(**p) for p in top3],
             requires_confirmation=True,
         )

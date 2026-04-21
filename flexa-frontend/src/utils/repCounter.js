@@ -55,19 +55,19 @@ export const EXERCISE_GROUPS = [
 
 export const EXERCISE_LABELS = {
   pushup: "Push-ups",
-  pullup: "Pull-ups / Chin-ups",
-  bicep_curl: "Dumbbell Bicep Curls",
+  pullup: "Pull-ups",
+  bicep_curl: "Bicep Curls",
   tricep_dip: "Tricep Dips",
-  shoulder_press: "Shoulder Press (Dumbbell/Barbell)",
+  shoulder_press: "Shoulder Press",
   lateral_raise: "Lateral Raises",
-  bench_press: "Bench Press (Barbell/Dumbbell)",
-  squat: "Squats (Bodyweight/Barbell)",
-  lunge: "Lunges (Forward/Walking)",
-  deadlift: "Deadlifts (Conventional/Romanian)",
-  hip_thrust: "Glute Bridges / Hip Thrusts",
+  bench_press: "Bench Press",
+  squat: "Squats",
+  lunge: "Lunges",
+  deadlift: "Deadlifts",
+  hip_thrust: "Hip Thrusts",
   calf_raise: "Calf Raises",
   plank: "Plank",
-  situp: "Sit-ups / Crunches",
+  situp: "Sit-ups",
   mountain_climber: "Mountain Climbers",
 };
 

@@ -301,13 +301,30 @@ def predict_top3_from_image_bytes(image_bytes: bytes) -> list:
     """
     Run inference and return the top-3 class predictions sorted by confidence.
     Returns a list of {"food_name": str, "confidence": float} dicts.
-    Falls back to [{"food_name": "unknown food", "confidence": 0.0}] when the
-    model is not loaded.
+    
+    If model is not loaded:
+      - Falls back to suggesting common foods with low confidence (50%)
+      - User can then manually select the correct food
     """
     _try_load_model()
 
     if _model is None:
-        return [{"food_name": "unknown food", "confidence": 0.0}]
+        # Fallback: suggest common foods with reduced confidence
+        # This allows users to manually select the correct food
+        import random
+        common = get_common_foods()
+        if not common:
+            return [{"food_name": "unknown food", "confidence": 0.0}]
+        
+        # Return random 3 common foods with 35% confidence to indicate "suggestions only"
+        # This low confidence triggers requires_confirmation in the API response
+        selected = random.sample(common, min(3, len(common)))
+        suggestions = [
+            {"food_name": food, "confidence": 0.35}
+            for food in selected
+        ]
+        logger.info("Model not available. Returning fallback food suggestions: %s", selected)
+        return suggestions
 
     try:
         import torch
@@ -408,15 +425,45 @@ async def map_prediction_to_nutrition(
     return None
 
 
+def get_common_foods() -> list:
+    """
+    Return a curated list of common foods from Pakistani, Food-101, and Veg datasets.
+    Used as fallback suggestions when model is not available.
+    Sorted alphabetically for easy browsing.
+    """
+    return sorted(list(set(
+        # Pakistani Food Images (sampled)
+        [
+            "biryani", "chicken tikka", "samosa", "chapati", "dal makhani",
+            "paneer tikka", "butter chicken", "aloo gobi", "chana masala",
+            "gulab jamun", "kebab", "nihari", "korma", "haleem",
+        ]
+        # Food-101 (sampled)
+        + [
+            "pizza", "ice cream", "sushi", "hamburger", "french fries",
+            "salad", "pasta", "ramen", "tacos", "curry",
+        ]
+        # Vegetables & Fruits
+        + [
+            "apple", "banana", "orange", "carrot", "broccoli",
+            "spinach", "tomato", "onion", "garlic", "potato",
+        ]
+    )))
+
+
 def get_model_runtime_info() -> dict:
     """Expose runtime model metadata for mobile clients and diagnostics."""
     meta = _load_model_meta()
+    model_available = MODEL_PATH.exists()
+    
     return {
-        "model_available": MODEL_PATH.exists(),
+        "model_available": model_available,
         "model_arch": meta.get("model_arch", "resnet50"),
         "img_size": int(meta.get("img_size", 224)),
         "normalize_mean": meta.get("normalize_mean", [0.485, 0.456, 0.406]),
         "normalize_std": meta.get("normalize_std", [0.229, 0.224, 0.225]),
         "class_map_available": MAP_PATH.exists(),
         "num_classes": len(_load_class_map()),
+        "fallback_mode": not model_available,
+        "common_foods_available": len(get_common_foods()) > 0,
     }
