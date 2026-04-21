@@ -4,8 +4,5 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ],
-  "env": {
-    "REACT_APP_API_URL": "https://banish-levitator-maroon.ngrok-free.dev/api/v1"
-  }
+  ]
 }

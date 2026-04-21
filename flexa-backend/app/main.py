@@ -64,12 +64,23 @@ Use JWT Bearer tokens. Get tokens via `/api/v1/auth/login`.
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-    # CORS - allow React frontend and ngrok deployments
+    # CORS - explicitly allow Vercel frontend and ngrok/localhost dev
+    cors_origins = settings.allowed_origins_list
+    # Ensure critical URLs are always included
+    critical_origins = [
+        "https://flexa-ashen.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ]
+    for origin in critical_origins:
+        if origin not in cors_origins:
+            cors_origins.append(origin)
+    
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.allowed_origins_list,
+        allow_origins=cors_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
         allow_headers=["*"],
         expose_headers=["*"],
         max_age=86400,
