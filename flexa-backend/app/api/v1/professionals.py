@@ -1,6 +1,5 @@
 import uuid
 from typing import Optional
-import stripe
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -103,7 +102,7 @@ async def book_consultation(
 ):
     """
     Book a consultation with a professional
-    Returns payment URL (Stripe)
+    Creates a consultation session and payment record
     """
     try:
         prof_uuid = uuid.UUID(professional_id)
@@ -133,79 +132,7 @@ async def book_consultation(
         await db.rollback()
         raise HTTPException(status_code=404, detail="Professional not found")
 
-    if settings.STRIPE_DEMO_MODE:
-        demo_checkout_id = f"cs_test_demo_{str(session.id).replace('-', '')[:18]}"
-        payment = Payment(
-            session_id=session.id,
-            user_id=current_user.id,
-            professional_id=professional.id,
-            gross_amount_usd=session.session_price_usd,
-            flexa_commission_usd=session.flexa_commission_usd,
-            professional_payout_usd=session.professional_earnings_usd,
-            payment_status="pending",
-            stripe_payment_intent_id=demo_checkout_id,
-        )
-
-        session.payment_id = demo_checkout_id
-        session.payment_status = "pending"
-
-        db.add(payment)
-        db.add(session)
-        await db.commit()
-
-        return {
-            "session_id": str(session.id),
-            "status": "pending_payment",
-            "price_usd": session.session_price_usd,
-            "session_date": session.session_date.isoformat(),
-            "message": "Stripe demo checkout created. This is a presentation-only flow.",
-            "checkout_url": f"{settings.FRONTEND_URL}/marketplace?payment=success&session_id={session.id}&stripe_session_id={demo_checkout_id}",
-            "stripe_session_id": demo_checkout_id,
-            "demo_mode": True,
-        }
-
-    if not settings.STRIPE_SECRET_KEY:
-        await db.rollback()
-        raise HTTPException(
-            status_code=503,
-            detail="Stripe key is missing. Add STRIPE_SECRET_KEY or enable STRIPE_DEMO_MODE.",
-        )
-
-    stripe.api_key = settings.STRIPE_SECRET_KEY
-    success_url = settings.STRIPE_SUCCESS_URL or (
-        f"{settings.FRONTEND_URL}/marketplace?payment=success&session_id={session.id}&stripe_session_id={{CHECKOUT_SESSION_ID}}"
-    )
-    cancel_url = settings.STRIPE_CANCEL_URL or f"{settings.FRONTEND_URL}/marketplace?payment=cancelled"
-
-    try:
-        checkout_session = stripe.checkout.Session.create(
-            mode="payment",
-            customer_email=current_user.email,
-            success_url=success_url,
-            cancel_url=cancel_url,
-            metadata={
-                "consultation_session_id": str(session.id),
-                "user_id": str(current_user.id),
-                "professional_id": str(professional.id),
-            },
-            line_items=[
-                {
-                    "quantity": 1,
-                    "price_data": {
-                        "currency": settings.STRIPE_CURRENCY,
-                        "unit_amount": int(round(session.session_price_usd * 100)),
-                        "product_data": {
-                            "name": f"FLEXA consultation with {professional.user.profile.username if professional.user.profile else 'Expert'}",
-                            "description": f"{data.specialization_type.replace('_', ' ').title()} consultation for {session.duration_mins} minutes",
-                        },
-                    },
-                }
-            ],
-        )
-    except Exception as exc:
-        await db.rollback()
-        raise HTTPException(status_code=502, detail=f"Could not create Stripe checkout session: {exc}")
-
+    # Create payment record
     payment = Payment(
         session_id=session.id,
         user_id=current_user.id,
@@ -216,7 +143,7 @@ async def book_consultation(
         payment_status="pending",
     )
 
-    session.payment_id = checkout_session.id
+    session.payment_id = str(payment.id)
     session.payment_status = "pending"
 
     db.add(payment)
@@ -228,10 +155,8 @@ async def book_consultation(
         "status": "pending_payment",
         "price_usd": session.session_price_usd,
         "session_date": session.session_date.isoformat(),
-        "message": "Proceed to Stripe Checkout. Use test card 4242 4242 4242 4242 for testing.",
-        "checkout_url": checkout_session.url,
-        "stripe_session_id": checkout_session.id,
-        "demo_mode": False,
+        "message": "Consultation booked successfully. Awaiting payment confirmation.",
+        "payment_id": str(payment.id),
     }
 
 

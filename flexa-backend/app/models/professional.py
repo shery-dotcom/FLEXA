@@ -159,10 +159,6 @@ class Payment(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     professional_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("professional_profiles.id", ondelete="CASCADE"), nullable=False)
 
-    # Stripe Integration
-    stripe_payment_intent_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-
     # Amount Breakdown
     gross_amount_usd: Mapped[float] = mapped_column(Float, nullable=False)
     flexa_commission_usd: Mapped[float] = mapped_column(Float, nullable=False)

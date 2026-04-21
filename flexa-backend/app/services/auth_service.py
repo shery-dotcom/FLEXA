@@ -222,13 +222,25 @@ class AuthService:
 
     @staticmethod
     async def google_login_or_create(db: AsyncSession, google_user_info: dict) -> TokenResponse:
+        """
+        Login or create user from Google OAuth info
+        Handles existing Google users and converts email-based users to Google auth
+        """
         email = google_user_info.get("email")
         google_id = google_user_info.get("sub")
+        given_name = google_user_info.get("given_name", "User")
+
+        # Validate required fields
+        if not email:
+            raise ValueError("Email not provided by Google OAuth")
+        if not google_id:
+            raise ValueError("Google ID not provided by Google OAuth")
 
         result = await db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
 
         if not user:
+            # Create new Google user
             user = User(
                 email=email,
                 google_id=google_id,
@@ -239,6 +251,13 @@ class AuthService:
             db.add(user)
             await db.commit()
             await db.refresh(user)
+        else:
+            # Update existing user to link Google account if not already linked
+            if not user.is_google_user:
+                user.google_id = google_id
+                user.is_google_user = True
+                db.add(user)
+                await db.commit()
 
         token_data = {"sub": str(user.id), "email": user.email, "role": user.role}
         return TokenResponse(

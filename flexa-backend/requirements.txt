@@ -21,7 +21,6 @@ aiofiles==23.2.1
 celery==5.3.6
 redis==5.0.1
 slowapi==0.1.9
-stripe==11.1.0
 # Module 3 — Diet & Calorie Planner
 Pillow>=10.0.0              # image preprocessing for food classifier
 xgboost>=2.0.0              # optional: XGBoost calorie prediction fallback

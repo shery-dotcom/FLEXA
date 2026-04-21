@@ -57,39 +57,80 @@ async def google_auth_redirect():
 
 
 @router.get("/google/callback")
-async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
+async def google_callback(code: str = None, error: str = None, db: AsyncSession = Depends(get_db)):
     import httpx
     from app.core.config import settings
-
-    async with httpx.AsyncClient() as client:
-        # Exchange code for tokens
-        token_response = await client.post(
-            "https://oauth2.googleapis.com/token",
-            data={
-                "code": code,
-                "client_id": settings.GOOGLE_CLIENT_ID,
-                "client_secret": settings.GOOGLE_CLIENT_SECRET,
-                "redirect_uri": settings.GOOGLE_REDIRECT_URI,
-                "grant_type": "authorization_code",
-            },
-        )
-        token_data = token_response.json()
-        access_token = token_data.get("access_token")
-
-        # Get user info
-        user_info_response = await client.get(
-            "https://www.googleapis.com/oauth2/v2/userinfo",
-            headers={"Authorization": f"Bearer {access_token}"},
-        )
-        user_info = user_info_response.json()
-
-    tokens = await AuthService.google_login_or_create(db, user_info)
-
-    # Redirect browser back to React with tokens in query string
+    
     frontend_url = settings.FRONTEND_URL
-    redirect_url = (
-        f"{frontend_url}/auth/google/success"
-        f"?access_token={tokens.access_token}"
-        f"&refresh_token={tokens.refresh_token}"
-    )
-    return RedirectResponse(url=redirect_url)
+
+    # Handle user cancellation
+    if error:
+        return RedirectResponse(
+            url=f"{frontend_url}/auth/google/error?error={error}",
+            status_code=302
+        )
+
+    if not code:
+        return RedirectResponse(
+            url=f"{frontend_url}/auth/google/error?error=no_code",
+            status_code=302
+        )
+
+    try:
+        async with httpx.AsyncClient() as client:
+            # Exchange code for tokens
+            token_response = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "code": code,
+                    "client_id": settings.GOOGLE_CLIENT_ID,
+                    "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                    "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+                    "grant_type": "authorization_code",
+                },
+                timeout=10.0,
+            )
+            token_data = token_response.json()
+            
+            if "error" in token_data:
+                return RedirectResponse(
+                    url=f"{frontend_url}/auth/google/error?error=token_exchange_failed",
+                    status_code=302
+                )
+            
+            access_token = token_data.get("access_token")
+            if not access_token:
+                return RedirectResponse(
+                    url=f"{frontend_url}/auth/google/error?error=no_access_token",
+                    status_code=302
+                )
+
+            # Get user info
+            user_info_response = await client.get(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10.0,
+            )
+            user_info = user_info_response.json()
+            
+            if "error" in user_info:
+                return RedirectResponse(
+                    url=f"{frontend_url}/auth/google/error?error=user_info_failed",
+                    status_code=302
+                )
+
+        tokens = await AuthService.google_login_or_create(db, user_info)
+
+        # Redirect browser back to React with tokens in query string
+        redirect_url = (
+            f"{frontend_url}/auth/google/success"
+            f"?access_token={tokens.access_token}"
+            f"&refresh_token={tokens.refresh_token}"
+        )
+        return RedirectResponse(url=redirect_url)
+    
+    except Exception as e:
+        return RedirectResponse(
+            url=f"{frontend_url}/auth/google/error?error=callback_failed",
+            status_code=302
+        )

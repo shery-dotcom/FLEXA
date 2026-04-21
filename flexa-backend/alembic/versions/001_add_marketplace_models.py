@@ -118,8 +118,6 @@ def upgrade() -> None:
         sa.Column('session_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('professional_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('stripe_payment_intent_id', sa.String(length=255), nullable=True),
-        sa.Column('stripe_customer_id', sa.String(length=255), nullable=True),
         sa.Column('gross_amount_usd', sa.Float(), nullable=False),
         sa.Column('flexa_commission_usd', sa.Float(), nullable=False),
         sa.Column('professional_payout_usd', sa.Float(), nullable=False),

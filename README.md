@@ -31,7 +31,7 @@ This repository contains the Flexa AI Fitness Planner project with:
 ### Backend
 
 1. Copy `flexa-backend/.env.example` to `flexa-backend/.env`.
-2. Fill required values (DB, OAuth, API keys, Stripe keys).
+2. Fill required values (DB, OAuth, API keys).
 
 ### Frontend
 
