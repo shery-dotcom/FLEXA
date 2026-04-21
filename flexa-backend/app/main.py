@@ -71,6 +71,8 @@ Use JWT Bearer tokens. Get tokens via `/api/v1/auth/login`.
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["*"],
+        max_age=3600,
     )
 
     # Include all routers
