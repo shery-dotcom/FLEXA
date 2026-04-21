@@ -8,7 +8,7 @@ _ENV_FILE = Path(__file__).resolve().parent.parent.parent / ".env"
 
 class Settings(BaseSettings):
     APP_NAME: str = "Flexa AI Fitness Planner"
-    APP_VERSION: str = "1.0.1"
+    APP_VERSION: str = "1.0.2"
     DEBUG: bool = True
 
     # Security
