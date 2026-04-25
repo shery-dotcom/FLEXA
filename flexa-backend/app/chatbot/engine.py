@@ -13,6 +13,7 @@ Flow:
   9. Return reply + avatar event
 """
 from __future__ import annotations
+import hashlib
 import os
 import uuid
 import asyncio
@@ -26,6 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
+from app.core.cache import cache_get, cache_set
 from app.models.user import User
 from app.chatbot import avatar as avatar_mod
 from app.chatbot import memory as memory_mod
@@ -39,6 +41,7 @@ logger = logging.getLogger(__name__)
 # llama-3.1-8b-instant is Groq's speed-optimised model — ~5-10× faster than
 # the 70B while retaining strong fitness/nutrition reasoning quality.
 _GROQ_MODEL = "llama-3.1-8b-instant"
+_RAG_CACHE_TTL_S = 900
 
 
 def _get_api_key() -> str:
@@ -46,6 +49,12 @@ def _get_api_key() -> str:
     if not api_key:
         raise RuntimeError("GROQ_API_KEY is not configured. Set it in flexa-backend/.env")
     return api_key
+
+
+def _rag_cache_key(intent: str, user_message: str) -> str:
+    normalized = " ".join((user_message or "").strip().lower().split())
+    digest = hashlib.sha1(normalized.encode("utf-8", errors="ignore")).hexdigest()
+    return f"flexa:chatbot:rag:{intent}:{digest}"
 
 
 async def _get_user_profile(db: AsyncSession, user_id: uuid.UUID) -> dict[str, Any]:
@@ -103,8 +112,19 @@ async def process_message(
     # same AsyncSession but asyncio.gather interleaves their awaits safely
     # because SQLAlchemy async never holds the connection between awaits.
     # Top_k kept small for faster retrieval without quality loss.
+    rag_cache_key = _rag_cache_key(intent, user_message)
+
+    async def _get_rag_context() -> str:
+        cached_rag = await cache_get(rag_cache_key)
+        if isinstance(cached_rag, str):
+            return cached_rag
+
+        context = await asyncio.to_thread(rag_mod.retrieve, user_message, 2, intent)
+        await cache_set(rag_cache_key, context or "", ttl=_RAG_CACHE_TTL_S)
+        return context
+
     rag_context, history, avatar_state, user_profile = await asyncio.gather(
-        asyncio.to_thread(rag_mod.retrieve, user_message, 2, intent),
+        _get_rag_context(),
         memory_mod.fetch_window(db, user_id),
         avatar_mod.refresh_avatar_from_progress(db, user_id),
         _get_user_profile(db, user_id),
@@ -140,7 +160,7 @@ async def process_message(
         completion = await async_client.chat.completions.create(
             model=_GROQ_MODEL,
             messages=messages,
-            max_tokens=220,   # keep responses concise and faster to generate
+            max_tokens=160,   # keep responses concise and faster to generate
             temperature=0.72,
         )
         reply = completion.choices[0].message.content.strip()
