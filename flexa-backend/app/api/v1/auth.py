@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+import secrets
+
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
@@ -44,24 +46,48 @@ async def logout(current_user: User = Depends(get_current_user)):
 @router.get("/google")
 async def google_auth_redirect():
     from app.core.config import settings
+    state = secrets.token_urlsafe(32)
     google_auth_url = (
         "https://accounts.google.com/o/oauth2/v2/auth"
         f"?client_id={settings.GOOGLE_CLIENT_ID}"
         "&response_type=code"
+        f"&state={state}"
         f"&redirect_uri={settings.GOOGLE_REDIRECT_URI}"
         "&scope=openid%20email%20profile"
         "&access_type=offline"
         "&prompt=select_account"
     )
-    return RedirectResponse(url=google_auth_url)
+    response = RedirectResponse(url=google_auth_url)
+    response.set_cookie(
+        key="google_oauth_state",
+        value=state,
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="lax",
+        max_age=600,
+        path="/api/v1/auth",
+    )
+    return response
 
 
 @router.get("/google/callback")
-async def google_callback(code: str = None, error: str = None, db: AsyncSession = Depends(get_db)):
+async def google_callback(
+    request: Request,
+    code: str = None,
+    state: str = None,
+    error: str = None,
+    db: AsyncSession = Depends(get_db),
+):
     import httpx
     from app.core.config import settings
     
     frontend_url = settings.FRONTEND_URL
+    expected_state = request.cookies.get("google_oauth_state")
+    if expected_state and state != expected_state:
+        return RedirectResponse(
+            url=f"{frontend_url}/auth/google/error?error=invalid_state",
+            status_code=302,
+        )
 
     # Handle user cancellation
     if error:
@@ -121,13 +147,16 @@ async def google_callback(code: str = None, error: str = None, db: AsyncSession 
 
         tokens = await AuthService.google_login_or_create(db, user_info)
 
-        # Redirect browser back to React with tokens in query string
+        # Redirect browser back to React with tokens in the URL fragment so they
+        # are not sent to the server or stored in access logs.
         redirect_url = (
             f"{frontend_url}/auth/google/success"
-            f"?access_token={tokens.access_token}"
+            f"#access_token={tokens.access_token}"
             f"&refresh_token={tokens.refresh_token}"
         )
-        return RedirectResponse(url=redirect_url)
+        response = RedirectResponse(url=redirect_url)
+        response.delete_cookie("google_oauth_state", path="/api/v1/auth")
+        return response
     
     except Exception as e:
         return RedirectResponse(

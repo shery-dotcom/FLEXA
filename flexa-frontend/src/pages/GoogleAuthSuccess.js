@@ -6,7 +6,7 @@ import { useAuth } from "../context/AuthContext";
  * /auth/google/success
  *
  * Google redirects the browser here after OAuth with:
- *   ?access_token=...&refresh_token=...
+ *   #access_token=...&refresh_token=...
  *
  * This page stores the tokens then navigates into the app.
  */
@@ -16,8 +16,15 @@ export default function GoogleAuthSuccess() {
   const { refreshUser } = useAuth();
 
   useEffect(() => {
-    const accessToken = searchParams.get("access_token");
-    const refreshToken = searchParams.get("refresh_token");
+    const fragment = new URLSearchParams(
+      window.location.hash.startsWith("#")
+        ? window.location.hash.slice(1)
+        : window.location.hash,
+    );
+    const accessToken =
+      fragment.get("access_token") || searchParams.get("access_token");
+    const refreshToken =
+      fragment.get("refresh_token") || searchParams.get("refresh_token");
 
     if (!accessToken) {
       // Something went wrong — send back to login with error
@@ -28,11 +35,13 @@ export default function GoogleAuthSuccess() {
     localStorage.setItem("access_token", accessToken);
     if (refreshToken) localStorage.setItem("refresh_token", refreshToken);
 
+    window.history.replaceState({}, document.title, window.location.pathname);
+
     // Reload user from API then redirect
     refreshUser().then(() => {
       navigate("/dashboard", { replace: true });
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [navigate, refreshUser, searchParams]);
 
   return (
     <div
@@ -52,5 +61,3 @@ export default function GoogleAuthSuccess() {
     </div>
   );
 }
-
-

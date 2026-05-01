@@ -201,6 +201,7 @@ async def confirm_payment(
         db=db,
         session_id=session_uuid,
         meeting_link=data.meeting_link,
+        requester_user_id=current_user.id,
     )
     
     return {

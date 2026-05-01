@@ -89,13 +89,15 @@ class ProfessionalService:
             raise HTTPException(status_code=404, detail="Professional not found")
 
         # Get available slots for next 7 days
-        seven_days_from_now = datetime.now(datetime.now().astimezone().tzinfo) + timedelta(days=7)
+        now = datetime.now(datetime.now().astimezone().tzinfo)
+        seven_days_from_now = now + timedelta(days=7)
         slots_res = await db.execute(
             select(AvailabilitySlot)
             .where(
                 AvailabilitySlot.professional_id == professional_id,
                 AvailabilitySlot.is_available == True,
-                AvailabilitySlot.start_time >= datetime.now(datetime.now().astimezone().tzinfo),
+                AvailabilitySlot.start_time >= now,
+                AvailabilitySlot.start_time <= seven_days_from_now,
             )
             .order_by(AvailabilitySlot.start_time)
         )
@@ -293,16 +295,25 @@ class ProfessionalService:
         db: AsyncSession,
         session_id: uuid.UUID,
         meeting_link: str,
+        requester_user_id: uuid.UUID,
     ) -> ConsultationSession:
         """
         Confirm booking after payment
         """
         session_res = await db.execute(
-            select(ConsultationSession).where(ConsultationSession.id == session_id)
+            select(ConsultationSession)
+            .options(selectinload(ConsultationSession.professional).selectinload(ProfessionalProfile.user))
+            .where(ConsultationSession.id == session_id)
         )
         session = session_res.scalar_one_or_none()
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
+
+        allowed_user_ids = {session.user_id}
+        if session.professional and session.professional.user_id:
+            allowed_user_ids.add(session.professional.user_id)
+        if requester_user_id not in allowed_user_ids:
+            raise HTTPException(status_code=403, detail="Not allowed to confirm this payment")
 
         session.status = "confirmed"
         if meeting_link is not None:
@@ -365,12 +376,13 @@ class ProfessionalService:
             raise HTTPException(status_code=404, detail="Professional not found")
 
         # Get upcoming sessions (next 7 days)
-        seven_days_from_now = datetime.now(datetime.now().astimezone().tzinfo) + timedelta(days=7)
+        now = datetime.now(datetime.now().astimezone().tzinfo)
+        seven_days_from_now = now + timedelta(days=7)
         upcoming_res = await db.execute(
             select(ConsultationSession)
             .where(
                 ConsultationSession.professional_id == professional_id,
-                ConsultationSession.session_date >= datetime.now(datetime.now().astimezone().tzinfo),
+                ConsultationSession.session_date >= now,
                 ConsultationSession.session_date <= seven_days_from_now,
             )
             .order_by(ConsultationSession.session_date)

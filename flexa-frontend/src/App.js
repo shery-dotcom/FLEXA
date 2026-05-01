@@ -18,6 +18,7 @@ import Chatbot from "./pages/Chatbot";
 import GoogleAuthSuccess from "./pages/GoogleAuthSuccess";
 import PostureTrackerPage from "./pages/PostureTrackerPage";
 import Marketplace from "./pages/Marketplace";
+import OpeningPage from "./pages/OpeningPage";
 
 // Guard: logged in but no profile → send to profile-setup
 function OnboardingGuard({ children }) {
@@ -158,8 +159,11 @@ function App() {
         />
 
         {/* Default */}
-        <Route path="/" element={<Navigate to="/login" />} />
-        <Route path="*" element={<Navigate to="/login" />} />
+        <Route
+          path="/"
+          element={!user ? <OpeningPage /> : <Navigate to="/dashboard" />}
+        />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </div>
   );
