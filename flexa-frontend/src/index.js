@@ -23,14 +23,12 @@ root.render(
               fontSize: "14px",
             },
             success: {
-              iconTheme: { primary: "#D4AF37", secondary: "#0a0a0a" },
+              iconTheme: { primary: "#FF6B35", secondary: "#0a0a0a" },
             },
-            error: { iconTheme: { primary: "#ef5350", secondary: "#fff" } },
+            error: { iconTheme: { primary: "#FF0055", secondary: "#ffffff" } },
           }}
         />
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,
 );
-
-

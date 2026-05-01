@@ -268,7 +268,7 @@ export default function FlexaGuide({ pageKey }) {
                     alignItems: "center",
                     justifyContent: "center",
                     fontSize: 10,
-                    color: "#D4AF37",
+                    color: "#FF6B35",
                     fontWeight: 900,
                   }}
                 >
@@ -307,8 +307,8 @@ export default function FlexaGuide({ pageKey }) {
                 padding: isMobile ? "11px 20px" : "11px 30px",
                 borderRadius: 14,
                 border: "none",
-                background: "linear-gradient(135deg, #D4AF37 0%, #B8962E 100%)",
-                color: "#0a0c14",
+                background: "linear-gradient(135deg, #FF6B35 0%, #FF5520 100%)",
+                color: "#ffffff",
                 fontWeight: 900,
                 fontSize: 14,
                 width: isMobile ? "100%" : "auto",
@@ -343,8 +343,8 @@ export default function FlexaGuide({ pageKey }) {
               width: 9,
               height: 9,
               borderRadius: "50%",
-              background: "#D4AF37",
-              boxShadow: "0 0 10px #D4AF37",
+              background: "#FF6B35",
+              boxShadow: "0 0 10px #FF6B35",
               animation: "fg-dot-pulse 2s ease-in-out infinite",
             }}
           />
@@ -363,8 +363,8 @@ export default function FlexaGuide({ pageKey }) {
           to   { opacity:0; transform:translate(-50%,-50%) scale(0.91) translateY(14px); }
         }
         @keyframes fg-dot-pulse {
-          0%,100% { transform:scale(1);   opacity:1;   box-shadow:0 0 10px #D4AF37; }
-          50%      { transform:scale(1.7); opacity:0.6; box-shadow:0 0 22px #D4AF37; }
+          0%,100% { transform:scale(1);   opacity:1;   box-shadow:0 0 10px #FF6B35; }
+          50%      { transform:scale(1.7); opacity:0.6; box-shadow:0 0 22px #FF6B35; }
         }
       `}</style>
     </>

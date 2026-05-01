@@ -281,7 +281,7 @@ export default function Chatbot() {
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerLeft}>
-          <TbRobot size={24} color="#D4AF37" />
+          <TbRobot size={24} color="#FF6B35" />
           <span style={styles.headerTitle}>FLEXA</span>
           <span style={styles.headerSub}>Fitness Companion</span>
         </div>
@@ -294,7 +294,7 @@ export default function Chatbot() {
             <FiRefreshCw size={16} />
           </button>
           <button
-            style={{ ...styles.iconBtn, color: "#EF4444" }}
+            style={{ ...styles.iconBtn, color: "#FF0055" }}
             onClick={handleClearHistory}
             title="Clear chat history"
           >
@@ -442,7 +442,7 @@ export default function Chatbot() {
                   border: isListening
                     ? "1px solid rgba(239,68,68,0.5)"
                     : "1px solid rgba(255,255,255,0.1)",
-                  color: isListening ? "#ef5350" : "rgba(255,255,255,0.6)",
+                  color: isListening ? "#FF0055" : "rgba(255,255,255,0.6)",
                   animation: isListening
                     ? "micPulse 1.2s ease-in-out infinite"
                     : "none",
@@ -512,7 +512,7 @@ const styles = {
   headerTitle: {
     fontSize: 20,
     fontWeight: 800,
-    color: "#D4AF37",
+    color: "#FF6B35",
     letterSpacing: 2,
   },
   headerSub: {
@@ -552,8 +552,7 @@ const styles = {
     fontWeight: 600,
   },
   mobileTabActive: {
-    color: "#D4AF37",
-    borderBottomColor: "#D4AF37",
+    color: "#FF6B35",
   },
   main: {
     display: "flex",
@@ -589,10 +588,10 @@ const styles = {
     width: "100%",
   },
   chip: {
-    background: "rgba(212,175,55,0.08)",
-    border: "1px solid rgba(212,175,55,0.2)",
+    background: "rgba(255,107,53,0.08)",
+    border: "1px solid rgba(255,107,53,0.2)",
     borderRadius: 8,
-    color: "#D4AF37",
+    color: "#FF6B35",
     padding: "7px 10px",
     fontSize: 12,
     cursor: "pointer",
@@ -658,7 +657,7 @@ const styles = {
     transition: "border-color 0.2s",
   },
   sendBtn: {
-    background: "linear-gradient(135deg, #D4AF37, #B8962E)",
+    background: "linear-gradient(135deg, #FF6B35, #FF5520)",
     border: "none",
     borderRadius: 12,
     color: "#0a0a0a",

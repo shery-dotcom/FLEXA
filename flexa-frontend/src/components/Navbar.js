@@ -98,7 +98,7 @@ export default function Navbar() {
           flexShrink: 0,
         }}
       >
-        <FiUser size={Math.floor(size * 0.45)} color="#D4AF37" />
+        <FiUser size={Math.floor(size * 0.45)} color="#FF6B35" />
       </div>
     );
 
@@ -187,7 +187,7 @@ export default function Navbar() {
                     <div>
                       <p
                         style={{
-                          color: "#D4AF37",
+                          color: "#FF6B35",
                           fontWeight: 700,
                           fontSize: 14,
                         }}
@@ -239,7 +239,7 @@ export default function Navbar() {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <AvatarCircle size={42} />
               <div>
-                <p style={{ color: "#D4AF37", fontWeight: 700, fontSize: 14 }}>
+                <p style={{ color: "#FF6B35", fontWeight: 700, fontSize: 14 }}>
                   {displayName}
                 </p>
                 <p style={{ color: "#616161", fontSize: 12 }}>{user?.email}</p>

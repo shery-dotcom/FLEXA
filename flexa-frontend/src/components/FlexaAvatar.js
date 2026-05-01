@@ -100,19 +100,19 @@ export default function FlexaAvatar({
           >
             <span
               className="av-zzz z1"
-              style={{ fontSize: 13, color: "#D4AF37", fontWeight: 900 }}
+              style={{ fontSize: 13, color: "#FF6B35", fontWeight: 900 }}
             >
               z
             </span>
             <span
               className="av-zzz z2"
-              style={{ fontSize: 17, color: "#D4AF37", fontWeight: 900 }}
+              style={{ fontSize: 17, color: "#FF6B35", fontWeight: 900 }}
             >
               z
             </span>
             <span
               className="av-zzz z3"
-              style={{ fontSize: 22, color: "#D4AF37", fontWeight: 900 }}
+              style={{ fontSize: 22, color: "#FF6B35", fontWeight: 900 }}
             >
               Z
             </span>
@@ -190,7 +190,7 @@ export default function FlexaAvatar({
           style={{
             fontSize: 18,
             fontWeight: 900,
-            color: "#D4AF37",
+            color: "#FF6B35",
             letterSpacing: 3,
           }}
         >
@@ -210,7 +210,7 @@ export default function FlexaAvatar({
             }}
           >
             BMI{" "}
-            <span style={{ color: "#D4AF37", fontWeight: 700 }}>
+            <span style={{ color: "#FF6B35", fontWeight: 700 }}>
               {Number(bmi).toFixed(1)}
             </span>
             {" · "}
