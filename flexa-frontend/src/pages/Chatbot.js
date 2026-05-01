@@ -497,7 +497,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "space-between",
     padding: "12px 20px",
-    borderBottom: "1px solid rgba(212,175,55,0.15)",
+    borderBottom: "1px solid rgba(255,107,53,0.15)",
     background: "rgba(10,10,10,0.95)",
     backdropFilter: "blur(10px)",
     position: "sticky",
@@ -668,7 +668,7 @@ const styles = {
     justifyContent: "center",
     flexShrink: 0,
     transition: "all 0.2s",
-    boxShadow: "0 2px 8px rgba(212,175,55,0.3)",
+    boxShadow: "0 2px 8px rgba(255,107,53,0.3)",
   },
   hint: {
     fontSize: 10,

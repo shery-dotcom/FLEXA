@@ -75,7 +75,7 @@ export default function FlexaVideoIntro({ show: showProp, onClose }) {
           zIndex: 2001,
           width: "min(640px, 94vw)",
           background: "linear-gradient(155deg, #13111a 0%, #0d0b14 100%)",
-          border: "1px solid rgba(212,175,55,0.3)",
+          border: "1px solid rgba(255,107,53,0.3)",
           borderRadius: 24,
           overflow: "hidden",
           boxShadow:
@@ -89,8 +89,8 @@ export default function FlexaVideoIntro({ show: showProp, onClose }) {
         <div
           style={{
             background:
-              "linear-gradient(90deg, #0d0b14 0%, rgba(212,175,55,0.12) 50%, #0d0b14 100%)",
-            borderBottom: "1px solid rgba(212,175,55,0.2)",
+              "linear-gradient(90deg, #0d0b14 0%, rgba(255,107,53,0.12) 50%, #0d0b14 100%)",
+            borderBottom: "1px solid rgba(255,107,53,0.2)",
             padding: "16px 22px",
             display: "flex",
             alignItems: "center",
@@ -109,7 +109,7 @@ export default function FlexaVideoIntro({ show: showProp, onClose }) {
               justifyContent: "center",
               fontSize: 22,
               flexShrink: 0,
-              boxShadow: "0 0 18px rgba(212,175,55,0.55)",
+              boxShadow: "0 0 18px rgba(255,107,53,0.55)",
               overflow: "hidden",
               padding: 0,
             }}
@@ -125,7 +125,7 @@ export default function FlexaVideoIntro({ show: showProp, onClose }) {
               style={{
                 fontSize: 10,
                 letterSpacing: 3,
-                color: "rgba(212,175,55,0.7)",
+                color: "rgba(255,107,53,0.7)",
                 fontWeight: 700,
                 textTransform: "uppercase",
               }}
@@ -205,7 +205,7 @@ export default function FlexaVideoIntro({ show: showProp, onClose }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            borderTop: "1px solid rgba(212,175,55,0.12)",
+            borderTop: "1px solid rgba(255,107,53,0.12)",
           }}
         >
           <p
@@ -233,7 +233,7 @@ export default function FlexaVideoIntro({ show: showProp, onClose }) {
               fontWeight: 800,
               fontSize: 14,
               cursor: "pointer",
-              boxShadow: "0 4px 18px rgba(212,175,55,0.45)",
+              boxShadow: "0 4px 18px rgba(255,107,53,0.45)",
               letterSpacing: 0.5,
               marginLeft: 20,
             }}

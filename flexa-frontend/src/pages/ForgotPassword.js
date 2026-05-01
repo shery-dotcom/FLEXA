@@ -88,7 +88,7 @@ export default function ForgotPassword() {
                 marginBottom: 20,
               }}
             >
-              If <span style={{ color: "#D4AF37" }}>{email}</span> is registered
+              If <span style={{ color: "#FF6B35" }}>{email}</span> is registered
               with Flexa, you'll receive a reset link shortly.
             </p>
 
@@ -96,8 +96,8 @@ export default function ForgotPassword() {
             {devToken && (
               <div
                 style={{
-                  background: "rgba(212,175,55,0.06)",
-                  border: "1px solid rgba(212,175,55,0.25)",
+                  background: "rgba(255,107,53,0.06)",
+                  border: "1px solid rgba(255,107,53,0.25)",
                   borderRadius: 10,
                   padding: "14px 16px",
                   marginBottom: 20,
@@ -107,7 +107,7 @@ export default function ForgotPassword() {
                 <p
                   style={{
                     fontSize: 11,
-                    color: "#D4AF37",
+                    color: "#FF6B35",
                     fontWeight: 700,
                     letterSpacing: "1px",
                     textTransform: "uppercase",
@@ -119,7 +119,7 @@ export default function ForgotPassword() {
                 <Link
                   to={`/reset-password?token=${devToken}`}
                   style={{
-                    color: "#D4AF37",
+                    color: "#FF6B35",
                     fontSize: 13,
                     wordBreak: "break-all",
                     textDecoration: "underline",
@@ -135,7 +135,7 @@ export default function ForgotPassword() {
         <div className="divider" style={{ margin: "28px 0" }} />
         <p style={{ textAlign: "center", fontSize: 14, color: "#9e9e9e" }}>
           Remembered it?&nbsp;
-          <Link to="/login" style={{ color: "#D4AF37", fontWeight: 600 }}>
+          <Link to="/login" style={{ color: "#FF6B35", fontWeight: 600 }}>
             Back to Login
           </Link>
         </p>
@@ -143,5 +143,3 @@ export default function ForgotPassword() {
     </div>
   );
 }
-
-

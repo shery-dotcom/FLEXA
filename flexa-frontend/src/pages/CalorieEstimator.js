@@ -11,7 +11,7 @@ import {
 import api from "../api/axios";
 import FlexaGuide from "../components/FlexaGuide";
 
-const GOLD = "#D4AF37";
+const GOLD = "#FF6B35";
 const MAX_IMAGE_EDGE = 1280;
 const JPEG_QUALITY = 0.9;
 
@@ -303,7 +303,7 @@ export default function CalorieEstimator() {
               textAlign: "center",
               cursor: "pointer",
               marginBottom: 24,
-              background: "rgba(212,175,55,0.02)",
+              background: "rgba(255,107,53,0.02)",
               transition: "border-color .2s",
             }}
           >
@@ -475,10 +475,10 @@ export default function CalorieEstimator() {
                   fontSize: 12,
                   color: result.requires_confirmation ? "#f6d98b" : "#8fcf9f",
                   background: result.requires_confirmation
-                    ? "rgba(212,175,55,0.08)"
+                    ? "rgba(255,107,53,0.08)"
                     : "rgba(76,175,80,0.08)",
                   border: result.requires_confirmation
-                    ? "1px solid rgba(212,175,55,0.28)"
+                    ? "1px solid rgba(255,107,53,0.28)"
                     : "1px solid rgba(76,175,80,0.25)",
                   borderRadius: 10,
                   padding: "10px 12px",
@@ -494,7 +494,7 @@ export default function CalorieEstimator() {
                 <div
                   style={{
                     marginBottom: 16,
-                    border: "1px solid rgba(212,175,55,0.2)",
+                    border: "1px solid rgba(255,107,53,0.2)",
                     borderRadius: 12,
                     padding: "12px 12px 10px",
                   }}

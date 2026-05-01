@@ -120,7 +120,7 @@ export default function WebcamCanvas({
             alignItems: "center",
             justifyContent: "center",
             background: "rgba(0,0,0,0.35)",
-            color: "#D4AF37",
+            color: "#FF6B35",
             fontWeight: 700,
             fontSize: 14,
           }}
@@ -131,5 +131,3 @@ export default function WebcamCanvas({
     </div>
   );
 }
-
-

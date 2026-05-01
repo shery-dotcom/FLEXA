@@ -102,8 +102,8 @@ const DOT_STYLE = (active) => ({
   width: active ? 22 : 8,
   height: 8,
   borderRadius: 4,
-  background: active ? "#D4AF37" : "rgba(212,175,55,0.25)",
-  border: "1px solid rgba(212,175,55,0.4)",
+  background: active ? "#FF6B35" : "rgba(255,107,53,0.25)",
+  border: "1px solid rgba(255,107,53,0.4)",
   transition: "all 0.3s ease",
   flexShrink: 0,
 });
@@ -209,7 +209,7 @@ export default function FlexaAppTour({ onDone }) {
           maxHeight: "90vh",
           overflowY: "auto",
           background: "linear-gradient(155deg,#13111a 0%,#0c0a12 100%)",
-          border: "1px solid rgba(212,175,55,0.28)",
+          border: "1px solid rgba(255,107,53,0.28)",
           borderRadius: 28,
           boxShadow:
             "0 32px 100px rgba(0,0,0,0.88), 0 0 0 1px rgba(255,255,255,0.04)",
@@ -225,8 +225,8 @@ export default function FlexaAppTour({ onDone }) {
         <div
           style={{
             background:
-              "linear-gradient(90deg,#0d0b14 0%,rgba(212,175,55,0.10) 50%,#0d0b14 100%)",
-            borderBottom: "1px solid rgba(212,175,55,0.18)",
+              "linear-gradient(90deg,#0d0b14 0%,rgba(255,107,53,0.10) 50%,#0d0b14 100%)",
+            borderBottom: "1px solid rgba(255,107,53,0.18)",
             padding: isMobile ? "10px 12px" : "13px 20px",
             display: "flex",
             alignItems: "center",
@@ -240,9 +240,9 @@ export default function FlexaAppTour({ onDone }) {
               height: 36,
               borderRadius: "50%",
               overflow: "hidden",
-              border: "2px solid rgba(212,175,55,0.55)",
+              border: "2px solid rgba(255,107,53,0.55)",
               flexShrink: 0,
-              boxShadow: "0 0 14px rgba(212,175,55,0.4)",
+              boxShadow: "0 0 14px rgba(255,107,53,0.4)",
             }}
           >
             <img
@@ -256,7 +256,7 @@ export default function FlexaAppTour({ onDone }) {
               style={{
                 fontSize: 9,
                 letterSpacing: 3,
-                color: "rgba(212,175,55,0.65)",
+                color: "rgba(255,107,53,0.65)",
                 fontWeight: 700,
                 textTransform: "uppercase",
               }}
@@ -271,7 +271,7 @@ export default function FlexaAppTour({ onDone }) {
                 letterSpacing: 0.5,
               }}
             >
-              <span style={{ color: "#D4AF37" }}>FLEXA</span> Guide
+              <span style={{ color: "#FF6B35" }}>FLEXA</span> Guide
             </div>
           </div>
           {/* Step counter */}
@@ -326,9 +326,9 @@ export default function FlexaAppTour({ onDone }) {
               background: "linear-gradient(160deg,#1a1628 0%,#100e18 100%)",
               borderRight: isMobile
                 ? "none"
-                : "1px solid rgba(212,175,55,0.10)",
+                : "1px solid rgba(255,107,53,0.10)",
               borderBottom: isMobile
-                ? "1px solid rgba(212,175,55,0.10)"
+                ? "1px solid rgba(255,107,53,0.10)"
                 : "none",
               display: "flex",
               flexDirection: "column",
@@ -351,7 +351,7 @@ export default function FlexaAppTour({ onDone }) {
                 height: 160,
                 borderRadius: "50%",
                 background:
-                  "radial-gradient(circle,rgba(212,175,55,0.18) 0%,transparent 70%)",
+                  "radial-gradient(circle,rgba(255,107,53,0.18) 0%,transparent 70%)",
                 pointerEvents: "none",
               }}
             />
@@ -363,12 +363,12 @@ export default function FlexaAppTour({ onDone }) {
             />
             <div
               style={{
-                background: "rgba(212,175,55,0.12)",
-                border: "1px solid rgba(212,175,55,0.32)",
+                background: "rgba(255,107,53,0.12)",
+                border: "1px solid rgba(255,107,53,0.32)",
                 borderRadius: 20,
                 padding: "4px 12px",
                 fontSize: 9,
-                color: "#D4AF37",
+                color: "#FF6B35",
                 fontWeight: 700,
                 letterSpacing: 2,
                 textTransform: "uppercase",
@@ -404,7 +404,7 @@ export default function FlexaAppTour({ onDone }) {
                   fontSize: 9,
                   fontWeight: 700,
                   letterSpacing: 3,
-                  color: "rgba(212,175,55,0.55)",
+                  color: "rgba(255,107,53,0.55)",
                   textTransform: "uppercase",
                 }}
               >
@@ -447,13 +447,13 @@ export default function FlexaAppTour({ onDone }) {
                       width: 20,
                       height: 20,
                       borderRadius: "50%",
-                      background: "rgba(212,175,55,0.12)",
-                      border: "1px solid rgba(212,175,55,0.38)",
+                      background: "rgba(255,107,53,0.12)",
+                      border: "1px solid rgba(255,107,53,0.38)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       fontSize: 9,
-                      color: "#D4AF37",
+                      color: "#FF6B35",
                       fontWeight: 900,
                     }}
                   >
@@ -532,9 +532,9 @@ export default function FlexaAppTour({ onDone }) {
                 <button
                   onClick={() => handleCta(slide.cta.path)}
                   style={{
-                    background: "rgba(212,175,55,0.08)",
-                    border: "1px solid rgba(212,175,55,0.35)",
-                    color: "#D4AF37",
+                    background: "rgba(255,107,53,0.08)",
+                    border: "1px solid rgba(255,107,53,0.35)",
+                    color: "#FF6B35",
                     padding: "9px 16px",
                     borderRadius: 12,
                     fontSize: 12,
@@ -544,12 +544,12 @@ export default function FlexaAppTour({ onDone }) {
                     transition: "all 0.2s",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(212,175,55,0.18)";
-                    e.currentTarget.style.borderColor = "rgba(212,175,55,0.6)";
+                    e.currentTarget.style.background = "rgba(255,107,53,0.18)";
+                    e.currentTarget.style.borderColor = "rgba(255,107,53,0.6)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(212,175,55,0.08)";
-                    e.currentTarget.style.borderColor = "rgba(212,175,55,0.35)";
+                    e.currentTarget.style.background = "rgba(255,107,53,0.08)";
+                    e.currentTarget.style.borderColor = "rgba(255,107,53,0.35)";
                   }}
                 >
                   {slide.cta.label}
@@ -560,7 +560,7 @@ export default function FlexaAppTour({ onDone }) {
               <button
                 onClick={handleNext}
                 style={{
-                  background: "linear-gradient(135deg,#D4AF37,#8B6914)",
+                  background: "linear-gradient(135deg,#FF6B35,#E85A2B)",
                   border: "none",
                   color: "#0c0a12",
                   padding: "9px 22px",
@@ -569,7 +569,7 @@ export default function FlexaAppTour({ onDone }) {
                   fontWeight: 800,
                   cursor: "pointer",
                   letterSpacing: 0.3,
-                  boxShadow: "0 0 18px rgba(212,175,55,0.35)",
+                  boxShadow: "0 0 18px rgba(255,107,53,0.35)",
                   transition: "opacity 0.2s",
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}

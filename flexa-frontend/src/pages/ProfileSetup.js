@@ -190,8 +190,8 @@ export default function ProfileSetup() {
           {bmi && (
             <div
               style={{
-                background: "rgba(212,175,55,0.06)",
-                border: "1px solid rgba(212,175,55,0.2)",
+                background: "rgba(255,107,53,0.06)",
+                border: "1px solid rgba(255,107,53,0.2)",
                 borderRadius: 10,
                 padding: "16px 20px",
                 marginBottom: 20,
@@ -204,7 +204,7 @@ export default function ProfileSetup() {
                 <p style={{ fontSize: 12, color: "#9e9e9e", marginBottom: 4 }}>
                   YOUR BMI
                 </p>
-                <p style={{ fontSize: 28, fontWeight: 800, color: "#D4AF37" }}>
+                <p style={{ fontSize: 28, fontWeight: 800, color: "#FF6B35" }}>
                   {bmi}
                 </p>
               </div>

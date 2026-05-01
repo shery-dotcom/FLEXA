@@ -29,7 +29,7 @@ import { useAuth } from "../context/AuthContext";
 import FlexaGuide from "../components/FlexaGuide";
 
 // ──────────────────────────────────────── Constants ────────────────────────
-const GOLD = "#D4AF37";
+const GOLD = "#FF6B35";
 const STEPS = ["Preferences", "Your Plan"];
 
 const REGION_OPTIONS = [
@@ -83,7 +83,7 @@ function StepDot({ label, idx, active, done }) {
           background: done
             ? GOLD
             : active
-              ? "rgba(212,175,55,0.2)"
+              ? "rgba(255,107,53,0.2)"
               : "rgba(255,255,255,0.06)",
           border: `2px solid ${done || active ? GOLD : "rgba(255,255,255,0.1)"}`,
           display: "flex",
@@ -180,7 +180,7 @@ function MealCard({ meal, onLog }) {
         <button
           onClick={() => onLog(meal)}
           style={{
-            background: "rgba(212,175,55,0.1)",
+            background: "rgba(255,107,53,0.1)",
             border: `1px solid ${GOLD}44`,
             borderRadius: 8,
             padding: "6px 12px",
@@ -875,7 +875,7 @@ export default function DietPlanner() {
                   display: "flex",
                   alignItems: "center",
                   gap: 6,
-                  background: "rgba(212,175,55,0.1)",
+                  background: "rgba(255,107,53,0.1)",
                   border: `1px solid ${GOLD}44`,
                   borderRadius: 8,
                   padding: "8px 14px",
@@ -1227,7 +1227,7 @@ export default function DietPlanner() {
                 <button
                   onClick={() => handleLogMeal(food)}
                   style={{
-                    background: "rgba(212,175,55,0.1)",
+                    background: "rgba(255,107,53,0.1)",
                     border: `1px solid ${GOLD}44`,
                     borderRadius: 6,
                     padding: "5px 10px",
@@ -1400,7 +1400,7 @@ export default function DietPlanner() {
                           })
                         }
                         style={{
-                          background: `rgba(212,175,55,0.08)`,
+                          background: `rgba(255,107,53,0.08)`,
                           border: `1px solid ${GOLD}44`,
                           borderRadius: 6,
                           padding: "5px 8px",

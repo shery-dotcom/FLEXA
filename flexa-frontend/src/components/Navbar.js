@@ -80,7 +80,7 @@ export default function Navbar() {
           height: size,
           borderRadius: "50%",
           objectFit: "cover",
-          border: "2px solid rgba(212,175,55,0.6)",
+          border: "2px solid rgba(255,107,53,0.6)",
           display: "block",
         }}
       />
@@ -90,8 +90,8 @@ export default function Navbar() {
           width: size,
           height: size,
           borderRadius: "50%",
-          background: "rgba(212,175,55,0.15)",
-          border: "2px solid rgba(212,175,55,0.5)",
+          background: "rgba(255,107,53,0.15)",
+          border: "2px solid rgba(255,107,53,0.5)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -324,7 +324,7 @@ const styles = {
     zIndex: 200,
     background:
       "linear-gradient(90deg, rgba(14,20,30,0.96) 0%, rgba(28,18,8,0.96) 52%, rgba(10,26,28,0.96) 100%)",
-    borderBottom: "1px solid rgba(212,175,55,0.28)",
+    borderBottom: "1px solid rgba(255,107,53,0.28)",
     backdropFilter: "blur(12px)",
     boxShadow: "0 6px 24px rgba(0,0,0,0.28)",
   },
@@ -341,7 +341,7 @@ const styles = {
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: 26,
     letterSpacing: 4,
-    color: "#D4AF37",
+    color: "#FF6B35",
     textDecoration: "none",
     flexShrink: 0,
   },
@@ -363,7 +363,7 @@ const styles = {
   activeLink: {
     color: "#f7f1df",
     background: "linear-gradient(135deg, #8a6a1f, #3b5b7d)",
-    border: "1px solid rgba(212,175,55,0.55)",
+    border: "1px solid rgba(255,107,53,0.55)",
     fontWeight: 700,
     boxShadow: "0 0 0 1px rgba(255,255,255,0.04) inset",
   },
@@ -373,7 +373,7 @@ const styles = {
     background: "none",
     border: "none",
     cursor: "pointer",
-    color: "#D4AF37",
+    color: "#FF6B35",
     padding: 6,
     borderRadius: 6,
     alignItems: "center",
@@ -424,7 +424,7 @@ const styles = {
     right: 0,
     zIndex: 199,
     background: "linear-gradient(180deg, #111827 0%, #0f1116 100%)",
-    borderBottom: "1px solid rgba(212,175,55,0.24)",
+    borderBottom: "1px solid rgba(255,107,53,0.24)",
     display: "flex",
     flexDirection: "column",
     padding: "12px 0",
@@ -455,7 +455,7 @@ const styles = {
     color: "#f6f1e0",
     background:
       "linear-gradient(90deg, rgba(60,90,130,0.25), rgba(138,106,31,0.22))",
-    borderLeft: "3px solid rgba(212,175,55,0.9)",
+    borderLeft: "3px solid rgba(255,107,53,0.9)",
   },
   drawerLogout: {
     display: "flex",

@@ -273,7 +273,7 @@ export default function WorkoutPlanner() {
             </button>
             <span
               style={{
-                color: "#D4AF37",
+                color: "#FF6B35",
                 fontWeight: 700,
                 minWidth: 60,
                 textAlign: "center",
@@ -403,7 +403,7 @@ function WeekGrid({ workouts, onViewWorkout }) {
                   bottom: 0,
                   width: 3,
                   background:
-                    "linear-gradient(180deg, #D4AF37 0%, rgba(212,175,55,0.3) 100%)",
+                    "linear-gradient(180deg, #FF6B35 0%, rgba(255,107,53,0.3) 100%)",
                   borderRadius: "14px 0 0 14px",
                 }}
               />
@@ -422,7 +422,7 @@ function WeekGrid({ workouts, onViewWorkout }) {
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  color: isRest ? "#303030" : "#D4AF37",
+                  color: isRest ? "#303030" : "#FF6B35",
                   textTransform: "uppercase",
                   letterSpacing: "1.2px",
                   margin: 0,
@@ -439,15 +439,15 @@ function WeekGrid({ workouts, onViewWorkout }) {
                       difficulty === "advanced"
                         ? "#ef5350"
                         : difficulty === "intermediate"
-                          ? "#D4AF37"
+                          ? "#FF6B35"
                           : "#4ec9b0",
                     background:
                       difficulty === "advanced"
                         ? "rgba(239,83,80,0.1)"
                         : difficulty === "intermediate"
-                          ? "rgba(212,175,55,0.1)"
+                          ? "rgba(255,107,53,0.1)"
                           : "rgba(78,201,176,0.1)",
-                    border: `1px solid ${difficulty === "advanced" ? "#ef535033" : difficulty === "intermediate" ? "#D4AF3733" : "#4ec9b033"}`,
+                    border: `1px solid ${difficulty === "advanced" ? "#ef535033" : difficulty === "intermediate" ? "#FF6B3533" : "#4ec9b033"}`,
                     borderRadius: 20,
                     padding: "2px 8px",
                     textTransform: "capitalize",
@@ -504,7 +504,7 @@ function WeekGrid({ workouts, onViewWorkout }) {
                     gap: 4,
                   }}
                 >
-                  <FiActivity size={11} color="#D4AF37" />
+                  <FiActivity size={11} color="#FF6B35" />
                   {exCount} exercises
                 </span>
                 {duration > 0 && (
@@ -517,7 +517,7 @@ function WeekGrid({ workouts, onViewWorkout }) {
                       gap: 4,
                     }}
                   >
-                    <FiClock size={11} color="#D4AF37" />
+                    <FiClock size={11} color="#FF6B35" />
                     {duration} min
                   </span>
                 )}
@@ -529,11 +529,11 @@ function WeekGrid({ workouts, onViewWorkout }) {
               <button
                 onClick={() => onViewWorkout(workout)}
                 style={{
-                  background: "rgba(212,175,55,0.07)",
-                  border: "1px solid rgba(212,175,55,0.2)",
+                  background: "rgba(255,107,53,0.07)",
+                  border: "1px solid rgba(255,107,53,0.2)",
                   borderRadius: 9,
                   padding: "10px 14px",
-                  color: "#D4AF37",
+                  color: "#FF6B35",
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: "pointer",
@@ -544,12 +544,12 @@ function WeekGrid({ workouts, onViewWorkout }) {
                   transition: "all .15s",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(212,175,55,0.55)";
-                  e.currentTarget.style.background = "rgba(212,175,55,0.13)";
+                  e.currentTarget.style.borderColor = "rgba(255,107,53,0.55)";
+                  e.currentTarget.style.background = "rgba(255,107,53,0.13)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(212,175,55,0.2)";
-                  e.currentTarget.style.background = "rgba(212,175,55,0.07)";
+                  e.currentTarget.style.borderColor = "rgba(255,107,53,0.2)";
+                  e.currentTarget.style.background = "rgba(255,107,53,0.07)";
                 }}
               >
                 View Workout <FiChevronRight size={14} />
@@ -576,7 +576,7 @@ function StatPill({ icon, label }) {
         color: "#9e9e9e",
       }}
     >
-      <span style={{ color: "#D4AF37" }}>{icon}</span>
+      <span style={{ color: "#FF6B35" }}>{icon}</span>
       {label}
     </div>
   );
@@ -961,7 +961,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
             fontFamily: "monospace",
             fontSize: 16,
             fontWeight: 700,
-            color: "#D4AF37",
+            color: "#FF6B35",
             display: "flex",
             alignItems: "center",
             gap: 6,
@@ -978,9 +978,9 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
             display: "inline-block",
             fontSize: 11,
             fontWeight: 700,
-            color: "#D4AF37",
-            background: "rgba(212,175,55,0.1)",
-            border: "1px solid rgba(212,175,55,0.25)",
+            color: "#FF6B35",
+            background: "rgba(255,107,53,0.1)",
+            border: "1px solid rgba(255,107,53,0.25)",
             borderRadius: 6,
             padding: "3px 10px",
             letterSpacing: "0.8px",
@@ -1042,7 +1042,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
             <span style={{ fontSize: 12, color: "#9e9e9e" }}>
               {completedCount} of {exercises.length} exercises logged
             </span>
-            <span style={{ fontSize: 12, color: "#D4AF37", fontWeight: 700 }}>
+            <span style={{ fontSize: 12, color: "#FF6B35", fontWeight: 700 }}>
               {exercises.length > 0
                 ? Math.round((completedCount / exercises.length) * 100)
                 : 0}
@@ -1061,7 +1061,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
               style={{
                 height: "100%",
                 width: `${exercises.length > 0 ? (completedCount / exercises.length) * 100 : 0}%`,
-                background: "#D4AF37",
+                background: "#FF6B35",
                 borderRadius: 6,
                 transition: "width 0.4s ease",
               }}
@@ -1225,7 +1225,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
         <SectionLabel
           icon={<FiActivity size={13} />}
           label="Exercises"
-          color="#D4AF37"
+          color="#FF6B35"
         />
         <button
           type="button"
@@ -1275,7 +1275,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                     hasProgress
                       ? "rgba(76,175,80,0.25)"
                       : isExpanded
-                        ? "rgba(212,175,55,0.3)"
+                        ? "rgba(255,107,53,0.3)"
                         : "#1e1e1e"
                   }`,
                   borderRadius: 12,
@@ -1311,14 +1311,14 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                           borderRadius: "50%",
                           background: hasProgress
                             ? "rgba(76,175,80,0.15)"
-                            : "rgba(212,175,55,0.1)",
-                          border: `1px solid ${hasProgress ? "rgba(76,175,80,0.4)" : "rgba(212,175,55,0.25)"}`,
+                            : "rgba(255,107,53,0.1)",
+                          border: `1px solid ${hasProgress ? "rgba(76,175,80,0.4)" : "rgba(255,107,53,0.25)"}`,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                           fontSize: 11,
                           fontWeight: 700,
-                          color: hasProgress ? "#4caf50" : "#D4AF37",
+                          color: hasProgress ? "#4caf50" : "#FF6B35",
                           flexShrink: 0,
                         }}
                       >
@@ -1354,7 +1354,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                           style={{
                             fontSize: 14,
                             fontWeight: 800,
-                            color: "#D4AF37",
+                            color: "#FF6B35",
                           }}
                         >
                           {ex.sets} × {ex.reps}
@@ -1443,7 +1443,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                             background: row.done
                               ? "rgba(76,175,80,0.05)"
                               : tData?.running
-                                ? "rgba(212,175,55,0.03)"
+                                ? "rgba(255,107,53,0.03)"
                                 : "transparent",
                           }}
                         >
@@ -1537,11 +1537,11 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                             <button
                               onClick={() => startSetTimer(exIdx, rowIdx)}
                               style={{
-                                background: "rgba(212,175,55,0.1)",
-                                border: "1px solid rgba(212,175,55,0.3)",
+                                background: "rgba(255,107,53,0.1)",
+                                border: "1px solid rgba(255,107,53,0.3)",
                                 borderRadius: 6,
                                 padding: "4px 6px",
-                                color: "#D4AF37",
+                                color: "#FF6B35",
                                 fontSize: 11,
                                 fontWeight: 700,
                                 cursor: "pointer",
@@ -1607,8 +1607,8 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                           gap: 6,
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = "#D4AF37";
-                          e.currentTarget.style.color = "#D4AF37";
+                          e.currentTarget.style.borderColor = "#FF6B35";
+                          e.currentTarget.style.color = "#FF6B35";
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.borderColor = "#2a2a2a";
@@ -1663,10 +1663,10 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                   gap: 12,
                   padding: "12px 16px",
                   background: cooldownChecked[i]
-                    ? "rgba(212,175,55,0.06)"
+                    ? "rgba(255,107,53,0.06)"
                     : "#111",
                   border: `1px solid ${
-                    cooldownChecked[i] ? "rgba(212,175,55,0.25)" : "#1e1e1e"
+                    cooldownChecked[i] ? "rgba(255,107,53,0.25)" : "#1e1e1e"
                   }`,
                   borderRadius: 10,
                   cursor: "pointer",
@@ -1678,9 +1678,9 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                     width: 22,
                     height: 22,
                     borderRadius: "50%",
-                    border: `2px solid ${cooldownChecked[i] ? "#D4AF37" : "#333"}`,
+                    border: `2px solid ${cooldownChecked[i] ? "#FF6B35" : "#333"}`,
                     background: cooldownChecked[i]
-                      ? "rgba(212,175,55,0.15)"
+                      ? "rgba(255,107,53,0.15)"
                       : "transparent",
                     display: "flex",
                     alignItems: "center",
@@ -1688,7 +1688,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                     flexShrink: 0,
                   }}
                 >
-                  {cooldownChecked[i] && <FiCheck size={12} color="#D4AF37" />}
+                  {cooldownChecked[i] && <FiCheck size={12} color="#FF6B35" />}
                 </div>
                 <div style={{ flex: 1 }}>
                   <span
@@ -1773,15 +1773,15 @@ function EmptyState({
           width: 72,
           height: 72,
           borderRadius: "50%",
-          background: "rgba(212,175,55,0.07)",
-          border: "1px solid rgba(212,175,55,0.2)",
+          background: "rgba(255,107,53,0.07)",
+          border: "1px solid rgba(255,107,53,0.2)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           margin: "0 auto 24px",
         }}
       >
-        <FiActivity size={32} color="#D4AF37" />
+        <FiActivity size={32} color="#FF6B35" />
       </div>
       <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
         No workout plan yet
@@ -1803,7 +1803,7 @@ function EmptyState({
           style={{
             fontSize: 11,
             fontWeight: 700,
-            color: "#D4AF37",
+            color: "#FF6B35",
             textTransform: "uppercase",
             letterSpacing: "1px",
             marginBottom: 10,
@@ -1820,10 +1820,10 @@ function EmptyState({
                 padding: "10px 18px",
                 borderRadius: 8,
                 border: "1px solid",
-                borderColor: freq === f.value ? "#D4AF37" : "#2a2a2a",
+                borderColor: freq === f.value ? "#FF6B35" : "#2a2a2a",
                 background:
-                  freq === f.value ? "rgba(212,175,55,0.1)" : "transparent",
-                color: freq === f.value ? "#D4AF37" : "#9e9e9e",
+                  freq === f.value ? "rgba(255,107,53,0.1)" : "transparent",
+                color: freq === f.value ? "#FF6B35" : "#9e9e9e",
                 fontSize: 13,
                 fontWeight: 600,
                 cursor: "pointer",
@@ -1840,7 +1840,7 @@ function EmptyState({
           style={{
             fontSize: 11,
             fontWeight: 700,
-            color: "#D4AF37",
+            color: "#FF6B35",
             textTransform: "uppercase",
             letterSpacing: "1px",
             marginBottom: 10,
@@ -1858,12 +1858,12 @@ function EmptyState({
                 borderRadius: 8,
                 border: "1px solid",
                 borderColor:
-                  experienceLevel === e.value ? "#D4AF37" : "#2a2a2a",
+                  experienceLevel === e.value ? "#FF6B35" : "#2a2a2a",
                 background:
                   experienceLevel === e.value
-                    ? "rgba(212,175,55,0.1)"
+                    ? "rgba(255,107,53,0.1)"
                     : "transparent",
-                color: experienceLevel === e.value ? "#D4AF37" : "#9e9e9e",
+                color: experienceLevel === e.value ? "#FF6B35" : "#9e9e9e",
                 fontSize: 13,
                 fontWeight: 600,
                 cursor: "pointer",
@@ -1946,7 +1946,7 @@ function ChangePlanOverlay({
       <div
         style={{
           background: "#111",
-          border: "1px solid rgba(212,175,55,0.25)",
+          border: "1px solid rgba(255,107,53,0.25)",
           borderRadius: 16,
           padding: "32px",
           width: "100%",
@@ -1965,7 +1965,7 @@ function ChangePlanOverlay({
             style={{
               fontSize: 11,
               fontWeight: 700,
-              color: "#D4AF37",
+              color: "#FF6B35",
               textTransform: "uppercase",
               letterSpacing: "1px",
               marginBottom: 10,
@@ -1982,10 +1982,10 @@ function ChangePlanOverlay({
                   padding: "9px 16px",
                   borderRadius: 8,
                   border: "1px solid",
-                  borderColor: freq === f.value ? "#D4AF37" : "#2a2a2a",
+                  borderColor: freq === f.value ? "#FF6B35" : "#2a2a2a",
                   background:
-                    freq === f.value ? "rgba(212,175,55,0.1)" : "transparent",
-                  color: freq === f.value ? "#D4AF37" : "#9e9e9e",
+                    freq === f.value ? "rgba(255,107,53,0.1)" : "transparent",
+                  color: freq === f.value ? "#FF6B35" : "#9e9e9e",
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: "pointer",
@@ -2002,7 +2002,7 @@ function ChangePlanOverlay({
             style={{
               fontSize: 11,
               fontWeight: 700,
-              color: "#D4AF37",
+              color: "#FF6B35",
               textTransform: "uppercase",
               letterSpacing: "1px",
               marginBottom: 10,
@@ -2020,12 +2020,12 @@ function ChangePlanOverlay({
                   borderRadius: 8,
                   border: "1px solid",
                   borderColor:
-                    experienceLevel === e.value ? "#D4AF37" : "#2a2a2a",
+                    experienceLevel === e.value ? "#FF6B35" : "#2a2a2a",
                   background:
                     experienceLevel === e.value
-                      ? "rgba(212,175,55,0.1)"
+                      ? "rgba(255,107,53,0.1)"
                       : "transparent",
-                  color: experienceLevel === e.value ? "#D4AF37" : "#9e9e9e",
+                  color: experienceLevel === e.value ? "#FF6B35" : "#9e9e9e",
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: "pointer",

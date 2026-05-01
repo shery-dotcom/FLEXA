@@ -166,7 +166,7 @@ export default function Marketplace() {
             Book trusted professionals for personalized guidance.
           </p>
           {confirmingPayment && (
-            <p style={{ color: "#D4AF37", fontSize: 13, marginTop: 6 }}>
+            <p style={{ color: "#FF6B35", fontSize: 13, marginTop: 6 }}>
               Finalizing your Stripe payment...
             </p>
           )}
@@ -250,7 +250,7 @@ export default function Marketplace() {
                 }}
               >
                 <h3 style={{ fontSize: 18, fontWeight: 700 }}>{p.name}</h3>
-                <span style={{ color: "#D4AF37", fontWeight: 700 }}>
+                <span style={{ color: "#FF6B35", fontWeight: 700 }}>
                   ${p.consultation_price_usd}
                 </span>
               </div>
@@ -287,7 +287,7 @@ export default function Marketplace() {
                 style={{
                   marginTop: "auto",
                   background: "linear-gradient(135deg, #8a6a1f, #3b5b7d)",
-                  border: "1px solid rgba(212,175,55,0.45)",
+                  border: "1px solid rgba(255,107,53,0.45)",
                   color: "#f7f1df",
                   borderRadius: 10,
                   padding: "10px 12px",
@@ -556,7 +556,7 @@ const styles = {
     cursor: "pointer",
   },
   bookButton: {
-    border: "1px solid rgba(212,175,55,0.45)",
+    border: "1px solid rgba(255,107,53,0.45)",
     background: "linear-gradient(135deg, #8a6a1f, #3b5b7d)",
     color: "#f7f1df",
   },

@@ -52,7 +52,7 @@ export default function ResetPassword() {
           </p>
           <Link
             to="/forgot-password"
-            style={{ color: "#D4AF37", fontSize: 14 }}
+            style={{ color: "#FF6B35", fontSize: 14 }}
           >
             Request a new reset link →
           </Link>
@@ -119,7 +119,7 @@ export default function ResetPassword() {
                         form.password.length >= 12
                           ? "#4caf50"
                           : form.password.length >= 8
-                            ? "#D4AF37"
+                            ? "#FF6B35"
                             : "#ef5350",
                       transition: "width 0.3s, background 0.3s",
                     }}
@@ -167,7 +167,7 @@ export default function ResetPassword() {
           <>
             <div className="divider" style={{ margin: "28px 0" }} />
             <p style={{ textAlign: "center", fontSize: 14, color: "#9e9e9e" }}>
-              <Link to="/login" style={{ color: "#D4AF37", fontWeight: 600 }}>
+              <Link to="/login" style={{ color: "#FF6B35", fontWeight: 600 }}>
                 ← Back to Login
               </Link>
             </p>

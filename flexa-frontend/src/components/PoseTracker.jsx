@@ -154,7 +154,7 @@ function drawSkeleton(canvas, landmarks, zone) {
 
   ctx.lineWidth = 3;
   ctx.strokeStyle = "#00e5ff";
-  ctx.fillStyle = "#D4AF37";
+  ctx.fillStyle = "#FF6B35";
 
   POSE_CONNECTIONS.forEach(([from, to]) => {
     const p1 = landmarks[from];
@@ -707,7 +707,7 @@ function StatCard({ label, value }) {
       <div style={{ fontSize: 11, color: "#777", textTransform: "uppercase" }}>
         {label}
       </div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: "#D4AF37" }}>
+      <div style={{ fontSize: 22, fontWeight: 800, color: "#FF6B35" }}>
         {value}
       </div>
     </div>

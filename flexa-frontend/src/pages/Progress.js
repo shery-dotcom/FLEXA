@@ -133,7 +133,7 @@ const CustomTooltip = ({ active, payload, label }) => {
     <div
       style={{
         background: "#1a1a1a",
-        border: "1px solid #D4AF37",
+        border: "1px solid #FF6B35",
         borderRadius: 8,
         padding: "10px 14px",
       }}
@@ -269,7 +269,7 @@ export default function Progress() {
             style={{
               fontSize: 11,
               fontWeight: 700,
-              color: "#D4AF37",
+              color: "#FF6B35",
               letterSpacing: "2px",
               textTransform: "uppercase",
               marginBottom: 16,
@@ -324,7 +324,7 @@ export default function Progress() {
             <div
               style={{
                 background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
-                border: "1px solid rgba(212,175,55,0.2)",
+                border: "1px solid rgba(255,107,53,0.2)",
                 borderRadius: 14,
                 padding: "18px 18px 16px",
               }}
@@ -337,12 +337,12 @@ export default function Progress() {
                   marginBottom: 10,
                 }}
               >
-                <FiTarget size={14} color="#D4AF37" />
+                <FiTarget size={14} color="#FF6B35" />
                 <p
                   style={{
                     fontSize: 11,
                     fontWeight: 700,
-                    color: "#D4AF37",
+                    color: "#FF6B35",
                     textTransform: "uppercase",
                     letterSpacing: "0.8px",
                   }}
@@ -438,7 +438,7 @@ export default function Progress() {
             <div
               style={{
                 background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
-                border: "1px solid rgba(212,175,55,0.2)",
+                border: "1px solid rgba(255,107,53,0.2)",
                 borderRadius: 14,
                 padding: "20px 20px 18px",
               }}
@@ -458,7 +458,7 @@ export default function Progress() {
                     style={{
                       fontSize: 11,
                       fontWeight: 700,
-                      color: "#D4AF37",
+                      color: "#FF6B35",
                       textTransform: "uppercase",
                       letterSpacing: "0.8px",
                       marginBottom: 6,
@@ -500,7 +500,7 @@ export default function Progress() {
                   }}
                 >
                   <div
-                    style={{ flex: macros.proteinPct, background: "#D4AF37" }}
+                    style={{ flex: macros.proteinPct, background: "#FF6B35" }}
                   />
                   <div
                     style={{ flex: macros.carbsPct, background: "#64b5f6" }}
@@ -532,7 +532,7 @@ export default function Progress() {
                   label="Protein"
                   grams={macros.protein}
                   pct={macros.proteinPct}
-                  color="#D4AF37"
+                  color="#FF6B35"
                   note="Muscle repair & growth"
                 />
                 <MacroCard
@@ -562,7 +562,7 @@ export default function Progress() {
             style={{
               fontSize: 11,
               fontWeight: 700,
-              color: "#D4AF37",
+              color: "#FF6B35",
               letterSpacing: "2px",
               textTransform: "uppercase",
               marginBottom: 16,
@@ -586,7 +586,7 @@ export default function Progress() {
                 style={{
                   background:
                     "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
-                  border: "1px solid rgba(212,175,55,0.3)",
+                  border: "1px solid rgba(255,107,53,0.3)",
                   borderRadius: 12,
                   padding: "14px 18px",
                   minWidth: 180,
@@ -614,7 +614,7 @@ export default function Progress() {
                   style={{
                     fontSize: 13,
                     fontWeight: 700,
-                    color: "#D4AF37",
+                    color: "#FF6B35",
                     marginBottom: 4,
                   }}
                 >
@@ -635,7 +635,7 @@ export default function Progress() {
           style={{
             fontSize: 11,
             fontWeight: 700,
-            color: "#D4AF37",
+            color: "#FF6B35",
             letterSpacing: "2px",
             textTransform: "uppercase",
             marginBottom: 16,
@@ -736,11 +736,11 @@ export default function Progress() {
                       textTransform: "capitalize",
                       letterSpacing: "0.4px",
                       background:
-                        summaryPeriod === p ? "#D4AF37" : "transparent",
+                        summaryPeriod === p ? "#FF6B35" : "transparent",
                       borderColor:
                         summaryPeriod === p
-                          ? "#D4AF37"
-                          : "rgba(212,175,55,0.3)",
+                          ? "#FF6B35"
+                          : "rgba(255,107,53,0.3)",
                       color: summaryPeriod === p ? "#000" : "#9e9e9e",
                       transition: "all 0.2s",
                     }}
@@ -795,7 +795,7 @@ export default function Progress() {
                         value={s.trend
                           .replace(/_/g, " ")
                           .replace(/\b\w/g, (c) => c.toUpperCase())}
-                        color={s.trend === "on_track" ? "#4caf50" : "#D4AF37"}
+                        color={s.trend === "on_track" ? "#4caf50" : "#FF6B35"}
                       />
                     )}
                     {summaryPeriod === "monthly" && s.month && (
@@ -876,12 +876,12 @@ export default function Progress() {
                       <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop
                           offset="0%"
-                          stopColor="#D4AF37"
+                          stopColor="#FF6B35"
                           stopOpacity={0.3}
                         />
                         <stop
                           offset="100%"
-                          stopColor="#D4AF37"
+                          stopColor="#FF6B35"
                           stopOpacity={0}
                         />
                       </linearGradient>
@@ -901,10 +901,10 @@ export default function Progress() {
                     <Area
                       type="monotone"
                       dataKey="Weight"
-                      stroke="#D4AF37"
+                      stroke="#FF6B35"
                       fill="url(#goldGrad)"
                       strokeWidth={2}
-                      dot={{ fill: "#D4AF37", r: 3 }}
+                      dot={{ fill: "#FF6B35", r: 3 }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -938,7 +938,7 @@ export default function Progress() {
                         dataKey="BMI"
                         stroke="#A08C29"
                         strokeWidth={2}
-                        dot={{ fill: "#D4AF37", r: 3 }}
+                        dot={{ fill: "#FF6B35", r: 3 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -1001,7 +1001,7 @@ export default function Progress() {
                             <td
                               style={{
                                 padding: "10px 12px",
-                                color: "#D4AF37",
+                                color: "#FF6B35",
                                 fontWeight: 500,
                               }}
                             >
@@ -1083,7 +1083,7 @@ function MetricCard({
       title={tooltip}
       style={{
         background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
-        border: "1px solid rgba(212,175,55,0.18)",
+        border: "1px solid rgba(255,107,53,0.18)",
         borderRadius: 14,
         padding: "16px 16px 14px",
         cursor: tooltip ? "help" : "default",
@@ -1097,12 +1097,12 @@ function MetricCard({
           marginBottom: 10,
         }}
       >
-        <span style={{ color: "#D4AF37" }}>{icon}</span>
+        <span style={{ color: "#FF6B35" }}>{icon}</span>
         <p
           style={{
             fontSize: 11,
             fontWeight: 700,
-            color: "#D4AF37",
+            color: "#FF6B35",
             textTransform: "uppercase",
             letterSpacing: "0.8px",
           }}
@@ -1181,5 +1181,3 @@ function MacroCard({ label, grams, pct, color, note }) {
     </div>
   );
 }
-
-

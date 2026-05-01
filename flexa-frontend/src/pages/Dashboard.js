@@ -348,7 +348,7 @@ export default function Dashboard() {
           gap: 0,
           borderRadius: 14,
           overflow: "hidden",
-          border: "1px solid rgba(212,175,55,0.25)",
+          border: "1px solid rgba(255,107,53,0.25)",
           background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
           minHeight: 90,
         }}
@@ -357,7 +357,7 @@ export default function Dashboard() {
         <div
           className="dashboard-logo-block"
           style={{
-            background: "linear-gradient(160deg, #D4AF37 0%, #8c7520 100%)",
+            background: "linear-gradient(160deg, #FF6B35 0%, #E85A2B 100%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -421,7 +421,7 @@ export default function Dashboard() {
           <div
             style={{
               background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
-              border: "1px solid rgba(212,175,55,0.2)",
+              border: "1px solid rgba(255,107,53,0.2)",
               borderRadius: 14,
               padding: "22px 22px 20px",
             }}
@@ -430,7 +430,7 @@ export default function Dashboard() {
               style={{
                 fontSize: 11,
                 fontWeight: 700,
-                color: "#D4AF37",
+                color: "#FF6B35",
                 letterSpacing: "2px",
                 textTransform: "uppercase",
                 marginBottom: 14,
@@ -455,7 +455,7 @@ export default function Dashboard() {
             <p
               style={{
                 textAlign: "center",
-                color: "#D4AF37",
+                color: "#FF6B35",
                 fontSize: 13,
                 fontWeight: 600,
               }}
@@ -516,8 +516,8 @@ export default function Dashboard() {
                   ? targetCalories > dailyCalories
                     ? "#4caf50"
                     : targetCalories < dailyCalories
-                      ? "#ef5350"
-                      : "#D4AF37"
+                      ? "#FF0055"
+                      : "#FF6B35"
                   : "#9e9e9e"
               }
             />
@@ -533,7 +533,7 @@ export default function Dashboard() {
             <div
               style={{
                 background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
-                border: "1px solid rgba(212,175,55,0.2)",
+                border: "1px solid rgba(255,107,53,0.2)",
                 borderRadius: 14,
                 padding: "32px 22px 28px",
                 textAlign: "center",
@@ -575,7 +575,7 @@ export default function Dashboard() {
             <div
               style={{
                 background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
-                border: "1px solid rgba(212,175,55,0.2)",
+                border: "1px solid rgba(255,107,53,0.2)",
                 borderRadius: 14,
                 padding: "20px 22px",
               }}
@@ -594,7 +594,7 @@ export default function Dashboard() {
                     style={{
                       fontSize: 13,
                       fontWeight: 700,
-                      color: "#D4AF37",
+                      color: "#FF6B35",
                       letterSpacing: "1px",
                       textTransform: "uppercase",
                       marginBottom: 2,
@@ -624,15 +624,15 @@ export default function Dashboard() {
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    background: "rgba(212,175,55,0.07)",
-                    border: "1px solid rgba(212,175,55,0.25)",
+                    background: "rgba(255,107,53,0.07)",
+                    border: "1px solid rgba(255,107,53,0.25)",
                     borderRadius: 8,
                     padding: "7px 12px",
                     marginBottom: 14,
                   }}
                 >
                   <span
-                    style={{ fontSize: 11, color: "#D4AF37", fontWeight: 700 }}
+                    style={{ fontSize: 11, color: "#FF6B35", fontWeight: 700 }}
                   >
                     YOUR PLAN
                   </span>
@@ -640,7 +640,7 @@ export default function Dashboard() {
                     style={{
                       width: 1,
                       height: 12,
-                      background: "rgba(212,175,55,0.3)",
+                      background: "rgba(255,107,53,0.3)",
                     }}
                   />
                   <span
@@ -691,19 +691,19 @@ export default function Dashboard() {
                           aspectRatio: "1",
                           borderRadius: 6,
                           background: isToday
-                            ? "rgba(212,175,55,0.25)"
+                            ? "rgba(255,107,53,0.25)"
                             : done
                               ? "rgba(76,175,80,0.25)"
                               : isWorkoutDay
-                                ? "rgba(212,175,55,0.07)"
+                                ? "rgba(255,107,53,0.07)"
                                 : "#1a1a1a",
                           border: `1.5px solid ${
                             isToday
-                              ? "#D4AF37"
+                              ? "#FF6B35"
                               : done
                                 ? "#4caf50"
                                 : isWorkoutDay
-                                  ? "rgba(212,175,55,0.3)"
+                                  ? "rgba(255,107,53,0.3)"
                                   : "#2a2a2a"
                           }`,
                           display: "flex",
@@ -714,7 +714,7 @@ export default function Dashboard() {
                         {isToday && (
                           <span
                             style={{
-                              color: "#D4AF37",
+                              color: "#FF6B35",
                               fontWeight: 900,
                               fontSize: 12,
                             }}
@@ -730,7 +730,7 @@ export default function Dashboard() {
                         {!isToday && !done && isWorkoutDay && (
                           <span
                             style={{
-                              color: "rgba(212,175,55,0.4)",
+                              color: "rgba(255,107,53,0.4)",
                               fontSize: 9,
                             }}
                           >
@@ -742,7 +742,7 @@ export default function Dashboard() {
                         style={{
                           fontSize: 10,
                           color: isToday
-                            ? "#D4AF37"
+                            ? "#FF6B35"
                             : isWorkoutDay
                               ? "#757575"
                               : "#333",
@@ -774,7 +774,7 @@ export default function Dashboard() {
                     </div>
                     <p
                       style={{
-                        color: "#D4AF37",
+                        color: "#FF6B35",
                         fontWeight: 700,
                         fontSize: 14,
                       }}
@@ -824,8 +824,8 @@ export default function Dashboard() {
                           <span
                             style={{
                               fontSize: 11,
-                              color: "#D4AF37",
-                              background: "rgba(212,175,55,0.1)",
+                              color: "#FF6B35",
+                              background: "rgba(255,107,53,0.1)",
                               borderRadius: 6,
                               padding: "3px 8px",
                               textTransform: "capitalize",
@@ -881,7 +881,7 @@ export default function Dashboard() {
                             <span
                               style={{
                                 fontSize: 12,
-                                color: "#D4AF37",
+                                color: "#FF6B35",
                                 fontWeight: 700,
                                 whiteSpace: "nowrap",
                               }}
@@ -946,7 +946,7 @@ export default function Dashboard() {
             <div
               style={{
                 background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
-                border: "1px solid rgba(212,175,55,0.2)",
+                border: "1px solid rgba(255,107,53,0.2)",
                 borderRadius: 14,
                 padding: "20px 22px",
               }}
@@ -963,7 +963,7 @@ export default function Dashboard() {
                   style={{
                     fontSize: 13,
                     fontWeight: 700,
-                    color: "#D4AF37",
+                    color: "#FF6B35",
                     letterSpacing: "1px",
                     textTransform: "uppercase",
                   }}
@@ -1007,12 +1007,12 @@ export default function Dashboard() {
 }
 
 /* --- StatCard ---------------------------------------------------- */
-function StatCard({ label, value, sub, subColor = "#D4AF37" }) {
+function StatCard({ label, value, sub, subColor = "#FF6B35" }) {
   return (
     <div
       style={{
         background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
-        border: "1px solid rgba(212,175,55,0.18)",
+        border: "1px solid rgba(255,107,53,0.18)",
         borderRadius: 14,
         padding: "18px 16px 16px",
       }}
@@ -1020,7 +1020,7 @@ function StatCard({ label, value, sub, subColor = "#D4AF37" }) {
       <p
         style={{
           fontSize: 11,
-          color: "#D4AF37",
+          color: "#FF6B35",
           fontWeight: 700,
           textTransform: "uppercase",
           letterSpacing: "0.8px",
@@ -1051,7 +1051,7 @@ function MiniStatCard({ label, value, unit }) {
     <div
       style={{
         background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
-        border: "1px solid rgba(212,175,55,0.12)",
+        border: "1px solid rgba(255,107,53,0.12)",
         borderRadius: 12,
         padding: "14px 16px",
         display: "flex",
@@ -1060,7 +1060,7 @@ function MiniStatCard({ label, value, unit }) {
       }}
     >
       <span style={{ fontSize: 12, color: "#9e9e9e" }}>{label}</span>
-      <span style={{ fontSize: 22, fontWeight: 900, color: "#D4AF37" }}>
+      <span style={{ fontSize: 22, fontWeight: 900, color: "#FF6B35" }}>
         {value}
         {unit && (
           <span
@@ -1096,7 +1096,7 @@ function TaskRow({ task }) {
           width: 18,
           height: 18,
           borderRadius: 4,
-          border: `2px solid ${task.is_completed ? "#4caf50" : "#D4AF37"}`,
+          border: `2px solid ${task.is_completed ? "#4caf50" : "#FF6B35"}`,
           background: task.is_completed ? "#4caf50" : "transparent",
           display: "flex",
           alignItems: "center",

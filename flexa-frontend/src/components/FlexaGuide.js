@@ -122,7 +122,7 @@ export default function FlexaGuide({ pageKey }) {
           maxHeight: "92dvh",
           overflowY: "auto",
           background: "linear-gradient(155deg, #13111a 0%, #0c0a12 100%)",
-          border: "1px solid rgba(212,175,55,0.28)",
+          border: "1px solid rgba(255,107,53,0.28)",
           borderRadius: 28,
           overflow: "hidden",
           boxShadow:
@@ -141,8 +141,8 @@ export default function FlexaGuide({ pageKey }) {
             width: isMobile ? "100%" : 200,
             flexShrink: 0,
             background: "linear-gradient(160deg, #1a1628 0%, #100e18 100%)",
-            borderRight: isMobile ? "none" : "1px solid rgba(212,175,55,0.12)",
-            borderBottom: isMobile ? "1px solid rgba(212,175,55,0.12)" : "none",
+            borderRight: isMobile ? "none" : "1px solid rgba(255,107,53,0.12)",
+            borderBottom: isMobile ? "1px solid rgba(255,107,53,0.12)" : "none",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -164,7 +164,7 @@ export default function FlexaGuide({ pageKey }) {
               height: 170,
               borderRadius: "50%",
               background:
-                "radial-gradient(circle, rgba(212,175,55,0.2) 0%, transparent 70%)",
+                "radial-gradient(circle, rgba(255,107,53,0.2) 0%, transparent 70%)",
               pointerEvents: "none",
             }}
           />
@@ -179,12 +179,12 @@ export default function FlexaGuide({ pageKey }) {
           {/* "FLEXA says" badge */}
           <div
             style={{
-              background: "rgba(212,175,55,0.14)",
-              border: "1px solid rgba(212,175,55,0.35)",
+              background: "rgba(255,107,53,0.14)",
+              border: "1px solid rgba(255,107,53,0.35)",
               borderRadius: 20,
               padding: "5px 14px",
               fontSize: 10,
-              color: "#D4AF37",
+              color: "#FF6B35",
               fontWeight: 700,
               letterSpacing: 2,
               textTransform: "uppercase",
@@ -219,7 +219,7 @@ export default function FlexaGuide({ pageKey }) {
                 fontSize: isMobile ? 9 : 10,
                 fontWeight: 700,
                 letterSpacing: 3,
-                color: "rgba(212,175,55,0.6)",
+                color: "rgba(255,107,53,0.6)",
                 textTransform: "uppercase",
               }}
             >
@@ -262,8 +262,8 @@ export default function FlexaGuide({ pageKey }) {
                     width: 22,
                     height: 22,
                     borderRadius: "50%",
-                    background: "rgba(212,175,55,0.15)",
-                    border: "1px solid rgba(212,175,55,0.4)",
+                    background: "rgba(255,107,53,0.15)",
+                    border: "1px solid rgba(255,107,53,0.4)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -313,19 +313,19 @@ export default function FlexaGuide({ pageKey }) {
                 fontSize: 14,
                 width: isMobile ? "100%" : "auto",
                 cursor: "pointer",
-                boxShadow: "0 4px 20px rgba(212,175,55,0.45)",
+                boxShadow: "0 4px 20px rgba(255,107,53,0.45)",
                 letterSpacing: 0.5,
                 transition: "transform 0.15s, box-shadow 0.15s",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "scale(1.05)";
                 e.currentTarget.style.boxShadow =
-                  "0 6px 28px rgba(212,175,55,0.65)";
+                  "0 6px 28px rgba(255,107,53,0.65)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "scale(1)";
                 e.currentTarget.style.boxShadow =
-                  "0 4px 20px rgba(212,175,55,0.45)";
+                  "0 4px 20px rgba(255,107,53,0.45)";
               }}
             >
               Got it! 👊

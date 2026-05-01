@@ -269,7 +269,7 @@ export default function Profile() {
                     height: 88,
                     borderRadius: "50%",
                     objectFit: "cover",
-                    border: "3px solid rgba(212,175,55,0.6)",
+                    border: "3px solid rgba(255,107,53,0.6)",
                     display: "block",
                   }}
                 />
@@ -279,14 +279,14 @@ export default function Profile() {
                     width: 88,
                     height: 88,
                     borderRadius: "50%",
-                    background: "rgba(212,175,55,0.12)",
-                    border: "3px solid rgba(212,175,55,0.4)",
+                    background: "rgba(255,107,53,0.12)",
+                    border: "3px solid rgba(255,107,53,0.4)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <FiUser size={36} color="#D4AF37" />
+                  <FiUser size={36} color="#FF6B35" />
                 </div>
               )}
               {/* Change picture button */}
@@ -299,7 +299,7 @@ export default function Profile() {
                   width: 28,
                   height: 28,
                   borderRadius: "50%",
-                  background: "#D4AF37",
+                  background: "#FF6B35",
                   border: "2px solid #0a0a0a",
                   display: "flex",
                   alignItems: "center",
@@ -319,7 +319,7 @@ export default function Profile() {
             </p>
             {profilePic && (
               <div style={{ marginTop: 12 }}>
-                <p style={{ fontSize: 11, color: "#D4AF37", marginBottom: 8 }}>
+                <p style={{ fontSize: 11, color: "#FF6B35", marginBottom: 8 }}>
                   New photo selected — save profile to apply
                 </p>
                 <button
@@ -390,8 +390,8 @@ export default function Profile() {
           <div
             style={{
               background:
-                "linear-gradient(135deg, #111 0%, rgba(212,175,55,0.06) 100%)",
-              border: "1.5px solid rgba(212,175,55,0.2)",
+                "linear-gradient(135deg, #111 0%, rgba(255,107,53,0.06) 100%)",
+              border: "1.5px solid rgba(255,107,53,0.2)",
               borderRadius: 12,
               padding: 24,
             }}
@@ -414,7 +414,7 @@ export default function Profile() {
                 justifyContent: "space-between",
               }}
             >
-              <span style={{ fontSize: 48, fontWeight: 900, color: "#D4AF37" }}>
+              <span style={{ fontSize: 48, fontWeight: 900, color: "#FF6B35" }}>
                 {liveBmi || p?.bmi?.toFixed(1) || "—"}
               </span>
               {bmiInfo && (
@@ -459,7 +459,7 @@ export default function Profile() {
                   style={{
                     background: "none",
                     border: "none",
-                    color: "#D4AF37",
+                    color: "#FF6B35",
                     cursor: "pointer",
                     fontSize: 12,
                     fontWeight: 600,
@@ -506,9 +506,9 @@ export default function Profile() {
                       style={{
                         background:
                           goalForm.goal_type === g.value
-                            ? "rgba(212,175,55,0.12)"
+                            ? "rgba(255,107,53,0.12)"
                             : "transparent",
-                        border: `1.5px solid ${goalForm.goal_type === g.value ? "#D4AF37" : "#2a2a2a"}`,
+                        border: `1.5px solid ${goalForm.goal_type === g.value ? "#FF6B35" : "#2a2a2a"}`,
                         borderRadius: 10,
                         padding: "10px 14px",
                         cursor: "pointer",
@@ -518,7 +518,7 @@ export default function Profile() {
                         transition: "all 0.2s",
                       }}
                     >
-                      <span style={{ color: "#D4AF37" }}>{g.icon}</span>
+                      <span style={{ color: "#FF6B35" }}>{g.icon}</span>
                       <div style={{ textAlign: "left" }}>
                         <p
                           style={{
@@ -526,7 +526,7 @@ export default function Profile() {
                             fontSize: 13,
                             color:
                               goalForm.goal_type === g.value
-                                ? "#D4AF37"
+                                ? "#FF6B35"
                                 : "#e0e0e0",
                           }}
                         >
@@ -571,9 +571,9 @@ export default function Profile() {
                       style={{
                         background:
                           goalForm.activity_level === a.value
-                            ? "rgba(212,175,55,0.08)"
+                            ? "rgba(255,107,53,0.08)"
                             : "transparent",
-                        border: `1.5px solid ${goalForm.activity_level === a.value ? "#D4AF37" : "#2a2a2a"}`,
+                        border: `1.5px solid ${goalForm.activity_level === a.value ? "#FF6B35" : "#2a2a2a"}`,
                         borderRadius: 8,
                         padding: "9px 14px",
                         cursor: "pointer",
@@ -589,7 +589,7 @@ export default function Profile() {
                           fontSize: 13,
                           color:
                             goalForm.activity_level === a.value
-                              ? "#D4AF37"
+                              ? "#FF6B35"
                               : "#e0e0e0",
                         }}
                       >
@@ -656,7 +656,7 @@ export default function Profile() {
                     style={{
                       fontSize: 22,
                       fontWeight: 800,
-                      color: "#D4AF37",
+                      color: "#FF6B35",
                       textTransform: "capitalize",
                     }}
                   >
@@ -680,7 +680,7 @@ export default function Profile() {
                   <InfoRow
                     label="Goal Score"
                     value={
-                      <span style={{ color: "#D4AF37", fontWeight: 700 }}>
+                      <span style={{ color: "#FF6B35", fontWeight: 700 }}>
                         {Math.round(goal.ml_score * 100)}%
                       </span>
                     }
@@ -732,8 +732,8 @@ export default function Profile() {
                     {goalValidation.recommendations?.length > 0 && (
                       <div
                         style={{
-                          background: "rgba(212,175,55,0.06)",
-                          border: "1px solid rgba(212,175,55,0.2)",
+                          background: "rgba(255,107,53,0.06)",
+                          border: "1px solid rgba(255,107,53,0.2)",
                           borderRadius: 8,
                           padding: "10px 14px",
                           marginBottom: 10,
@@ -743,7 +743,7 @@ export default function Profile() {
                           style={{
                             fontSize: 11,
                             fontWeight: 700,
-                            color: "#D4AF37",
+                            color: "#FF6B35",
                             textTransform: "uppercase",
                             letterSpacing: "0.6px",
                             marginBottom: 6,
@@ -996,8 +996,8 @@ export default function Profile() {
               {liveBmi && (
                 <div
                   style={{
-                    background: "rgba(212,175,55,0.06)",
-                    border: "1px solid rgba(212,175,55,0.2)",
+                    background: "rgba(255,107,53,0.06)",
+                    border: "1px solid rgba(255,107,53,0.2)",
                     borderRadius: 8,
                     padding: "12px 16px",
                     marginBottom: 20,
@@ -1020,7 +1020,7 @@ export default function Profile() {
                       style={{
                         fontSize: 24,
                         fontWeight: 800,
-                        color: "#D4AF37",
+                        color: "#FF6B35",
                       }}
                     >
                       {liveBmi}

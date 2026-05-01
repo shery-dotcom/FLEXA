@@ -8,19 +8,19 @@ const GOAL_OPTIONS = [
   {
     value: "bulking",
     label: "Bulking",
-    icon: <FiTrendingUp size={32} color="#D4AF37" />,
+    icon: <FiTrendingUp size={32} color="#FF6B35" />,
     desc: "Build muscle mass with a calorie surplus",
   },
   {
     value: "cutting",
     label: "Cutting",
-    icon: <FiZap size={32} color="#D4AF37" />,
+    icon: <FiZap size={32} color="#FF6B35" />,
     desc: "Lose fat while preserving lean muscle",
   },
   {
     value: "recomp",
     label: "Recomp",
-    icon: <FiSliders size={32} color="#D4AF37" />,
+    icon: <FiSliders size={32} color="#FF6B35" />,
     desc: "Simultaneously build muscle and burn fat",
   },
 ];
@@ -117,8 +117,8 @@ export default function GoalSetup() {
                 onClick={() => setGoalType(g.value)}
                 style={{
                   background:
-                    goalType === g.value ? "rgba(212,175,55,0.12)" : "#111",
-                  border: `2px solid ${goalType === g.value ? "#D4AF37" : "#242424"}`,
+                    goalType === g.value ? "rgba(255,107,53,0.12)" : "#111",
+                  border: `2px solid ${goalType === g.value ? "#FF6B35" : "#242424"}`,
                   borderRadius: 12,
                   padding: "20px 16px",
                   textAlign: "center",
@@ -131,7 +131,7 @@ export default function GoalSetup() {
                   style={{
                     fontWeight: 700,
                     fontSize: 16,
-                    color: goalType === g.value ? "#D4AF37" : "#fff",
+                    color: goalType === g.value ? "#FF6B35" : "#fff",
                   }}
                 >
                   {g.label}
@@ -170,8 +170,8 @@ export default function GoalSetup() {
                 onClick={() => setActivity(a.value)}
                 style={{
                   background:
-                    activity === a.value ? "rgba(212,175,55,0.08)" : "#111",
-                  border: `2px solid ${activity === a.value ? "#D4AF37" : "#242424"}`,
+                    activity === a.value ? "rgba(255,107,53,0.08)" : "#111",
+                  border: `2px solid ${activity === a.value ? "#FF6B35" : "#242424"}`,
                   borderRadius: 10,
                   padding: "14px 20px",
                   display: "flex",
@@ -184,7 +184,7 @@ export default function GoalSetup() {
                 <span
                   style={{
                     fontWeight: 600,
-                    color: activity === a.value ? "#D4AF37" : "#e0e0e0",
+                    color: activity === a.value ? "#FF6B35" : "#e0e0e0",
                   }}
                 >
                   {a.label}
@@ -369,7 +369,7 @@ function AIReportCard({ report, loading, onAdoptGoal, onContinue }) {
           marginBottom: 10,
           fontSize: 13,
           fontWeight: 600,
-          color: "#D4AF37",
+          color: "#FF6B35",
           textTransform: "uppercase",
           letterSpacing: "0.8px",
         }}
@@ -389,7 +389,7 @@ function AIReportCard({ report, loading, onAdoptGoal, onContinue }) {
             key={i}
             style={{ fontSize: 14, color: "#e0e0e0", display: "flex", gap: 10 }}
           >
-            <span style={{ color: "#D4AF37" }}>→</span> {s}
+            <span style={{ color: "#FF6B35" }}>→</span> {s}
           </li>
         ))}
       </ul>
