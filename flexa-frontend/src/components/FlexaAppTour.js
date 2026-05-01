@@ -14,7 +14,7 @@ const SLIDES = [
     lines: [
       "Your personal AI fitness companion — here to guide, motivate, and track every step of your journey.",
       "I'll be watching over every page, ready to help whenever you need.",
-      "Let me give you a quick tour of FLEXA so you know exactly where everything is. Ready? 💪",
+      "Let me give you a quick tour of FLEXA so you know exactly where everything is. Ready?",
     ],
     cta: null,
   },
@@ -40,7 +40,7 @@ const SLIDES = [
     lines: [
       "FLEXA generates a personalised weekly workout plan based on your goal and fitness level.",
       "Each exercise has a per-set timer so you know exactly how long you're working.",
-      "Tick off sets as you go — completing a day keeps your streak alive! 🔥",
+      "Tick off sets as you go — completing a day keeps your streak alive!",
     ],
     cta: { label: "See Workouts →", path: "/workouts" },
   },
@@ -575,7 +575,7 @@ export default function FlexaAppTour({ onDone }) {
                 onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
                 onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
               >
-                {isLast ? "Let's Go! 🚀" : "Next →"}
+                {isLast ? "Let's Go" : "Next →"}
               </button>
             </div>
           </div>

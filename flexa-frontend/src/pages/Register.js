@@ -63,7 +63,7 @@ export default function Register() {
     <div className="auth-page">
       <div className="auth-box">
         <div className="auth-logo">FLEXA</div>
-        <p className="auth-tagline">💪 BEGIN YOUR TRANSFORMATION</p>
+        <p className="auth-tagline">CREATE YOUR ACCOUNT</p>
 
         <form onSubmit={handleSubmit}>
           {/* Profile Picture Upload */}
@@ -211,8 +211,8 @@ export default function Register() {
             }}
           >
             <p style={{ fontSize: 12, color: "#9e9e9e", lineHeight: 1.6 }}>
-              ✓ By joining, you commit to consistency, hard work, and
-              data-driven fitness progress.
+              By joining, you commit to consistency, hard work, and data-driven
+              fitness progress.
             </p>
           </div>
 
@@ -222,7 +222,7 @@ export default function Register() {
             style={{ width: "100%" }}
             disabled={loading}
           >
-            {loading ? "Creating Account..." : "🚀 Create Account"}
+            {loading ? "Creating Account..." : "Create Account"}
           </button>
         </form>
 

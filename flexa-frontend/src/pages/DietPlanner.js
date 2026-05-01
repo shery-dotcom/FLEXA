@@ -707,7 +707,7 @@ export default function DietPlanner() {
                       fontWeight: active ? 600 : 400,
                     }}
                   >
-                    {active ? "✓ " : ""}
+                    {active ? "" : ""}
                     {opt.label}
                   </button>
                 );
@@ -1010,7 +1010,7 @@ export default function DietPlanner() {
                   marginBottom: 10,
                 }}
               >
-                💡 Diet Tips
+                Diet Tips
               </div>
               {plan.tips.map((tip, i) => (
                 <div

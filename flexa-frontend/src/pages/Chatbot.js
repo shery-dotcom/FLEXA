@@ -143,7 +143,7 @@ export default function Chatbot() {
               id: "welcome",
               role: "assistant",
               content:
-                "Hey! I'm FLEXA 💪 — your personal fitness companion. Ask me anything about workouts, nutrition, or your personal goals. آپ اردو میں بھی بات کر سکتے ہیں!",
+                "Hey! I'm FLEXA — your personal fitness companion. Ask me anything about workouts, nutrition, or your personal goals. آپ اردو میں بھی بات کر سکتے ہیں!",
               timestamp: new Date().toISOString(),
               language: "en",
             },
@@ -244,7 +244,7 @@ export default function Chatbot() {
       {
         id: "welcome",
         role: "assistant",
-        content: "Chat cleared! Let's start fresh 💪 How can I help you today?",
+        content: "Chat cleared! Let's start fresh. How can I help you today?",
         timestamp: new Date().toISOString(),
         language: "en",
       },

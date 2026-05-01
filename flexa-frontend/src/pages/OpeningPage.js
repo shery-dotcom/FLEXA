@@ -14,8 +14,8 @@ const HIGHLIGHTS = [
   },
   {
     icon: <FiZap />,
-    title: "AI Fitness Assistant",
-    text: "Get instant coaching tips, posture guidance, and personalized recommendations.",
+    title: "Instant Guidance",
+    text: "Get real-time coaching tips, posture guidance, and personalized recommendations.",
   },
 ];
 
@@ -27,7 +27,7 @@ export default function OpeningPage() {
           <p className="opening-kicker">FLEXA PERFORMANCE SYSTEM</p>
           <h1 className="opening-title">
             Build your strongest self
-            <span> with focused AI coaching.</span>
+            <span> with precision tracking.</span>
           </h1>
           <p className="opening-subtitle">
             Train smarter, eat better, and stay consistent with one unified
@@ -36,7 +36,7 @@ export default function OpeningPage() {
 
           <div className="opening-cta-row">
             <Link to="/register" className="btn btn-gold opening-cta-primary">
-              🚀 Start Free
+              Get Started
             </Link>
             <Link to="/login" className="btn btn-outline opening-cta-secondary">
               Sign In

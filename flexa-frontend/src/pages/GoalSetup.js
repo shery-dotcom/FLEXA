@@ -232,7 +232,7 @@ function AIReportCard({ report, loading, onAdoptGoal, onContinue }) {
           className={`badge ${report.is_valid && !report.recommended_goal ? "badge-green" : "badge-red"}`}
         >
           {report.is_valid && !report.recommended_goal
-            ? "✓ Goal Validated"
+            ? "Goal Validated"
             : "⚠ Needs Attention"}
         </span>
       </div>
@@ -319,7 +319,7 @@ function AIReportCard({ report, loading, onAdoptGoal, onContinue }) {
             >
               {loading
                 ? "Switching..."
-                : `✓ Switch to ${report.recommended_goal}`}
+                : `Switch to ${report.recommended_goal}`}
             </button>
             <button
               onClick={onContinue}

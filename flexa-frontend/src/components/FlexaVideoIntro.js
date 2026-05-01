@@ -219,7 +219,7 @@ export default function FlexaVideoIntro({ show: showProp, onClose }) {
           >
             Your personal AI coach — ask me anything in{" "}
             <strong style={{ color: "#D4AF37" }}>English or Urdu</strong>.<br />
-            I know your goals and BMI, so my advice is tailored just for you. 🚀
+            I know your goals and BMI, so my advice is tailored just for you.
           </p>
           <button
             onClick={dismiss}
@@ -238,7 +238,7 @@ export default function FlexaVideoIntro({ show: showProp, onClose }) {
               marginLeft: 20,
             }}
           >
-            Let's Go! 💪
+            Let's Go!
           </button>
         </div>
       </div>
@@ -258,5 +258,3 @@ export default function FlexaVideoIntro({ show: showProp, onClose }) {
     </>
   );
 }
-
-

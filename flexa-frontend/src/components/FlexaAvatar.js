@@ -199,7 +199,7 @@ export default function FlexaAvatar({
         <div
           style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 1 }}
         >
-          {personalityMode === "coach" ? "🎯 Coach Mode" : "💪 Motivator Mode"}
+          {personalityMode === "coach" ? "Coach Mode" : "Motivator Mode"}
         </div>
         {bmi && (
           <div
@@ -228,7 +228,7 @@ export default function FlexaAvatar({
               marginTop: 3,
             }}
           >
-            🔥 {streakDays} day{streakDays !== 1 ? "s" : ""} streak
+            {streakDays} day{streakDays !== 1 ? "s" : ""} streak
           </div>
         )}
       </div>
@@ -290,5 +290,3 @@ const GLOW = {
   heavy: "rgba(124,58,237,0.45)",
   heavy_plus: "rgba(147,51,234,0.45)",
 };
-
-

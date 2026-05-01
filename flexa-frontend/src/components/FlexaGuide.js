@@ -17,7 +17,7 @@ const GUIDE_MESSAGES = {
     lines: [
       "This is your home base, champ.",
       "Here you'll find your daily calorie target, workout split, streak tracker, and all your key health stats.",
-      "Every section of FLEXA is built around YOUR goals — let's crush it together! 💪",
+      "Every section of FLEXA is built around YOUR goals — let's crush it together!",
     ],
     avatarClass: "fit",
   },
@@ -27,7 +27,7 @@ const GUIDE_MESSAGES = {
     lines: [
       "Your personalized workout plan is right here.",
       "Each day shows exercises, sets, and reps tailored to your goal and fitness level.",
-      "Mark sessions done to keep your streak alive — don't break the chain! 🔥",
+      "Mark sessions done to keep your streak alive — don't break the chain!",
     ],
     avatarClass: "athletic",
   },

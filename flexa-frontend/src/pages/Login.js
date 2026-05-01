@@ -37,7 +37,7 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-box">
         <div className="auth-logo">FLEXA</div>
-        <p className="auth-tagline">⚡ BACK TO YOUR GAINS</p>
+        <p className="auth-tagline">SIGN IN TO YOUR ACCOUNT</p>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -83,7 +83,7 @@ export default function Login() {
             style={{ width: "100%", marginTop: 8 }}
             disabled={loading}
           >
-            {loading ? "Signing in..." : "🔥 Let's Go"}
+            {loading ? "Signing in..." : "Sign In"}
           </button>
 
           <p style={{ textAlign: "right", marginTop: 12, fontSize: 13 }}>
