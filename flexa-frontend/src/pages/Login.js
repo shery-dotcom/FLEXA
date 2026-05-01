@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
+import { FiLock, FiMail } from "react-icons/fi";
 
 const API_BASE_URL =
   process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1";
@@ -36,11 +37,17 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-box">
         <div className="auth-logo">FLEXA</div>
-        <p className="auth-tagline">YOUR AI FITNESS COMMANDER</p>
+        <p className="auth-tagline">⚡ BACK TO YOUR GAINS</p>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Email or Username</label>
+            <label className="form-label">
+              <FiMail
+                size={14}
+                style={{ marginRight: 6, verticalAlign: "middle" }}
+              />
+              Email or Username
+            </label>
             <input
               className="form-input"
               type="text"
@@ -52,7 +59,13 @@ export default function Login() {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Password</label>
+            <label className="form-label">
+              <FiLock
+                size={14}
+                style={{ marginRight: 6, verticalAlign: "middle" }}
+              />
+              Password
+            </label>
             <input
               className="form-input"
               type="password"
@@ -70,13 +83,17 @@ export default function Login() {
             style={{ width: "100%", marginTop: 8 }}
             disabled={loading}
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Signing in..." : "🔥 Let's Go"}
           </button>
 
           <p style={{ textAlign: "right", marginTop: 12, fontSize: 13 }}>
             <Link
               to="/forgot-password"
-              style={{ color: "#9e9e9e", textDecoration: "none" }}
+              style={{
+                color: "#00D4FF",
+                textDecoration: "none",
+                fontWeight: 600,
+              }}
             >
               Forgot password?
             </Link>
@@ -90,7 +107,7 @@ export default function Login() {
           style={{ width: "100%" }}
           onClick={() => (window.location.href = GOOGLE_AUTH_URL)}
         >
-          <GoogleIcon /> Continue with Google
+          <GoogleIcon /> Google Sign In
         </button>
 
         <p
@@ -101,9 +118,9 @@ export default function Login() {
             color: "#9e9e9e",
           }}
         >
-          Don't have an account?&nbsp;
-          <Link to="/register" style={{ color: "#D4AF37", fontWeight: 600 }}>
-            Sign Up
+          New to Flexa?&nbsp;
+          <Link to="/register" style={{ color: "#FF6B35", fontWeight: 700 }}>
+            Start Your Journey
           </Link>
         </p>
       </div>

@@ -20,6 +20,13 @@
   --danger: #ef5350;
   --warning: #ff9800;
 
+  /* Fitness/Gym Theme Colors */
+  --fitness-primary: #ff6b35; /* Energetic Orange */
+  --fitness-accent: #00d4ff; /* Active Cyan */
+  --fitness-success: #00dc82; /* Muscular Green */
+  --fitness-heat: #ff0055; /* Heart/Intensity Red */
+  --fitness-light: #ffd460; /* Energy Yellow */
+
   --font-main: "Inter", sans-serif;
   --font-hero: "Bebas Neue", sans-serif;
 
@@ -108,22 +115,24 @@ h6 {
 }
 
 .btn-gold {
-  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-  color: var(--black);
+  background: linear-gradient(135deg, var(--fitness-primary), #ff5520);
+  color: var(--white);
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
 }
 .btn-gold:hover {
-  background: linear-gradient(135deg, var(--gold-light), var(--gold));
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-gold);
+  background: linear-gradient(135deg, #ff7b4a, var(--fitness-primary));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(255, 107, 53, 0.4);
 }
 
 .btn-outline {
   background: transparent;
-  color: var(--gold);
-  border: 1.5px solid var(--gold);
+  color: var(--fitness-accent);
+  border: 1.5px solid var(--fitness-accent);
 }
 .btn-outline:hover {
-  background: rgba(212, 175, 55, 0.1);
+  background: rgba(0, 212, 255, 0.1);
   transform: translateY(-1px);
 }
 
@@ -351,15 +360,15 @@ h6 {
   background:
     radial-gradient(
       circle at 12% 16%,
-      rgba(212, 175, 55, 0.22),
+      rgba(255, 107, 53, 0.22),
       transparent 40%
     ),
     radial-gradient(
       circle at 85% 85%,
-      rgba(214, 91, 32, 0.22),
+      rgba(0, 212, 255, 0.18),
       transparent 45%
     ),
-    linear-gradient(145deg, #090909 0%, #111111 42%, #17110a 100%);
+    linear-gradient(145deg, #090909 0%, #111111 42%, #0a0f1a 100%);
   padding: 42px 24px;
 }
 
@@ -377,7 +386,7 @@ h6 {
 
 .opening-hero,
 .opening-panel {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 107, 53, 0.15);
   border-radius: 28px;
   backdrop-filter: blur(4px);
   background: linear-gradient(
@@ -398,9 +407,9 @@ h6 {
   margin-bottom: 14px;
   padding: 7px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  color: #f1d58b;
-  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(255, 107, 53, 0.3);
+  color: #ffb380;
+  background: rgba(255, 107, 53, 0.12);
   font-size: 11px;
   letter-spacing: 1.5px;
   font-weight: 700;
@@ -416,7 +425,7 @@ h6 {
 }
 
 .opening-title span {
-  color: #f4c96f;
+  color: #ff6b35;
 }
 
 .opening-subtitle {
@@ -486,11 +495,11 @@ h6 {
   border-radius: 10px;
   display: grid;
   place-items: center;
-  color: #f7d483;
+  color: #ff6b35;
   background: linear-gradient(
     145deg,
-    rgba(212, 175, 55, 0.25),
-    rgba(212, 175, 55, 0.08)
+    rgba(255, 107, 53, 0.25),
+    rgba(255, 107, 53, 0.08)
   );
 }
 
@@ -520,8 +529,8 @@ h6 {
   border-radius: 10px;
   display: grid;
   place-items: center;
-  color: #f4c96f;
-  background: rgba(212, 175, 55, 0.14);
+  color: #ff6b35;
+  background: rgba(255, 107, 53, 0.14);
   font-size: 20px;
 }
 
@@ -557,7 +566,7 @@ h6 {
   right: -90px;
   background: radial-gradient(
     circle,
-    rgba(212, 175, 55, 0.26),
+    rgba(255, 107, 53, 0.26),
     transparent 64%
   );
   animation: openingPulse 8s ease-in-out infinite;
@@ -568,11 +577,7 @@ h6 {
   height: 280px;
   left: -90px;
   bottom: -90px;
-  background: radial-gradient(
-    circle,
-    rgba(255, 122, 24, 0.22),
-    transparent 66%
-  );
+  background: radial-gradient(circle, rgba(0, 212, 255, 0.18), transparent 66%);
   animation: openingPulse 7s ease-in-out infinite reverse;
 }
 
@@ -649,36 +654,101 @@ h6 {
   justify-content: center;
   background: radial-gradient(
     ellipse at center top,
-    rgba(212, 175, 55, 0.08) 0%,
+    rgba(255, 107, 53, 0.06) 0%,
+    rgba(0, 212, 255, 0.03) 30%,
     var(--black) 60%
   );
   padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-page::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: 10%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 107, 53, 0.12),
+    transparent 70%
+  );
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 0;
+}
+
+.auth-page::after {
+  content: "";
+  position: absolute;
+  bottom: -30%;
+  right: 5%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(0, 212, 255, 0.1), transparent 70%);
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 0;
 }
 
 .auth-box {
-  background: var(--black-2);
-  border: 1px solid var(--black-4);
-  border-radius: var(--radius-lg);
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(
+    135deg,
+    rgba(20, 20, 20, 0.9) 0%,
+    rgba(15, 15, 15, 0.95) 100%
+  );
+  border: 1px solid rgba(255, 107, 53, 0.2);
+  border-radius: 20px;
   padding: 48px 42px;
   width: 100%;
   max-width: 440px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 107, 53, 0.1);
+  backdrop-filter: blur(4px);
+  animation: authPop 0.6s ease-out;
 }
 
 .auth-logo {
   font-family: var(--font-hero);
   font-size: 40px;
   letter-spacing: 4px;
-  color: var(--gold);
+  background: linear-gradient(
+    135deg,
+    var(--fitness-primary),
+    var(--fitness-accent)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   text-align: center;
   margin-bottom: 8px;
+  font-weight: 800;
 }
 
 .auth-tagline {
-  font-size: 13px;
-  color: var(--gray-2);
+  font-size: 12px;
+  color: var(--fitness-accent);
   text-align: center;
-  margin-bottom: 36px;
-  letter-spacing: 1px;
+  margin-bottom: 32px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+@keyframes authPop {
+  from {
+    transform: scale(0.95) translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
 }
 
 /* ===== PROGRESS BAR ===== */

@@ -36,7 +36,7 @@ export default function OpeningPage() {
 
           <div className="opening-cta-row">
             <Link to="/register" className="btn btn-gold opening-cta-primary">
-              Create Account
+              🚀 Start Free
             </Link>
             <Link to="/login" className="btn btn-outline opening-cta-secondary">
               Sign In

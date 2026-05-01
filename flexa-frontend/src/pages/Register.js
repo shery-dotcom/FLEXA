@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
-import { FiCamera } from "react-icons/fi";
+import { FiCamera, FiMail, FiPhone, FiLock } from "react-icons/fi";
 
 const API_BASE_URL =
   process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1";
@@ -63,7 +63,7 @@ export default function Register() {
     <div className="auth-page">
       <div className="auth-box">
         <div className="auth-logo">FLEXA</div>
-        <p className="auth-tagline">START YOUR TRANSFORMATION</p>
+        <p className="auth-tagline">💪 BEGIN YOUR TRANSFORMATION</p>
 
         <form onSubmit={handleSubmit}>
           {/* Profile Picture Upload */}
@@ -85,8 +85,8 @@ export default function Register() {
                 borderRadius: "50%",
                 background: profilePic
                   ? "transparent"
-                  : "rgba(212,175,55,0.08)",
-                border: "2px dashed rgba(212,175,55,0.5)",
+                  : "rgba(255,107,53,0.08)",
+                border: "2px dashed rgba(255,107,53,0.5)",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
@@ -116,7 +116,7 @@ export default function Register() {
                     gap: 6,
                   }}
                 >
-                  <FiCamera size={24} color="#D4AF37" />
+                  <FiCamera size={24} color="#FF6B35" />
                   <span
                     style={{ fontSize: 10, color: "#9e9e9e", fontWeight: 600 }}
                   >
@@ -145,7 +145,13 @@ export default function Register() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Email</label>
+            <label className="form-label">
+              <FiMail
+                size={14}
+                style={{ marginRight: 6, verticalAlign: "middle" }}
+              />
+              Email
+            </label>
             <input
               className="form-input"
               type="email"
@@ -160,7 +166,13 @@ export default function Register() {
             </p>
           </div>
           <div className="form-group">
-            <label className="form-label">Phone (optional)</label>
+            <label className="form-label">
+              <FiPhone
+                size={14}
+                style={{ marginRight: 6, verticalAlign: "middle" }}
+              />
+              Phone (optional)
+            </label>
             <input
               className="form-input"
               type="tel"
@@ -171,7 +183,13 @@ export default function Register() {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Password</label>
+            <label className="form-label">
+              <FiLock
+                size={14}
+                style={{ marginRight: 6, verticalAlign: "middle" }}
+              />
+              Password
+            </label>
             <input
               className="form-input"
               type="password"
@@ -185,16 +203,16 @@ export default function Register() {
 
           <div
             style={{
-              background: "rgba(212,175,55,0.06)",
-              border: "1px solid rgba(212,175,55,0.2)",
+              background: "rgba(255,107,53,0.08)",
+              border: "1px solid rgba(255,107,53,0.2)",
               borderRadius: 8,
               padding: "12px 16px",
               marginBottom: 20,
             }}
           >
             <p style={{ fontSize: 12, color: "#9e9e9e", lineHeight: 1.6 }}>
-              By registering you agree to train hard, stay consistent, and let
-              AI guide your journey.
+              ✓ By joining, you commit to consistency, hard work, and
+              data-driven fitness progress.
             </p>
           </div>
 
@@ -204,7 +222,7 @@ export default function Register() {
             style={{ width: "100%" }}
             disabled={loading}
           >
-            {loading ? "Creating Account..." : "Create Account"}
+            {loading ? "Creating Account..." : "🚀 Create Account"}
           </button>
         </form>
 
@@ -238,7 +256,7 @@ export default function Register() {
               d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.3z"
             />
           </svg>
-          Sign up with Google
+          Google Sign Up
         </button>
 
         <p
@@ -250,7 +268,7 @@ export default function Register() {
           }}
         >
           Already have an account?&nbsp;
-          <Link to="/login" style={{ color: "#D4AF37", fontWeight: 600 }}>
+          <Link to="/login" style={{ color: "#00D4FF", fontWeight: 700 }}>
             Sign In
           </Link>
         </p>
