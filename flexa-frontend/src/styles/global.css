@@ -151,6 +151,39 @@ h6 {
   transform: none;
 }
 
+/* Quick-access nav buttons */
+.btn-quick-diet {
+  padding: 10px 0 !important;
+  font-size: 12px !important;
+  font-weight: 700;
+  background: rgba(255, 107, 53, 0.15);
+  border: 1px solid #ff6b35;
+  color: #ff6b35;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+.btn-quick-diet:hover {
+  background: rgba(255, 107, 53, 0.25) !important;
+  transform: none;
+}
+
+.btn-quick-ai {
+  padding: 10px 0 !important;
+  font-size: 12px !important;
+  font-weight: 700;
+  background: rgba(78, 201, 176, 0.15);
+  border: 1px solid #4ec9b0;
+  color: #4ec9b0;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+.btn-quick-ai:hover {
+  background: rgba(78, 201, 176, 0.25) !important;
+  transform: none;
+}
+
 /* ===== CARDS ===== */
 .card {
   background: var(--black-2);
@@ -703,9 +736,9 @@ h6 {
   );
   border: 1px solid rgba(255, 107, 53, 0.2);
   border-radius: 20px;
-  padding: 48px 42px;
+  padding: 40px 36px;
   width: 100%;
-  max-width: 100%;
+  max-width: 420px;
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.8),
     inset 0 1px 0 rgba(255, 107, 53, 0.1);
@@ -759,7 +792,7 @@ h6 {
   grid-template-columns: 1.1fr 1fr;
   gap: 32px;
   align-items: center;
-  max-width: 1100px;
+  max-width: 900px;
   width: 100%;
 }
 
@@ -908,7 +941,7 @@ h6 {
 /* Auth box: reduce padding on small screens */
 @media (max-width: 480px) {
   .auth-box {
-    padding: 32px 20px;
+    padding: 28px 20px;
     border-radius: var(--radius-md);
   }
   .auth-logo {

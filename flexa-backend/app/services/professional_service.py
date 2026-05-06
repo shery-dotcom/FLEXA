@@ -78,57 +78,86 @@ class ProfessionalService:
         """
         Get professional profile with availability
         """
-        prof_res = await db.execute(
-            select(ProfessionalProfile)
-            .options(selectinload(ProfessionalProfile.user).selectinload(User.profile))
-            .where(ProfessionalProfile.id == professional_id)
-        )
-        professional = prof_res.scalar_one_or_none()
-
-        if not professional:
-            raise HTTPException(status_code=404, detail="Professional not found")
-
-        # Get available slots for next 7 days
-        now = datetime.now(datetime.now().astimezone().tzinfo)
-        seven_days_from_now = now + timedelta(days=7)
-        slots_res = await db.execute(
-            select(AvailabilitySlot)
-            .where(
-                AvailabilitySlot.professional_id == professional_id,
-                AvailabilitySlot.is_available == True,
-                AvailabilitySlot.start_time >= now,
-                AvailabilitySlot.start_time <= seven_days_from_now,
+        try:
+            prof_res = await db.execute(
+                select(ProfessionalProfile)
+                .options(selectinload(ProfessionalProfile.user).selectinload(User.profile))
+                .where(ProfessionalProfile.id == professional_id)
             )
-            .order_by(AvailabilitySlot.start_time)
-        )
-        available_slots = slots_res.scalars().all()
+            professional = prof_res.scalar_one_or_none()
 
-        return {
-            "id": str(professional.id),
-            "name": professional.user.profile.username if professional.user.profile else "Unknown",
-            "contact_email": professional.user.email,
-            "specialization": professional.specialization,
-            "location": professional.location,
-            "bio": professional.bio,
-            "years_experience": professional.years_experience,
-            "certifications": json.loads(professional.certifications),
-            "languages": json.loads(professional.languages),
-            "consultation_price_usd": professional.consultation_price_usd,
-            "consultation_duration_mins": professional.consultation_duration_mins,
-            "average_rating": professional.average_rating,
-            "total_reviews": professional.total_reviews,
-            "total_sessions_completed": professional.total_sessions_completed,
-            "is_verified": professional.is_verified,
-            "timezone": professional.timezone,
-            "available_slots": [
-                {
-                    "slot_id": str(slot.id),
-                    "start_time": slot.start_time.isoformat(),
-                    "end_time": slot.end_time.isoformat(),
-                }
-                for slot in available_slots[:10]  # Limit to 10
-            ],
-        }
+            if not professional:
+                raise HTTPException(status_code=404, detail="Professional not found")
+
+            # Get available slots for next 7 days (without strict timezone filtering)
+            now = datetime.now()
+            seven_days_from_now = now + timedelta(days=7)
+            slots_res = await db.execute(
+                select(AvailabilitySlot)
+                .where(
+                    AvailabilitySlot.professional_id == professional_id,
+                    AvailabilitySlot.is_available == True,
+                )
+                .order_by(AvailabilitySlot.start_time)
+            )
+            available_slots = slots_res.scalars().all()
+            
+            # Filter slots to next 7 days
+            filtered_slots = [
+                slot for slot in available_slots 
+                if now <= slot.start_time <= seven_days_from_now
+            ][:10]  # Limit to 10
+
+            username = "Unknown"
+            if professional.user and professional.user.profile:
+                username = professional.user.profile.username
+            
+            certifications = []
+            languages = []
+            try:
+                certifications = json.loads(professional.certifications) if professional.certifications else []
+            except (json.JSONDecodeError, TypeError):
+                certifications = [professional.certifications] if professional.certifications else []
+            
+            try:
+                languages = json.loads(professional.languages) if professional.languages else []
+            except (json.JSONDecodeError, TypeError):
+                languages = [professional.languages] if professional.languages else []
+
+            return {
+                "id": str(professional.id),
+                "name": username,
+                "user": {
+                    "username": username,
+                },
+                "contact_email": professional.user.email if professional.user else "N/A",
+                "specialization": professional.specialization,
+                "location": professional.location or "",
+                "bio": professional.bio,
+                "years_experience": professional.years_experience,
+                "certifications": certifications,
+                "languages": languages,
+                "consultation_price_usd": professional.consultation_price_usd,
+                "consultation_duration_mins": professional.consultation_duration_mins,
+                "average_rating": professional.average_rating,
+                "total_reviews": professional.total_reviews,
+                "total_sessions_completed": professional.total_sessions_completed,
+                "is_verified": professional.is_verified,
+                "timezone": professional.timezone,
+                "available_slots": [
+                    {
+                        "slot_id": str(slot.id),
+                        "start_time": slot.start_time.isoformat() if slot.start_time else "",
+                        "end_time": slot.end_time.isoformat() if slot.end_time else "",
+                    }
+                    for slot in filtered_slots
+                ],
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"Error in get_professional_profile: {e}")
+            raise HTTPException(status_code=500, detail=f"Error loading professional: {str(e)}")
 
     @staticmethod
     async def search_professionals(
@@ -146,7 +175,6 @@ class ProfessionalService:
         query = select(ProfessionalProfile).options(
             selectinload(ProfessionalProfile.user).selectinload(User.profile)
         ).where(
-            ProfessionalProfile.is_verified == True,
             ProfessionalProfile.is_accepting_clients == True,
         )
 
@@ -162,12 +190,14 @@ class ProfessionalService:
         if timezone:
             query = query.where(ProfessionalProfile.timezone == timezone)
 
-        # Order by rating
-        query = query.order_by(ProfessionalProfile.average_rating.desc())
+        # Order by rating (descending), then by verification status
+        query = query.order_by(
+            ProfessionalProfile.is_verified.desc(),
+            ProfessionalProfile.average_rating.desc(),
+        )
 
         # Pagination
         total_query = select(func.count()).select_from(ProfessionalProfile).where(
-            ProfessionalProfile.is_verified == True,
             ProfessionalProfile.is_accepting_clients == True,
         )
 
@@ -197,7 +227,9 @@ class ProfessionalService:
             "professionals": [
                 {
                     "id": str(p.id),
-                    "name": p.user.profile.username if p.user.profile else "Unknown",
+                    "user": {
+                        "username": p.user.profile.username if p.user.profile else "Unknown",
+                    },
                     "specialization": p.specialization,
                     "location": p.location,
                     "bio": p.bio[:100] + "..." if len(p.bio) > 100 else p.bio,
@@ -205,6 +237,7 @@ class ProfessionalService:
                     "average_rating": p.average_rating,
                     "total_reviews": p.total_reviews,
                     "total_sessions_completed": p.total_sessions_completed,
+                    "is_verified": p.is_verified,
                 }
                 for p in professionals
             ],

@@ -50,10 +50,6 @@ const QUOTES = [
     author: "Abraham Lincoln",
   },
   {
-    text: "The only bad workout is the one that didn't happen.",
-    author: "Unknown",
-  },
-  {
     text: "Take care of your body. It's the only place you have to live.",
     author: "Jim Rohn",
   },
@@ -66,16 +62,8 @@ const QUOTES = [
     author: "Fred DeVito",
   },
   {
-    text: "Your body can stand almost anything. It's your mind that you have to convince.",
-    author: "Unknown",
-  },
-  {
     text: "Strength does not come from physical capacity. It comes from an indomitable will.",
     author: "Mahatma Gandhi",
-  },
-  {
-    text: "Push yourself because no one else is going to do it for you.",
-    author: "Unknown",
   },
   {
     text: "The groundwork for all happiness is good health.",
@@ -109,48 +97,29 @@ const QUOTES = [
     text: "Don't count the days, make the days count.",
     author: "Muhammad Ali",
   },
-  { text: "An hour of training beats a year of regret.", author: "Unknown" },
-  { text: "Your only limit is you.", author: "Unknown" },
-  { text: "Be stronger than your strongest excuse.", author: "Unknown" },
-  { text: "It never gets easier, you just get better.", author: "Unknown" },
-  {
-    text: "Wake up with determination. Go to bed with satisfaction.",
-    author: "Unknown",
-  },
-  { text: "Train insane or remain the same.", author: "Unknown" },
   {
     text: "The harder the battle, the sweeter the victory.",
     author: "Les Brown",
   },
-  { text: "Fall seven times, stand up eight.", author: "Japanese Proverb" },
+  {
+    text: "Fall seven times, stand up eight.",
+    author: "Japanese Proverb",
+  },
   {
     text: "Believe you can and you're halfway there.",
     author: "Theodore Roosevelt",
   },
   {
-    text: "Every champion was once a contender who refused to give up.",
-    author: "Unknown",
-  },
-  {
     text: "The body achieves what the mind believes.",
     author: "Napoleon Hill",
-  },
-  { text: "Strive for progress, not perfection.", author: "Unknown" },
-  {
-    text: "Do something today that your future self will thank you for.",
-    author: "Sean Patrick Flanery",
-  },
-  {
-    text: "Fitness is not a destination. It is a way of life.",
-    author: "Unknown",
-  },
-  {
-    text: "Motivation gets you started. Habit keeps you going.",
-    author: "Jim Ryun",
   },
   {
     text: "All progress takes place outside the comfort zone.",
     author: "Michael John Bobak",
+  },
+  {
+    text: "Motivation gets you started. Habit keeps you going.",
+    author: "Jim Ryun",
   },
 ];
 
@@ -212,6 +181,9 @@ export default function Dashboard() {
   const [todayWorkout, setTodayWorkout] = useState(null);
   const [weekWorkouts, setWeekWorkouts] = useState([]);
   const [mlSplit, setMlSplit] = useState(null);
+  const [todayMeals, setTodayMeals] = useState([]);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [professionals, setProfessionals] = useState([]);
   const requestSeqRef = useRef(0);
   const hasLoadedDashboardRef = useRef(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
@@ -230,13 +202,23 @@ export default function Dashboard() {
 
     (async () => {
       try {
-        const [dashRes, workoutRes, splitRes] = await Promise.all([
-          api.get("/dashboard/"),
-          api
-            .get("/workouts/", { params: { week: 1 } })
-            .catch(() => ({ data: [] })),
-          api.get("/workouts/my-split").catch(() => ({ data: null })),
-        ]);
+        const [dashRes, workoutRes, splitRes, mealsRes, chatRes, profsRes] =
+          await Promise.all([
+            api.get("/dashboard/"),
+            api
+              .get("/workouts/", { params: { week: 1 } })
+              .catch(() => ({ data: [] })),
+            api.get("/workouts/my-split").catch(() => ({ data: null })),
+            api
+              .get("/diet/meal-logs", { params: { limit: 10 } })
+              .catch(() => ({ data: [] })),
+            api
+              .get("/chatbot/history", { params: { limit: 5 } })
+              .catch(() => ({ data: { conversations: [] } })),
+            api
+              .get("/professionals/search", { params: { page_size: 6 } })
+              .catch(() => ({ data: { professionals: [] } })),
+          ]);
 
         if (!isActive || currentRequest !== requestSeqRef.current) return;
 
@@ -255,6 +237,21 @@ export default function Dashboard() {
             (w) => w.day_of_week?.toLowerCase() === TODAY_NAME.toLowerCase(),
           ) || null,
         );
+
+        // Filter today's meals from the meal logs
+        const mealLogs = mealsRes.data || [];
+        const todayDate = new Date().toISOString().split("T")[0];
+        const todayMealFiltered = mealLogs.filter((meal) => {
+          const mealDate = new Date(meal.logged_at).toISOString().split("T")[0];
+          return mealDate === todayDate;
+        });
+        setTodayMeals(todayMealFiltered);
+
+        // Set chat history
+        setChatHistory(chatRes.data?.conversations || []);
+
+        // Set professionals list
+        setProfessionals(profsRes.data?.professionals || []);
       } catch (err) {
         if (!isActive || currentRequest !== requestSeqRef.current) return;
 
@@ -922,24 +919,510 @@ export default function Dashboard() {
                 </div>
               )}
 
-              <button
-                className="btn btn-gold"
+              <div
                 style={{
-                  width: "100%",
-                  padding: "12px 0",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  letterSpacing: "0.5px",
-                  borderRadius: 10,
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: 10,
                 }}
-                onClick={() => navigate("/workouts")}
               >
-                {todayWorkout && !todayWorkout.is_rest_day
-                  ? "Start Workout"
-                  : "View Full Plan"}
-              </button>
+                <button
+                  className="btn btn-gold"
+                  style={{
+                    padding: "10px 0",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    borderRadius: 8,
+                  }}
+                  onClick={() => navigate("/workouts")}
+                >
+                  🏋️ Workout
+                </button>
+                <button
+                  className="btn btn-quick-diet"
+                  onClick={() => navigate("/diet-planner")}
+                >
+                  🍽️ Diet
+                </button>
+                <button
+                  className="btn btn-quick-ai"
+                  onClick={() => navigate("/chatbot")}
+                >
+                  💬 AI
+                </button>
+              </div>
             </div>
           )}
+
+          {/* -- Diet Planner -------------------------------------------- */}
+          <div
+            style={{
+              background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
+              border: "1px solid rgba(78,201,176,0.2)",
+              borderRadius: 14,
+              padding: "20px 22px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                marginBottom: 14,
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "#4ec9b0",
+                    letterSpacing: "1px",
+                    textTransform: "uppercase",
+                    marginBottom: 2,
+                  }}
+                >
+                  Your Nutrition
+                </p>
+                {dailyCalories && (
+                  <p style={{ fontSize: 12, color: "#9e9e9e" }}>
+                    Target: {targetCalories || dailyCalories} kcal/day
+                  </p>
+                )}
+              </div>
+              <span style={{ fontSize: 12, color: "#9e9e9e", paddingTop: 2 }}>
+                {todayMeals.length} meal{todayMeals.length !== 1 ? "s" : ""}{" "}
+                logged
+              </span>
+            </div>
+
+            {todayMeals.length === 0 ? (
+              /* No meals logged yet */
+              <div
+                style={{
+                  background: "rgba(78,201,176,0.07)",
+                  borderRadius: 10,
+                  padding: "20px 16px",
+                  textAlign: "center",
+                  marginBottom: 14,
+                  border: "1px solid rgba(78,201,176,0.2)",
+                }}
+              >
+                <p style={{ fontSize: 13, color: "#9e9e9e", marginBottom: 16 }}>
+                  No meals logged yet. Generate a personalized meal plan!
+                </p>
+                <button
+                  className="btn"
+                  style={{
+                    background: "rgba(78,201,176,0.15)",
+                    border: "1.5px solid #4ec9b0",
+                    color: "#4ec9b0",
+                    padding: "10px 16px",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = "rgba(78,201,176,0.25)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = "rgba(78,201,176,0.15)";
+                  }}
+                  onClick={() => navigate("/diet-planner")}
+                >
+                  Generate Meal Plan
+                </button>
+              </div>
+            ) : (
+              /* Show today's meals */
+              <div
+                style={{
+                  background: "rgba(78,201,176,0.05)",
+                  borderRadius: 10,
+                  padding: "14px 12px",
+                  marginBottom: 14,
+                  border: "1px solid rgba(78,201,176,0.15)",
+                }}
+              >
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                >
+                  {todayMeals.slice(0, 3).map((meal, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        paddingBottom:
+                          idx < Math.min(3, todayMeals.length - 1) ? 8 : 0,
+                        borderBottom:
+                          idx < Math.min(3, todayMeals.length - 1)
+                            ? "1px solid rgba(78,201,176,0.1)"
+                            : "none",
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <p
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#fff",
+                            marginBottom: 2,
+                          }}
+                        >
+                          {meal.meal_type || "Meal"} &ndash;{" "}
+                          {meal.food_name || "Unknown"}
+                        </p>
+                        <p style={{ fontSize: 11, color: "#9e9e9e" }}>
+                          {meal.calories || 0} kcal
+                          {meal.protein_g
+                            ? ` • ${meal.protein_g.toFixed(1)}g protein`
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {todayMeals.length > 3 && (
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: "#616161",
+                        textAlign: "center",
+                        paddingTop: 6,
+                      }}
+                    >
+                      +{todayMeals.length - 3} more meal
+                      {todayMeals.length - 3 !== 1 ? "s" : ""}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <button
+              className="btn btn-quick-diet"
+              onClick={() => navigate("/diet-planner")}
+              style={{
+                width: "100%",
+                padding: "12px 0",
+                fontSize: 13,
+                fontWeight: 700,
+                borderRadius: 8,
+              }}
+            >
+              View Full Plan
+            </button>
+          </div>
+
+          {/* -- AI Chatbot -------------------------------------------- */}
+          <div
+            style={{
+              background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
+              border: "1px solid rgba(255,200,87,0.2)",
+              borderRadius: 14,
+              padding: "20px 22px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                marginBottom: 14,
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "#ffc857",
+                    letterSpacing: "1px",
+                    textTransform: "uppercase",
+                    marginBottom: 2,
+                  }}
+                >
+                  AI Assistant
+                </p>
+                <p style={{ fontSize: 12, color: "#9e9e9e" }}>
+                  Get personalized fitness guidance
+                </p>
+              </div>
+            </div>
+
+            {chatHistory.length === 0 ? (
+              /* No chat history */
+              <div
+                style={{
+                  background: "rgba(255,200,87,0.07)",
+                  borderRadius: 10,
+                  padding: "20px 16px",
+                  textAlign: "center",
+                  marginBottom: 14,
+                  border: "1px solid rgba(255,200,87,0.2)",
+                }}
+              >
+                <p style={{ fontSize: 13, color: "#9e9e9e", marginBottom: 16 }}>
+                  Start a conversation with Flexa AI
+                </p>
+                <button
+                  className="btn"
+                  style={{
+                    background: "rgba(255,200,87,0.15)",
+                    border: "1.5px solid #ffc857",
+                    color: "#ffc857",
+                    padding: "10px 16px",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = "rgba(255,200,87,0.25)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = "rgba(255,200,87,0.15)";
+                  }}
+                  onClick={() => navigate("/chatbot")}
+                >
+                  Chat Now
+                </button>
+              </div>
+            ) : (
+              /* Show recent conversations */
+              <div
+                style={{
+                  background: "rgba(255,200,87,0.05)",
+                  borderRadius: 10,
+                  padding: "14px 12px",
+                  marginBottom: 14,
+                  border: "1px solid rgba(255,200,87,0.15)",
+                }}
+              >
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 10 }}
+                >
+                  {chatHistory.slice(0, 2).map((conv, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        paddingBottom:
+                          idx < Math.min(2, chatHistory.length - 1) ? 10 : 0,
+                        borderBottom:
+                          idx < Math.min(2, chatHistory.length - 1)
+                            ? "1px solid rgba(255,200,87,0.1)"
+                            : "none",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#fff",
+                          marginBottom: 2,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {conv.title || "Conversation"}
+                      </p>
+                      <p style={{ fontSize: 11, color: "#9e9e9e" }}>
+                        {new Date(conv.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              className="btn"
+              onClick={() => navigate("/chatbot")}
+              style={{
+                width: "100%",
+                padding: "12px 0",
+                fontSize: 13,
+                fontWeight: 700,
+                borderRadius: 8,
+                background: "rgba(255,200,87,0.15)",
+                border: "1.5px solid #ffc857",
+                color: "#ffc857",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(255,200,87,0.25)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255,200,87,0.15)";
+              }}
+            >
+              Open Chatbot
+            </button>
+          </div>
+
+          {/* -- Experts Directory -------------------------------------------- */}
+          <div
+            style={{
+              background: "linear-gradient(135deg, #13100a 0%, #1c1608 100%)",
+              border: "1px solid rgba(156,102,222,0.2)",
+              borderRadius: 14,
+              padding: "20px 22px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                marginBottom: 14,
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "#9c66de",
+                    letterSpacing: "1px",
+                    textTransform: "uppercase",
+                    marginBottom: 2,
+                  }}
+                >
+                  Expert Professionals
+                </p>
+                <p style={{ fontSize: 12, color: "#9e9e9e" }}>
+                  Book consultations with certified experts
+                </p>
+              </div>
+            </div>
+
+            {professionals.length === 0 ? (
+              /* No professionals found */
+              <div
+                style={{
+                  background: "rgba(156,102,222,0.07)",
+                  borderRadius: 10,
+                  padding: "20px 16px",
+                  textAlign: "center",
+                  marginBottom: 14,
+                  border: "1px solid rgba(156,102,222,0.2)",
+                }}
+              >
+                <p style={{ fontSize: 13, color: "#9e9e9e", marginBottom: 16 }}>
+                  Browse our network of verified professionals
+                </p>
+                <button
+                  className="btn"
+                  style={{
+                    background: "rgba(156,102,222,0.15)",
+                    border: "1.5px solid #9c66de",
+                    color: "#9c66de",
+                    padding: "10px 16px",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = "rgba(156,102,222,0.25)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = "rgba(156,102,222,0.15)";
+                  }}
+                  onClick={() => navigate("/experts")}
+                >
+                  Find Experts
+                </button>
+              </div>
+            ) : (
+              /* Show available professionals */
+              <div
+                style={{
+                  background: "rgba(156,102,222,0.05)",
+                  borderRadius: 10,
+                  padding: "12px",
+                  marginBottom: 14,
+                  border: "1px solid rgba(156,102,222,0.15)",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+              >
+                {professionals.slice(0, 4).map((prof, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      padding: "10px 12px",
+                      background: "rgba(156,102,222,0.08)",
+                      borderRadius: 8,
+                      border: "1px solid rgba(156,102,222,0.2)",
+                    }}
+                  >
+                    <p
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#fff",
+                        marginBottom: 4,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {prof.user?.username || "Expert"}
+                    </p>
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: "#9c66de",
+                        marginBottom: 2,
+                      }}
+                    >
+                      {prof.specialization || "Fitness"}
+                    </p>
+                    {prof.average_rating && (
+                      <p style={{ fontSize: 10, color: "#9e9e9e" }}>
+                        ⭐ {prof.average_rating.toFixed(1)} (
+                        {prof.total_reviews || 0})
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              className="btn"
+              onClick={() => navigate("/experts")}
+              style={{
+                width: "100%",
+                padding: "12px 0",
+                fontSize: 13,
+                fontWeight: 700,
+                borderRadius: 8,
+                background: "rgba(156,102,222,0.15)",
+                border: "1.5px solid #9c66de",
+                color: "#9c66de",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(156,102,222,0.25)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(156,102,222,0.15)";
+              }}
+            >
+              View All Experts
+            </button>
+          </div>
 
           {/* -- Today's Tasks -------------------------------------------- */}
           {safeData.today_tasks?.length > 0 && (

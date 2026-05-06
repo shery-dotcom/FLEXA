@@ -110,6 +110,11 @@ DIET_TIPS = [
     "Track consistency over perfection â€” 80/20 rule works.",
 ]
 
+# Keyword sets for food categorization - defined once at module level for performance
+BREAD_KEYWORDS = {'naan', 'roti', 'rice', 'bread', 'pasta', 'couscous', 'polenta', 'tortilla', 'flatbread', 'chapati', 'puri', 'paratha', 'basmati', 'biryani', 'pulao', 'pilau', 'pilaf', 'idli', 'dosa', 'upma', 'semolina'}
+PROTEIN_KEYWORDS = {'chicken', 'fish', 'shrimp', 'prawns', 'meat', 'beef', 'pork', 'lamb', 'goat', 'mutton', 'turkey', 'tofu', 'paneer', 'cheese', 'eggs', 'egg', 'yogurt', 'dal', 'lentil', 'beans', 'legume', 'tempeh', 'seitan'}
+VEG_KEYWORDS = {'broccoli', 'spinach', 'carrot', 'zucchini', 'cucumber', 'tomato', 'pepper', 'capsicum', 'onion', 'garlic', 'salad', 'greens', 'cabbage', 'cauliflower', 'pumpkin', 'squash', 'aubergine', 'eggplant', 'okra', 'bhindi', 'leafy', 'vegetable', 'veggie', 'sauteed', 'grilled', 'steamed', 'boiled'}
+
 # Meal slot distribution as ordered list of (category, calorie_fraction)
 # "snack" entries are all collected into the snacks[] array.
 MEAL_CALORIE_SPLITS = {
@@ -562,6 +567,24 @@ async def _ensure_ml_fitted(db: AsyncSession) -> None:
         logger.warning("DB empty â€” ML recommender fitted on built-in library (%d items).", len(BUILTIN_FOODS))
 
 
+def _categorize_food(food_name: str) -> str:
+    """
+    Categorize a food as 'grain', 'protein', 'vegetable', or 'other'.
+    This helps avoid duplicate food types in the same meal slot.
+    Uses module-level keyword sets for performance.
+    """
+    food_lower = food_name.lower()
+    
+    if any(kw in food_lower for kw in BREAD_KEYWORDS):
+        return "grain"
+    elif any(kw in food_lower for kw in PROTEIN_KEYWORDS):
+        return "protein"
+    elif any(kw in food_lower for kw in VEG_KEYWORDS):
+        return "vegetable"
+    else:
+        return "other"
+
+
 def _filter_builtin(meal_type: str, diet_types: List[str], allergies: List[str], region: str):
     """Pure-Python hard-filter over BUILTIN_FOODS â€” used as last-resort fallback."""
     compatible_diets = {"any"} | set(diet_types)
@@ -596,6 +619,7 @@ def _pick_one_food(
     region: str,
     chosen_names: set,
     apply_protein_filter: bool = True,
+    avoid_categories: Optional[set] = None,
 ):
     """
     Run ML ranking + fallback and return a single food object for one item in a slot.
@@ -604,7 +628,13 @@ def _pick_one_food(
     ensures a protein-rich dish is selected (not a stand-alone bread/grain).
     For complement (second) items the filter is skipped so Naan/Roti/Rice pair
     naturally with the anchor dish, producing a complete meal.
+    
+    Args:
+        avoid_categories: Set of food categories to avoid (e.g., {"grain"}) to prevent
+                         duplicate food types in the same meal slot.
     """
+    if avoid_categories is None:
+        avoid_categories = set()
     ranked_idx = rec.recommend(
         target_calories=per_cal,
         target_protein_g=per_pro,
@@ -643,6 +673,16 @@ def _pick_one_food(
         ]
         if dense_enough:
             best_idx = dense_enough
+    
+    # Filter out foods from avoid_categories to prevent duplicate food types in same slot
+    # This prevents "rice + basmati rice" or "chicken + steamed rice" type combinations
+    if avoid_categories and best_idx:
+        category_ok = [
+            i for i in best_idx
+            if _categorize_food(rec.get_food(i)["food_name"]) not in avoid_categories
+        ]
+        if category_ok:
+            best_idx = category_ok
 
     if best_idx:
         pick_from = best_idx[:5]
@@ -700,9 +740,6 @@ async def generate_meal_plan(
     plan: dict  = {"breakfast": [], "lunch": [], "dinner": [], "snack": []}
     total_cal = total_pro = total_carb = total_fat = 0.0
     chosen_names: set = set()   # avoid serving the same food twice in one plan
-    
-    # Bread/carb foods to avoid duplication: ['naan', 'roti', 'rice', 'bread', 'pasta', 'couscous', 'polenta', 'tortilla']
-    BREAD_KEYWORDS = {'naan', 'roti', 'rice', 'bread', 'pasta', 'couscous', 'polenta', 'tortilla', 'flatbread', 'chapati', 'puri', 'paratha', 'basmati'}
 
     for slot, fraction in slot_list:
         # Per-slot macro targets
@@ -720,27 +757,35 @@ async def generate_meal_plan(
         per_fat  = slot_fat  / n_items
 
         slot_foods = []  # Track foods picked in this slot
+        slot_categories = set()  # Track categories of foods in this slot
         
         for item_idx in range(n_items):
             # Anchor (first) item: protein filter on â†’ picks protein-rich dish.
             # Complement (second) item: check if first was bread/carb; if so, apply protein filter
             # to avoid naan+roti or rice+bread combos.
-            first_is_bread = False
-            if item_idx > 0 and slot_foods:
-                # Check if previous item was bread-like
-                prev_food_lower = slot_foods[0].food_name.lower()
-                first_is_bread = any(kw in prev_food_lower for kw in BREAD_KEYWORDS)
+            avoid_cat = set()
+            if item_idx > 0 and slot_categories:
+                # If first item was a grain/carb, avoid picking another grain for second item
+                if "grain" in slot_categories:
+                    avoid_cat.add("grain")
             
             # Apply protein filter to first item OR if second item's predecessor was bread
-            apply_filter = (item_idx == 0) or first_is_bread
+            apply_filter = (item_idx == 0) or ("grain" in slot_categories)
             
             food_obj = _pick_one_food(
                 rec, slot, per_cal, per_pro, per_carb, per_fat,
                 diet_types, allergies, region, chosen_names,
                 apply_protein_filter=apply_filter,
+                avoid_categories=avoid_cat,
             )
+            
             chosen_names.add(food_obj.food_name)
             slot_foods.append(food_obj)
+            
+            # Track category of this food to prevent duplicates
+            category = _categorize_food(food_obj.food_name)
+            slot_categories.add(category)
+            
             item = _scale_meal(food_obj, per_cal, slot)
             plan[slot].append(item)
             total_cal  += item.calories

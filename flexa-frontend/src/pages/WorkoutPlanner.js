@@ -98,9 +98,6 @@ function mapExerciseToPostureMode(exercise) {
   const raw =
     `${exercise?.name || ""} ${exercise?.muscle_group || ""}`.toLowerCase();
 
-  if (/mountain climber/.test(raw)) return "mountain_climber";
-  if (/plank/.test(raw)) return "plank";
-  if (/sit ?up|crunch/.test(raw)) return "situp";
   if (/pull ?up|pull-up|chin ?up|chin-up/.test(raw)) return "pullup";
   if (/lateral raise|side raise/.test(raw)) return "lateral_raise";
   if (/bench|chest press/.test(raw)) return "bench_press";

@@ -1,6 +1,72 @@
 import { POSE_LANDMARKS } from "./angleUtils";
 import { normalizeExercise } from "./repCounter";
 
+// Injury severity & recovery advice mapping
+export const INJURY_DATABASE = {
+  back_not_straight: {
+    severity: "high",
+    recovery: "Keep spine neutral. Reduce weight if needed. Strengthen core.",
+  },
+  too_much_rounding: {
+    severity: "high",
+    recovery: "Stop. Reset posture. Do lighter reps with perfect form.",
+  },
+  hips_sagging: {
+    severity: "high",
+    recovery: "Engage glutes & core. Reduce reps or load.",
+  },
+  arching_back: {
+    severity: "high",
+    recovery: "Lower ribs, tighten core. Avoid over-arching.",
+  },
+  knees_not_aligned: {
+    severity: "high",
+    recovery: "Push knees outward. Avoid inward collapse.",
+  },
+  uneven_depth: {
+    severity: "medium",
+    recovery: "Match depth on both sides. Slow down tempo.",
+  },
+  too_deep_or_collapsing: {
+    severity: "medium",
+    recovery: "Reduce depth slightly. Maintain control.",
+  },
+  too_deep: {
+    severity: "medium",
+    recovery: "Shorten range of motion. Control the movement.",
+  },
+  elbows_moving: {
+    severity: "medium",
+    recovery: "Keep elbows close to body. Reduce weight.",
+  },
+  uneven_elbow_drive: {
+    severity: "medium",
+    recovery: "Press both arms evenly. Lighter load.",
+  },
+  uneven_press: {
+    severity: "medium",
+    recovery: "Balance both arms. Check shoulder alignment.",
+  },
+  uneven_drive: {
+    severity: "medium",
+    recovery: "Push evenly through both legs.",
+  },
+  too_much_knee_bend: {
+    severity: "medium",
+    recovery: "Hinge more from hips. Engage posterior chain.",
+  },
+  torso_lean: {
+    severity: "medium",
+    recovery: "Keep torso upright. Engage core.",
+  },
+  torso_swinging: {
+    severity: "high",
+    recovery: "Slow down. Avoid momentum. Isolate movement.",
+  },
+  low_visibility: { severity: "low", recovery: "Move closer to camera." },
+  no_detection: { severity: "low", recovery: "Ensure full body is visible." },
+};
+
 function isVisible(p, threshold = 0.45) {
   return !!p && (p.visibility ?? 1) >= threshold;
 }
@@ -8,6 +74,27 @@ function isVisible(p, threshold = 0.45) {
 function average(values) {
   if (!values.length) return 0;
   return values.reduce((sum, v) => sum + v, 0) / values.length;
+}
+
+function getInjuryDetails(flags) {
+  // Get first high-severity injury flag
+  for (const flag of flags) {
+    const injury = INJURY_DATABASE[flag];
+    if (injury?.severity === "high") {
+      return { type: flag, severity: "high", recovery: injury.recovery };
+    }
+  }
+  // Fall back to first flag if no high severity
+  if (flags.length > 0) {
+    const flag = flags[0];
+    const injury = INJURY_DATABASE[flag];
+    return {
+      type: flag,
+      severity: injury?.severity || "low",
+      recovery: injury?.recovery || "Adjust form.",
+    };
+  }
+  return null;
 }
 
 function basicVisibilityCheck(landmarks) {
@@ -22,10 +109,12 @@ function basicVisibilityCheck(landmarks) {
     !isVisible(lKnee) ||
     !isVisible(rKnee)
   ) {
+    const flags = ["low_visibility"];
     return {
       score: 40,
       message: "Move into camera frame",
-      flags: ["low_visibility"],
+      flags,
+      injury: getInjuryDetails(flags),
     };
   }
 
@@ -34,10 +123,12 @@ function basicVisibilityCheck(landmarks) {
 
 function evaluateSquatPosture(landmarks, angles) {
   if (!landmarks || !angles) {
+    const flags = ["no_detection"];
     return {
       score: 0,
       message: "No body detected",
-      flags: ["no_detection"],
+      flags,
+      injury: getInjuryDetails(flags),
     };
   }
 
@@ -77,7 +168,7 @@ function evaluateSquatPosture(landmarks, angles) {
     message = "Control squat depth";
   }
 
-  return { score, message, flags };
+  return { score, message, flags, injury: getInjuryDetails(flags) };
 }
 
 function evaluatePushupPosture(landmarks, angles) {
@@ -114,7 +205,7 @@ function evaluatePushupPosture(landmarks, angles) {
     message = "Control your depth";
   }
 
-  return { score, message, flags };
+  return { score, message, flags, injury: getInjuryDetails(flags) };
 }
 
 function evaluateBicepCurlPosture(landmarks, angles) {
@@ -129,10 +220,12 @@ function evaluateBicepCurlPosture(landmarks, angles) {
     !isVisible(lElbow) ||
     !isVisible(rElbow)
   ) {
+    const flags = ["low_visibility"];
     return {
       score: 40,
       message: "Move into camera frame",
-      flags: ["low_visibility"],
+      flags,
+      injury: getInjuryDetails(flags),
     };
   }
 
@@ -162,7 +255,7 @@ function evaluateBicepCurlPosture(landmarks, angles) {
     message = "Avoid torso swinging";
   }
 
-  return { score, message, flags };
+  return { score, message, flags, injury: getInjuryDetails(flags) };
 }
 
 function evaluateLungePosture(landmarks, angles) {
@@ -199,7 +292,7 @@ function evaluateLungePosture(landmarks, angles) {
     message = "Control your lunge depth";
   }
 
-  return { score, message, flags };
+  return { score, message, flags, injury: getInjuryDetails(flags) };
 }
 
 function evaluateShoulderPressPosture(landmarks, angles) {
@@ -236,7 +329,7 @@ function evaluateShoulderPressPosture(landmarks, angles) {
     message = "Control the bottom position";
   }
 
-  return { score, message, flags };
+  return { score, message, flags, injury: getInjuryDetails(flags) };
 }
 
 function evaluateDeadliftPosture(landmarks, angles) {
@@ -273,7 +366,7 @@ function evaluateDeadliftPosture(landmarks, angles) {
     message = "Push evenly through both legs";
   }
 
-  return { score, message, flags };
+  return { score, message, flags, injury: getInjuryDetails(flags) };
 }
 
 export function evaluateExercisePosture(exercise, landmarks, angles) {
@@ -291,14 +384,10 @@ export function evaluateExercisePosture(exercise, landmarks, angles) {
     case "bicep_curl":
       return evaluateBicepCurlPosture(landmarks, angles);
     case "lunge":
-    case "mountain_climber":
       return evaluateLungePosture(landmarks, angles);
     case "deadlift":
     case "hip_thrust":
-    case "situp":
       return evaluateDeadliftPosture(landmarks, angles);
-    case "plank":
-      return evaluatePushupPosture(landmarks, angles);
     case "calf_raise":
       return evaluateSquatPosture(landmarks, angles);
     case "squat":

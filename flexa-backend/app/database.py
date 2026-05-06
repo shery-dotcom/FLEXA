@@ -9,6 +9,7 @@ engine = create_async_engine(
     pool_pre_ping=True,
     pool_size=10,
     max_overflow=20,
+    connect_args={"timeout": 30},  # asyncpg connect timeout — prevents cold-start failures on Neon
 )
 
 AsyncSessionLocal = async_sessionmaker(

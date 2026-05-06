@@ -4,7 +4,7 @@ Tables: nutrition_foods, user_diet_preferences, daily_meal_logs, image_analysis_
 """
 import uuid as _uuid
 from sqlalchemy import (
-    Column, Integer, String, Float, DateTime, Text, ForeignKey, JSON, Boolean
+    Column, Integer, String, Float, DateTime, Text, ForeignKey, JSON, Boolean, Index
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -78,9 +78,13 @@ class DailyMealLog(Base):
     User's daily food diary — each row is one food item logged at one meal slot.
     """
     __tablename__ = "daily_meal_logs"
+    __table_args__ = (
+        Index("ix_daily_meal_logs_user_id", "user_id"),
+        Index("ix_daily_meal_logs_user_logged_at", "user_id", "logged_at"),
+    )
 
     id                  = Column(Integer, primary_key=True, index=True)
-    user_id             = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id             = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     food_id             = Column(Integer, ForeignKey("nutrition_foods.id"), nullable=True)
     food_name           = Column(String(500), nullable=False)
     meal_type           = Column(String(50), nullable=False)   # breakfast/lunch/dinner/snack
@@ -89,7 +93,7 @@ class DailyMealLog(Base):
     protein_consumed_g  = Column(Float, default=0.0)
     carbs_consumed_g    = Column(Float, default=0.0)
     fat_consumed_g      = Column(Float, default=0.0)
-    logged_at           = Column(DateTime, default=datetime.now)
+    logged_at           = Column(DateTime, default=datetime.now, index=True)
     notes               = Column(Text, default="")
 
     food = relationship("NutritionFood", foreign_keys=[food_id])
@@ -101,9 +105,13 @@ class ImageAnalysisLog(Base):
     Confidence < 0.5 triggers a low-confidence flag on the frontend.
     """
     __tablename__ = "image_analysis_logs"
+    __table_args__ = (
+        Index("ix_image_analysis_logs_user_id", "user_id"),
+        Index("ix_image_analysis_logs_user_analyzed_at", "user_id", "analyzed_at"),
+    )
 
     id                  = Column(Integer, primary_key=True, index=True)
-    user_id             = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id             = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     image_filename      = Column(String(500), default="")
     predicted_class     = Column(String(200), nullable=False)
     confidence          = Column(Float, default=0.0)
@@ -112,4 +120,4 @@ class ImageAnalysisLog(Base):
     estimated_protein_g = Column(Float, default=0.0)
     estimated_carbs_g   = Column(Float, default=0.0)
     estimated_fat_g     = Column(Float, default=0.0)
-    analyzed_at         = Column(DateTime, default=datetime.utcnow)
+    analyzed_at         = Column(DateTime, default=datetime.utcnow, index=True)

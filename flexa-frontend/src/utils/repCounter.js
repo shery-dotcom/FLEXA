@@ -45,10 +45,6 @@ export const EXERCISE_GROUPS = [
     label: "Lower Body",
     exercises: ["squat", "lunge", "hip_thrust", "calf_raise"],
   },
-  {
-    label: "Core / Stability",
-    exercises: ["plank", "situp", "mountain_climber"],
-  },
 ];
 
 export const EXERCISE_LABELS = {
@@ -61,9 +57,6 @@ export const EXERCISE_LABELS = {
   lunge: "Lunges",
   hip_thrust: "Hip Thrusts",
   calf_raise: "Calf Raises",
-  plank: "Plank",
-  situp: "Sit-ups",
-  mountain_climber: "Mountain Climbers",
 };
 
 const EXERCISE_COUNTER_CONFIG = {
@@ -139,34 +132,6 @@ const EXERCISE_COUNTER_CONFIG = {
     minRange: 10,
     validate: (angles) => Math.abs(angles.leftKnee - angles.rightKnee) <= 25,
   },
-  plank: {
-    mode: "hold",
-    metric: (angles) => angles.hipBack,
-    holdMin: 150,
-    holdMax: 180,
-    holdDurationMs: 3000,
-    cooldownMs: 2000,
-    initialStage: "up",
-    validate: (angles) =>
-      Math.abs(angles.leftElbow - angles.rightElbow) <= 30 &&
-      Math.abs(angles.leftKnee - angles.rightKnee) <= 30,
-  },
-  situp: {
-    metric: (angles) => angles.hipBack,
-    downThreshold: 115,
-    upThreshold: 160,
-    initialStage: "up",
-    minRange: 28,
-    validate: (angles) => angles.avgKnee >= 65,
-  },
-  mountain_climber: {
-    metric: (angles) => angles.minKnee,
-    downThreshold: 95,
-    upThreshold: 145,
-    initialStage: "up",
-    minRange: 35,
-    validate: (angles) => angles.maxKnee >= 120,
-  },
 };
 
 const EXERCISE_ALIASES = {
@@ -193,14 +158,6 @@ const EXERCISE_ALIASES = {
   "hip thrusts": "hip_thrust",
   "calf raise": "calf_raise",
   "calf raises": "calf_raise",
-  crunch: "situp",
-  crunches: "situp",
-  "sit-up": "situp",
-  "sit-ups": "situp",
-  "sit up": "situp",
-  "sit ups": "situp",
-  "mountain climber": "mountain_climber",
-  "mountain climbers": "mountain_climber",
   "tricep extension": "tricep_dip",
   "triceps extension": "tricep_dip",
 };
@@ -361,33 +318,6 @@ function getExerciseSpecificHint(mode, reason) {
       cooldown: "Avoid bouncing; pause before next rep.",
       invalid_signal: "Keep lower legs and ankles in frame.",
       stabilizing: "Perform smooth, controlled calf raises.",
-    },
-    plank: {
-      go_down: "Straighten your body line from shoulders to ankles.",
-      come_up: "Hold steady and keep breathing.",
-      range_small: "Maintain a flatter, more stable plank line.",
-      strict_form_invalid: "Square shoulders and hips to the camera.",
-      cooldown: "Great hold. Reset and brace for the next interval.",
-      invalid_signal: "Keep shoulders, hips, and knees visible.",
-      stabilizing: "Hold steady for a clean plank interval.",
-    },
-    situp: {
-      go_down: "Curl up higher with controlled core engagement.",
-      come_up: "Lower back down with control.",
-      range_small: "Use fuller sit-up range on each rep.",
-      strict_form_invalid: "Keep movement balanced and controlled.",
-      cooldown: "Avoid bouncing; complete each sit-up fully.",
-      invalid_signal: "Keep torso and knees visible.",
-      stabilizing: "Move smoothly through each sit-up rep.",
-    },
-    mountain_climber: {
-      go_down: "Drive your knee farther toward the chest.",
-      come_up: "Extend leg back fully before switching.",
-      range_small: "Increase knee drive and full leg extension.",
-      strict_form_invalid: "Keep hips level and alternate evenly.",
-      cooldown: "Keep rhythm controlled, not rushed.",
-      invalid_signal: "Keep shoulders, hips, knees, and ankles visible.",
-      stabilizing: "Maintain steady alternating mountain climbers.",
     },
   };
 

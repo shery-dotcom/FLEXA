@@ -82,11 +82,19 @@ export default function Marketplace() {
     setSelectedSlotId("");
     setBookingNotes("");
     try {
+      console.log("Fetching professional details for:", professionalId);
       const res = await api.get(`/professionals/${professionalId}`);
-      setSelectedProfessional(res.data || null);
-      const firstSlotId = res.data?.available_slots?.[0]?.slot_id || "";
-      setSelectedSlotId(firstSlotId);
-    } catch {
+      console.log("Professional response:", res.data);
+
+      if (res.data) {
+        setSelectedProfessional(res.data);
+        const firstSlotId = res.data?.available_slots?.[0]?.slot_id || "";
+        setSelectedSlotId(firstSlotId);
+        console.log("Selected professional with slots:", firstSlotId);
+      }
+    } catch (err) {
+      console.error("Error loading professional:", err);
+      console.error("Error details:", err.response?.data || err.message);
       toast.error("Could not load expert details.");
     } finally {
       setDetailLoading(false);
@@ -228,77 +236,150 @@ export default function Marketplace() {
             gap: 14,
           }}
         >
-          {professionals.map((p) => (
-            <div
-              key={p.id}
-              style={{
-                border: "1px solid #242424",
-                background: "#0f0f0f",
-                borderRadius: 14,
-                padding: 16,
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-                minHeight: 250,
-              }}
-            >
+          {professionals.map((p) => {
+            const profName = p.user?.username || p.name || "Professional";
+            return (
               <div
+                key={p.id}
                 style={{
+                  border: "1px solid #FF6B35",
+                  background:
+                    "linear-gradient(135deg, #1a1a2e 0%, #0f0f0f 100%)",
+                  borderRadius: 14,
+                  padding: 16,
                   display: "flex",
-                  justifyContent: "space-between",
-                  gap: 10,
-                }}
-              >
-                <h3 style={{ fontSize: 18, fontWeight: 700 }}>{p.name}</h3>
-                <span style={{ color: "#FF6B35", fontWeight: 700 }}>
-                  ${p.consultation_price_usd}
-                </span>
-              </div>
-              <p
-                style={{
-                  color: "#bdbdbd",
-                  fontSize: 13,
-                  margin: 0,
-                  lineHeight: 1.45,
-                  display: "-webkit-box",
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                  minHeight: 56,
-                }}
-              >
-                {p.bio}
-              </p>
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  flexWrap: "wrap",
-                  fontSize: 12,
-                }}
-              >
-                <Badge label={formatSpecialization(p.specialization)} />
-                <Badge label={`Location: ${STATIC_LOCATION_LABEL}`} />
-                <Badge label={`Rating: ${p.average_rating ?? "-"}`} />
-                <Badge label={`${p.total_sessions_completed ?? 0} sessions`} />
-              </div>
-              <button
-                onClick={() => openProfessional(p.id)}
-                style={{
-                  marginTop: "auto",
-                  background: "linear-gradient(135deg, #8a6a1f, #3b5b7d)",
-                  border: "1px solid rgba(255,107,53,0.45)",
-                  color: "#f7f1df",
-                  borderRadius: 10,
-                  padding: "10px 12px",
-                  fontWeight: 700,
+                  flexDirection: "column",
+                  gap: 12,
+                  minHeight: 320,
+                  transition: "all 0.3s ease",
                   cursor: "pointer",
                 }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.borderColor = "#ffc857")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.borderColor = "#FF6B35")
+                }
               >
-                View Details
-              </button>
-            </div>
-          ))}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <h3
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 700,
+                        margin: 0,
+                        color: "#fff",
+                      }}
+                    >
+                      {profName}
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: 13,
+                        color: "#4ec9b0",
+                        margin: "4px 0 0",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {formatSpecialization(p.specialization)}
+                    </p>
+                  </div>
+                  <span
+                    style={{ color: "#FF6B35", fontWeight: 700, fontSize: 16 }}
+                  >
+                    ${p.consultation_price_usd}
+                  </span>
+                </div>
+                <div style={{ borderTop: "1px solid #2a2a2a", paddingTop: 8 }}>
+                  <p
+                    style={{
+                      color: "#bdbdbd",
+                      fontSize: 12,
+                      margin: 0,
+                      lineHeight: 1.5,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {p.bio}
+                  </p>
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 8,
+                    fontSize: 12,
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "#121925",
+                      padding: "8px",
+                      borderRadius: 8,
+                      textAlign: "center",
+                    }}
+                  >
+                    <div style={{ color: "#9e9e9e", fontSize: 11 }}>Rating</div>
+                    <div style={{ color: "#ffc857", fontWeight: 700 }}>
+                      {p.average_rating ?? "-"}/5
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      background: "#121925",
+                      padding: "8px",
+                      borderRadius: 8,
+                      textAlign: "center",
+                    }}
+                  >
+                    <div style={{ color: "#9e9e9e", fontSize: 11 }}>
+                      Sessions
+                    </div>
+                    <div style={{ color: "#ffc857", fontWeight: 700 }}>
+                      {p.total_sessions_completed ?? 0}+
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <Badge label={`${p.years_experience ?? 0}y exp`} />
+                  <Badge label={`${p.total_reviews ?? 0} reviews`} />
+                </div>
+                <button
+                  onClick={() => openProfessional(p.id)}
+                  style={{
+                    marginTop: "auto",
+                    background: "linear-gradient(135deg, #FF6B35, #ffc857)",
+                    border: "none",
+                    color: "#000",
+                    borderRadius: 10,
+                    padding: "12px 16px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontSize: 14,
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.transform = "scale(1.02)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.transform = "scale(1)")
+                  }
+                >
+                  View Details
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -316,14 +397,28 @@ export default function Marketplace() {
               <>
                 <div style={styles.modalHeader}>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: 24 }}>
-                      {selectedProfessional.name}
+                    <h2 style={{ margin: 0, fontSize: 26, color: "#fff" }}>
+                      {selectedProfessional.user?.username ||
+                        selectedProfessional.name ||
+                        "Professional"}
                     </h2>
-                    <p style={{ marginTop: 6, color: "#aab6ca", fontSize: 13 }}>
+                    <p
+                      style={{
+                        marginTop: 6,
+                        color: "#4ec9b0",
+                        fontSize: 14,
+                        fontWeight: 600,
+                        margin: 0,
+                      }}
+                    >
                       {formatSpecialization(
                         selectedProfessional.specialization,
-                      )}{" "}
-                      | {selectedProfessional.years_experience} years experience
+                      )}
+                    </p>
+                    <p style={{ marginTop: 4, color: "#aab6ca", fontSize: 12 }}>
+                      {selectedProfessional.years_experience} years experience |{" "}
+                      {selectedProfessional.total_sessions_completed ?? 0}+
+                      sessions
                     </p>
                   </div>
                   <button
@@ -360,6 +455,23 @@ export default function Marketplace() {
                     value={selectedProfessional.location || "-"}
                   />
                 </div>
+
+                <Section title="Track Record">
+                  <div style={styles.metaGrid}>
+                    <InfoItem
+                      label="Reviews"
+                      value={`${selectedProfessional.total_reviews ?? 0} clients`}
+                    />
+                    <InfoItem
+                      label="Sessions Completed"
+                      value={`${selectedProfessional.total_sessions_completed ?? 0}+`}
+                    />
+                    <InfoItem
+                      label="Experience"
+                      value={`${selectedProfessional.years_experience ?? 0} years`}
+                    />
+                  </div>
+                </Section>
 
                 <Section title="Certifications">
                   <div style={styles.chipsWrap}>
@@ -418,9 +530,16 @@ export default function Marketplace() {
                     disabled={
                       booking || !selectedProfessional.available_slots?.length
                     }
-                    style={{ ...styles.actionButton, ...styles.bookButton }}
+                    style={{
+                      ...styles.actionButton,
+                      ...styles.bookButton,
+                      background: booking
+                        ? "#555"
+                        : "linear-gradient(135deg, #FF6B35, #ffc857)",
+                      color: booking ? "#ccc" : "#000",
+                    }}
                   >
-                    {booking ? "Booking..." : "Book Session"}
+                    {booking ? "Booking..." : "💰 Book Session"}
                   </button>
                 </div>
               </>
