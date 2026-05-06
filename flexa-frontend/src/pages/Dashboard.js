@@ -354,7 +354,8 @@ export default function Dashboard() {
         <div
           className="dashboard-logo-block"
           style={{
-            background: "linear-gradient(160deg, var(--accent) 0%, #E85A2B 100%)",
+            background:
+              "linear-gradient(160deg, var(--accent) 0%, #E85A2B 100%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -608,7 +609,13 @@ export default function Dashboard() {
                     </p>
                   )}
                 </div>
-                <span style={{ fontSize: 12, color: "var(--text-tertiary)", paddingTop: 2 }}>
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: "var(--text-tertiary)",
+                    paddingTop: 2,
+                  }}
+                >
                   {safeData.weekly_sessions} session
                   {safeData.weekly_sessions !== 1 ? "s" : ""} done
                 </span>
@@ -629,7 +636,11 @@ export default function Dashboard() {
                   }}
                 >
                   <span
-                    style={{ fontSize: 11, color: "var(--accent)", fontWeight: 700 }}
+                    style={{
+                      fontSize: 11,
+                      color: "var(--accent)",
+                      fontWeight: 700,
+                    }}
                   >
                     YOUR PLAN
                   </span>
@@ -645,7 +656,13 @@ export default function Dashboard() {
                   >
                     {mlSplit.split}
                   </span>
-                  <span style={{ fontSize: 12, color: "var(--text-tertiary)", flex: 1 }}>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: "var(--text-tertiary)",
+                      flex: 1,
+                    }}
+                  >
                     &mdash; {SPLIT_DESC[mlSplit.split] || "Personalized plan"}
                   </span>
                 </div>
@@ -990,7 +1007,13 @@ export default function Dashboard() {
                   </p>
                 )}
               </div>
-              <span style={{ fontSize: 12, color: "var(--text-tertiary)", paddingTop: 2 }}>
+              <span
+                style={{
+                  fontSize: 12,
+                  color: "var(--text-tertiary)",
+                  paddingTop: 2,
+                }}
+              >
                 {todayMeals.length} meal{todayMeals.length !== 1 ? "s" : ""}{" "}
                 logged
               </span>
@@ -1008,7 +1031,13 @@ export default function Dashboard() {
                   border: "1px solid rgba(78,201,176,0.2)",
                 }}
               >
-                <p style={{ fontSize: 13, color: "var(--text-tertiary)", marginBottom: 16 }}>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: "var(--text-tertiary)",
+                    marginBottom: 16,
+                  }}
+                >
                   No meals logged yet. Generate a personalized meal plan!
                 </p>
                 <button
@@ -1076,7 +1105,12 @@ export default function Dashboard() {
                           {meal.meal_type || "Meal"} &ndash;{" "}
                           {meal.food_name || "Unknown"}
                         </p>
-                        <p style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
+                        <p
+                          style={{
+                            fontSize: 11,
+                            color: "var(--text-tertiary)",
+                          }}
+                        >
                           {meal.calories || 0} kcal
                           {meal.protein_g
                             ? ` • ${meal.protein_g.toFixed(1)}g protein`
@@ -1165,7 +1199,13 @@ export default function Dashboard() {
                   border: "1px solid rgba(255,200,87,0.2)",
                 }}
               >
-                <p style={{ fontSize: 13, color: "var(--text-tertiary)", marginBottom: 16 }}>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: "var(--text-tertiary)",
+                    marginBottom: 16,
+                  }}
+                >
                   Start a conversation with Flexa AI
                 </p>
                 <button
@@ -1231,7 +1271,9 @@ export default function Dashboard() {
                       >
                         {conv.title || "Conversation"}
                       </p>
-                      <p style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
+                      <p
+                        style={{ fontSize: 11, color: "var(--text-tertiary)" }}
+                      >
                         {new Date(conv.created_at).toLocaleDateString()}
                       </p>
                     </div>
@@ -1314,7 +1356,13 @@ export default function Dashboard() {
                   border: "1px solid rgba(156,102,222,0.2)",
                 }}
               >
-                <p style={{ fontSize: 13, color: "var(--text-tertiary)", marginBottom: 16 }}>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: "var(--text-tertiary)",
+                    marginBottom: 16,
+                  }}
+                >
                   Browse our network of verified professionals
                 </p>
                 <button
@@ -1388,7 +1436,9 @@ export default function Dashboard() {
                       {prof.specialization || "Fitness"}
                     </p>
                     {prof.average_rating && (
-                      <p style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
+                      <p
+                        style={{ fontSize: 10, color: "var(--text-tertiary)" }}
+                      >
                         ⭐ {prof.average_rating.toFixed(1)} (
                         {prof.total_reviews || 0})
                       </p>
@@ -1542,7 +1592,9 @@ function MiniStatCard({ label, value, unit }) {
         justifyContent: "space-between",
       }}
     >
-      <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>{label}</span>
+      <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+        {label}
+      </span>
       <span style={{ fontSize: 22, fontWeight: 900, color: "var(--accent)" }}>
         {value}
         {unit && (
@@ -1613,4 +1665,3 @@ function TaskRow({ task }) {
     </div>
   );
 }
-
