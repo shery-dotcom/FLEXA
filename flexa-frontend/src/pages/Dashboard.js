@@ -440,7 +440,7 @@ export default function Dashboard() {
               style={{
                 fontSize: 15,
                 fontStyle: "italic",
-                color: "var(--bg-light)",
+                color: "var(--text-secondary)",
                 lineHeight: 1.65,
                 textAlign: "center",
                 marginBottom: 14,
