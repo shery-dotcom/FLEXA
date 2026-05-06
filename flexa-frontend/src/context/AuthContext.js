@@ -86,8 +86,20 @@ export function AuthProvider({ children }) {
       if (password.length < 8) {
         throw new Error("Password must be at least 8 characters");
       }
+      if (!email.includes("@")) {
+        throw new Error("Please enter a valid email address");
+      }
 
-      const res = await api.post("/auth/register", { email, password, phone });
+      console.log("[AUTH] Attempting registration for:", email);
+
+      const res = await api.post("/auth/register", {
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+        phone: phone ? phone.trim() : null,
+      });
+
+      console.log("[AUTH] Registration response:", res.data);
+
       const accessToken = res.data?.access_token;
       const refreshToken = res.data?.refresh_token;
 
@@ -99,15 +111,41 @@ export function AuthProvider({ children }) {
       }
 
       // Backward compatibility for servers returning only {message} from /auth/register.
-      await login(email, password);
-      return {
-        ...res.data,
-        message: res.data?.message || "Account created and signed in.",
-      };
+      if (res.data?.message) {
+        try {
+          await login(email, password);
+          return {
+            ...res.data,
+            message: res.data?.message || "Account created and signed in.",
+          };
+        } catch (loginErr) {
+          console.warn(
+            "[AUTH] Auto-login after registration failed:",
+            loginErr,
+          );
+          return res.data; // Return registration response even if auto-login fails
+        }
+      }
+
+      return res.data;
     } catch (err) {
+      console.error("[AUTH] Registration error:", err);
+
       const detail = String(
         err?.response?.data?.detail || err.message || "",
       ).toLowerCase();
+      const status = err?.response?.status;
+
+      // Handle network/CORS errors
+      if (!err.response) {
+        console.error(
+          "[AUTH] Network error - check backend connection:",
+          err.message,
+        );
+        throw new Error(
+          "Network error. Please check your internet connection and try again.",
+        );
+      }
 
       // Handle specific error cases
       if (
@@ -130,13 +168,24 @@ export function AuthProvider({ children }) {
         );
       }
 
+      if (detail.includes("phone")) {
+        throw new Error("This phone number is already registered.");
+      }
+
+      if (status === 500) {
+        throw new Error("Server error. Please try again in a moment.");
+      }
+
       if (detail.includes("invalid") || detail.includes("failed")) {
         throw new Error(
           "Registration failed. Please check your details and try again.",
         );
       }
 
-      throw err;
+      // Fallback error message
+      throw new Error(
+        err?.response?.data?.detail || "Registration failed. Please try again.",
+      );
     }
   };
 

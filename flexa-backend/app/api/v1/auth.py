@@ -1,7 +1,7 @@
 import secrets
 
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -11,10 +11,32 @@ from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, Refre
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+# CORS preflight handler for auth endpoints
+@router.options("/{rest_of_path:path}")
+async def preflight(rest_of_path: str):
+    """Handle CORS preflight requests for all auth endpoints"""
+    return JSONResponse(content={}, headers={
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400",
+    })
+
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
 async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    return await AuthService.register(db, data)
+    try:
+        return await AuthService.register(db, data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        import logging
+        logging.error(f"Registration error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Registration failed. Please try again or contact support."
+        )
 
 
 @router.post("/login", response_model=TokenResponse)

@@ -9,7 +9,17 @@ const api = axios.create({
     "Content-Type": "application/json",
     "ngrok-skip-browser-warning": "1",
   },
-  timeout: 20000, // Keep normal pages responsive; long requests can override per-call.
+  timeout: 30000, // Increased timeout for auth operations
+  withCredentials: false, // Explicitly set to false for cross-origin requests
+});
+
+// Add request interceptor to ensure proper headers
+api.interceptors.request.use((config) => {
+  // Ensure Content-Type is always set
+  if (!config.headers["Content-Type"]) {
+    config.headers["Content-Type"] = "application/json";
+  }
+  return config;
 });
 
 // Attach access token to every request
