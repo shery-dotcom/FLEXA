@@ -51,13 +51,14 @@ export default function GoogleAuthSuccess() {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        background: "#0a0a0a",
+        background: "var(--bg-primary)",
         color: "#e8e8e8",
         gap: 16,
       }}
     >
       <div className="spinner" />
-      <p style={{ color: "#9e9e9e", fontSize: 14 }}>Signing you in…</p>
+      <p style={{ color: "var(--text-tertiary)", fontSize: 14 }}>Signing you in…</p>
     </div>
   );
 }
+

@@ -190,11 +190,11 @@ export default function Marketplace() {
           <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>
             {heading}
           </h1>
-          <p style={{ color: "#9e9e9e", fontSize: 14 }}>
+          <p style={{ color: "var(--text-tertiary)", fontSize: 14 }}>
             Book trusted professionals for personalized guidance.
           </p>
           {confirmingPayment && (
-            <p style={{ color: "#FF6B35", fontSize: 13, marginTop: 6 }}>
+            <p style={{ color: "var(--accent)", fontSize: 13, marginTop: 6 }}>
               Finalizing your Stripe payment...
             </p>
           )}
@@ -205,7 +205,7 @@ export default function Marketplace() {
             style={{
               display: "block",
               fontSize: 12,
-              color: "#9e9e9e",
+              color: "var(--text-tertiary)",
               marginBottom: 6,
             }}
           >
@@ -216,7 +216,7 @@ export default function Marketplace() {
             onChange={(e) => setSpecialization(e.target.value)}
             style={{
               width: "100%",
-              background: "#111",
+              background: "var(--card-bg)",
               color: "#d7d7d7",
               border: "1px solid #2a2a2a",
               borderRadius: 8,
@@ -242,7 +242,7 @@ export default function Marketplace() {
             border: "1px solid #242424",
             borderRadius: 14,
             padding: 24,
-            color: "#9e9e9e",
+            color: "var(--text-tertiary)",
           }}
         >
           No professionals available right now.
@@ -295,7 +295,7 @@ export default function Marketplace() {
                       },
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = "#FF6B35";
+                      e.currentTarget.style.borderColor = "var(--accent)";
                       e.currentTarget.style.boxShadow =
                         "0 8px 24px rgba(255,107,53,0.2)";
                     }}
@@ -320,7 +320,7 @@ export default function Marketplace() {
                           height: 56,
                           borderRadius: "50%",
                           background:
-                            "linear-gradient(135deg, #FF6B35, #ffc857)",
+                            "linear-gradient(135deg, var(--accent), #ffc857)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -349,7 +349,7 @@ export default function Marketplace() {
                         <p
                           style={{
                             fontSize: 12,
-                            color: "#4ec9b0",
+                            color: "var(--macro-protein)",
                             margin: "4px 0 0",
                             fontWeight: 600,
                           }}
@@ -405,7 +405,7 @@ export default function Marketplace() {
                         <div style={{ color: "#888", fontSize: 10 }}>
                           Experience
                         </div>
-                        <div style={{ color: "#4ec9b0", fontWeight: 700 }}>
+                        <div style={{ color: "var(--macro-protein)", fontWeight: 700 }}>
                           {p.years_experience ?? 0}+ years
                         </div>
                       </div>
@@ -493,7 +493,7 @@ export default function Marketplace() {
                       onClick={() => openProfessional(p.id)}
                       style={{
                         marginTop: "auto",
-                        background: "linear-gradient(135deg, #FF6B35, #ffc857)",
+                        background: "linear-gradient(135deg, var(--accent), #ffc857)",
                         border: "none",
                         color: "#000",
                         borderRadius: 10,
@@ -535,7 +535,7 @@ export default function Marketplace() {
                 disabled={currentPage === 1}
                 style={{
                   padding: "8px 12px",
-                  background: currentPage === 1 ? "#333" : "#FF6B35",
+                  background: currentPage === 1 ? "#333" : "var(--accent)",
                   color: currentPage === 1 ? "#666" : "#fff",
                   border: "none",
                   borderRadius: 6,
@@ -561,7 +561,7 @@ export default function Marketplace() {
                       border: "none",
                       background:
                         page === currentPage
-                          ? "linear-gradient(135deg, #FF6B35, #ffc857)"
+                          ? "linear-gradient(135deg, var(--accent), #ffc857)"
                           : "rgba(255,107,53,0.1)",
                       color: page === currentPage ? "#000" : "#fff",
                       fontWeight: 600,
@@ -603,7 +603,7 @@ export default function Marketplace() {
                     currentPage >=
                     Math.ceil(professionals.length / ITEMS_PER_PAGE)
                       ? "#333"
-                      : "#FF6B35",
+                      : "var(--accent)",
                   color:
                     currentPage >=
                     Math.ceil(professionals.length / ITEMS_PER_PAGE)
@@ -648,7 +648,7 @@ export default function Marketplace() {
                     <p
                       style={{
                         marginTop: 6,
-                        color: "#4ec9b0",
+                        color: "var(--macro-protein)",
                         fontSize: 14,
                         fontWeight: 600,
                         margin: 0,
@@ -751,7 +751,7 @@ export default function Marketplace() {
                       ))}
                     </select>
                   ) : (
-                    <p style={{ color: "#9e9e9e", margin: 0 }}>
+                    <p style={{ color: "var(--text-tertiary)", margin: 0 }}>
                       No slots currently available.
                     </p>
                   )}
@@ -778,7 +778,7 @@ export default function Marketplace() {
                       ...styles.bookButton,
                       background: booking
                         ? "#555"
-                        : "linear-gradient(135deg, #FF6B35, #ffc857)",
+                        : "linear-gradient(135deg, var(--accent), #ffc857)",
                       color: booking ? "#ccc" : "#000",
                     }}
                   >
@@ -931,7 +931,8 @@ const styles = {
   },
   bookButton: {
     border: "none",
-    background: "linear-gradient(135deg, #FF6B35, #ffc857)",
+    background: "linear-gradient(135deg, var(--accent), #ffc857)",
     color: "#000",
   },
 };
+

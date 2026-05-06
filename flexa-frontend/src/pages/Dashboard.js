@@ -161,7 +161,7 @@ function fmtActivity(a) {
 }
 
 function bmiColor(cat) {
-  if (!cat) return "#9e9e9e";
+  if (!cat) return "var(--text-tertiary)";
   const c = cat.toLowerCase();
   if (c.includes("underweight")) return "#64b5f6";
   if (c.includes("normal") || c.includes("healthy")) return "#4caf50";
@@ -354,7 +354,7 @@ export default function Dashboard() {
         <div
           className="dashboard-logo-block"
           style={{
-            background: "linear-gradient(160deg, #FF6B35 0%, #E85A2B 100%)",
+            background: "linear-gradient(160deg, var(--accent) 0%, #E85A2B 100%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -367,7 +367,7 @@ export default function Dashboard() {
               fontFamily: "'Bebas Neue', sans-serif",
               fontSize: 28,
               fontWeight: 900,
-              color: "#0a0a0a",
+              color: "var(--bg-primary)",
               letterSpacing: 3,
             }}
           >
@@ -388,14 +388,14 @@ export default function Dashboard() {
             style={{
               fontSize: 19,
               fontWeight: 800,
-              color: "#ffffff",
+              color: "var(--text-primary)",
               lineHeight: 1.2,
               marginBottom: 5,
             }}
           >
             {getGreeting()}, {safeData.user_name}!
           </p>
-          <p style={{ fontSize: 12, color: "#9e9e9e" }}>
+          <p style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
             {getDayLabel()} &middot; Ready to crush your goals?
           </p>
         </div>
@@ -427,7 +427,7 @@ export default function Dashboard() {
               style={{
                 fontSize: 11,
                 fontWeight: 700,
-                color: "#FF6B35",
+                color: "var(--accent)",
                 letterSpacing: "2px",
                 textTransform: "uppercase",
                 marginBottom: 14,
@@ -440,7 +440,7 @@ export default function Dashboard() {
               style={{
                 fontSize: 15,
                 fontStyle: "italic",
-                color: "#f0f0f0",
+                color: "var(--bg-light)",
                 lineHeight: 1.65,
                 textAlign: "center",
                 marginBottom: 14,
@@ -452,7 +452,7 @@ export default function Dashboard() {
             <p
               style={{
                 textAlign: "center",
-                color: "#FF6B35",
+                color: "var(--accent)",
                 fontSize: 13,
                 fontWeight: 600,
               }}
@@ -514,8 +514,8 @@ export default function Dashboard() {
                     ? "#4caf50"
                     : targetCalories < dailyCalories
                       ? "#FF0055"
-                      : "#FF6B35"
-                  : "#9e9e9e"
+                      : "var(--accent)"
+                  : "var(--text-tertiary)"
               }
             />
           </div>
@@ -544,7 +544,7 @@ export default function Dashboard() {
               </h3>
               <p
                 style={{
-                  color: "#9e9e9e",
+                  color: "var(--text-tertiary)",
                   fontSize: 13,
                   marginBottom: 24,
                   lineHeight: 1.6,
@@ -591,7 +591,7 @@ export default function Dashboard() {
                     style={{
                       fontSize: 13,
                       fontWeight: 700,
-                      color: "#FF6B35",
+                      color: "var(--accent)",
                       letterSpacing: "1px",
                       textTransform: "uppercase",
                       marginBottom: 2,
@@ -600,7 +600,7 @@ export default function Dashboard() {
                     Your Workout Plan
                   </p>
                   {planFreq > 0 && (
-                    <p style={{ fontSize: 12, color: "#9e9e9e" }}>
+                    <p style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
                       {planFreq} day{planFreq !== 1 ? "s" : ""}/week
                       {planDifficulty
                         ? ` � ${planDifficulty.charAt(0).toUpperCase() + planDifficulty.slice(1)}`
@@ -608,7 +608,7 @@ export default function Dashboard() {
                     </p>
                   )}
                 </div>
-                <span style={{ fontSize: 12, color: "#9e9e9e", paddingTop: 2 }}>
+                <span style={{ fontSize: 12, color: "var(--text-tertiary)", paddingTop: 2 }}>
                   {safeData.weekly_sessions} session
                   {safeData.weekly_sessions !== 1 ? "s" : ""} done
                 </span>
@@ -629,7 +629,7 @@ export default function Dashboard() {
                   }}
                 >
                   <span
-                    style={{ fontSize: 11, color: "#FF6B35", fontWeight: 700 }}
+                    style={{ fontSize: 11, color: "var(--accent)", fontWeight: 700 }}
                   >
                     YOUR PLAN
                   </span>
@@ -645,7 +645,7 @@ export default function Dashboard() {
                   >
                     {mlSplit.split}
                   </span>
-                  <span style={{ fontSize: 12, color: "#9e9e9e", flex: 1 }}>
+                  <span style={{ fontSize: 12, color: "var(--text-tertiary)", flex: 1 }}>
                     &mdash; {SPLIT_DESC[mlSplit.split] || "Personalized plan"}
                   </span>
                 </div>
@@ -693,10 +693,10 @@ export default function Dashboard() {
                               ? "rgba(76,175,80,0.25)"
                               : isWorkoutDay
                                 ? "rgba(255,107,53,0.07)"
-                                : "#1a1a1a",
+                                : "var(--bg-tertiary)",
                           border: `1.5px solid ${
                             isToday
-                              ? "#FF6B35"
+                              ? "var(--accent)"
                               : done
                                 ? "#4caf50"
                                 : isWorkoutDay
@@ -711,7 +711,7 @@ export default function Dashboard() {
                         {isToday && (
                           <span
                             style={{
-                              color: "#FF6B35",
+                              color: "var(--accent)",
                               fontWeight: 900,
                               fontSize: 12,
                             }}
@@ -739,7 +739,7 @@ export default function Dashboard() {
                         style={{
                           fontSize: 10,
                           color: isToday
-                            ? "#FF6B35"
+                            ? "var(--accent)"
                             : isWorkoutDay
                               ? "#757575"
                               : "#333",
@@ -771,7 +771,7 @@ export default function Dashboard() {
                     </div>
                     <p
                       style={{
-                        color: "#FF6B35",
+                        color: "var(--accent)",
                         fontWeight: 700,
                         fontSize: 14,
                       }}
@@ -808,8 +808,8 @@ export default function Dashboard() {
                           <span
                             style={{
                               fontSize: 11,
-                              color: "#9e9e9e",
-                              background: "#1a1a1a",
+                              color: "var(--text-tertiary)",
+                              background: "var(--bg-tertiary)",
                               borderRadius: 6,
                               padding: "3px 8px",
                             }}
@@ -821,7 +821,7 @@ export default function Dashboard() {
                           <span
                             style={{
                               fontSize: 11,
-                              color: "#FF6B35",
+                              color: "var(--accent)",
                               background: "rgba(255,107,53,0.1)",
                               borderRadius: 6,
                               padding: "3px 8px",
@@ -860,7 +860,7 @@ export default function Dashboard() {
                                 style={{
                                   fontSize: 13,
                                   fontWeight: 600,
-                                  color: "#e0e0e0",
+                                  color: "var(--text-secondary)",
                                 }}
                               >
                                 {ex.name}
@@ -878,7 +878,7 @@ export default function Dashboard() {
                             <span
                               style={{
                                 fontSize: 12,
-                                color: "#FF6B35",
+                                color: "var(--accent)",
                                 fontWeight: 700,
                                 whiteSpace: "nowrap",
                               }}
@@ -976,7 +976,7 @@ export default function Dashboard() {
                   style={{
                     fontSize: 13,
                     fontWeight: 700,
-                    color: "#4ec9b0",
+                    color: "var(--macro-protein)",
                     letterSpacing: "1px",
                     textTransform: "uppercase",
                     marginBottom: 2,
@@ -985,12 +985,12 @@ export default function Dashboard() {
                   Your Nutrition
                 </p>
                 {dailyCalories && (
-                  <p style={{ fontSize: 12, color: "#9e9e9e" }}>
+                  <p style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
                     Target: {targetCalories || dailyCalories} kcal/day
                   </p>
                 )}
               </div>
-              <span style={{ fontSize: 12, color: "#9e9e9e", paddingTop: 2 }}>
+              <span style={{ fontSize: 12, color: "var(--text-tertiary)", paddingTop: 2 }}>
                 {todayMeals.length} meal{todayMeals.length !== 1 ? "s" : ""}{" "}
                 logged
               </span>
@@ -1008,15 +1008,15 @@ export default function Dashboard() {
                   border: "1px solid rgba(78,201,176,0.2)",
                 }}
               >
-                <p style={{ fontSize: 13, color: "#9e9e9e", marginBottom: 16 }}>
+                <p style={{ fontSize: 13, color: "var(--text-tertiary)", marginBottom: 16 }}>
                   No meals logged yet. Generate a personalized meal plan!
                 </p>
                 <button
                   className="btn"
                   style={{
                     background: "rgba(78,201,176,0.15)",
-                    border: "1.5px solid #4ec9b0",
-                    color: "#4ec9b0",
+                    border: "1.5px solid var(--macro-protein)",
+                    color: "var(--macro-protein)",
                     padding: "10px 16px",
                     fontSize: 12,
                     fontWeight: 700,
@@ -1076,7 +1076,7 @@ export default function Dashboard() {
                           {meal.meal_type || "Meal"} &ndash;{" "}
                           {meal.food_name || "Unknown"}
                         </p>
-                        <p style={{ fontSize: 11, color: "#9e9e9e" }}>
+                        <p style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
                           {meal.calories || 0} kcal
                           {meal.protein_g
                             ? ` • ${meal.protein_g.toFixed(1)}g protein`
@@ -1147,7 +1147,7 @@ export default function Dashboard() {
                 >
                   AI Assistant
                 </p>
-                <p style={{ fontSize: 12, color: "#9e9e9e" }}>
+                <p style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
                   Get personalized fitness guidance
                 </p>
               </div>
@@ -1165,7 +1165,7 @@ export default function Dashboard() {
                   border: "1px solid rgba(255,200,87,0.2)",
                 }}
               >
-                <p style={{ fontSize: 13, color: "#9e9e9e", marginBottom: 16 }}>
+                <p style={{ fontSize: 13, color: "var(--text-tertiary)", marginBottom: 16 }}>
                   Start a conversation with Flexa AI
                 </p>
                 <button
@@ -1231,7 +1231,7 @@ export default function Dashboard() {
                       >
                         {conv.title || "Conversation"}
                       </p>
-                      <p style={{ fontSize: 11, color: "#9e9e9e" }}>
+                      <p style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
                         {new Date(conv.created_at).toLocaleDateString()}
                       </p>
                     </div>
@@ -1296,7 +1296,7 @@ export default function Dashboard() {
                 >
                   Expert Professionals
                 </p>
-                <p style={{ fontSize: 12, color: "#9e9e9e" }}>
+                <p style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
                   Book consultations with certified experts
                 </p>
               </div>
@@ -1314,7 +1314,7 @@ export default function Dashboard() {
                   border: "1px solid rgba(156,102,222,0.2)",
                 }}
               >
-                <p style={{ fontSize: 13, color: "#9e9e9e", marginBottom: 16 }}>
+                <p style={{ fontSize: 13, color: "var(--text-tertiary)", marginBottom: 16 }}>
                   Browse our network of verified professionals
                 </p>
                 <button
@@ -1388,7 +1388,7 @@ export default function Dashboard() {
                       {prof.specialization || "Fitness"}
                     </p>
                     {prof.average_rating && (
-                      <p style={{ fontSize: 10, color: "#9e9e9e" }}>
+                      <p style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
                         ⭐ {prof.average_rating.toFixed(1)} (
                         {prof.total_reviews || 0})
                       </p>
@@ -1446,7 +1446,7 @@ export default function Dashboard() {
                   style={{
                     fontSize: 13,
                     fontWeight: 700,
-                    color: "#FF6B35",
+                    color: "var(--accent)",
                     letterSpacing: "1px",
                     textTransform: "uppercase",
                   }}
@@ -1490,7 +1490,7 @@ export default function Dashboard() {
 }
 
 /* --- StatCard ---------------------------------------------------- */
-function StatCard({ label, value, sub, subColor = "#FF6B35" }) {
+function StatCard({ label, value, sub, subColor = "var(--accent)" }) {
   return (
     <div
       style={{
@@ -1503,7 +1503,7 @@ function StatCard({ label, value, sub, subColor = "#FF6B35" }) {
       <p
         style={{
           fontSize: 11,
-          color: "#FF6B35",
+          color: "var(--accent)",
           fontWeight: 700,
           textTransform: "uppercase",
           letterSpacing: "0.8px",
@@ -1516,7 +1516,7 @@ function StatCard({ label, value, sub, subColor = "#FF6B35" }) {
         style={{
           fontSize: 28,
           fontWeight: 900,
-          color: "#ffffff",
+          color: "var(--text-primary)",
           lineHeight: 1,
           marginBottom: 6,
         }}
@@ -1542,8 +1542,8 @@ function MiniStatCard({ label, value, unit }) {
         justifyContent: "space-between",
       }}
     >
-      <span style={{ fontSize: 12, color: "#9e9e9e" }}>{label}</span>
-      <span style={{ fontSize: 22, fontWeight: 900, color: "#FF6B35" }}>
+      <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>{label}</span>
+      <span style={{ fontSize: 22, fontWeight: 900, color: "var(--accent)" }}>
         {value}
         {unit && (
           <span
@@ -1579,7 +1579,7 @@ function TaskRow({ task }) {
           width: 18,
           height: 18,
           borderRadius: 4,
-          border: `2px solid ${task.is_completed ? "#4caf50" : "#FF6B35"}`,
+          border: `2px solid ${task.is_completed ? "#4caf50" : "var(--accent)"}`,
           background: task.is_completed ? "#4caf50" : "transparent",
           display: "flex",
           alignItems: "center",
@@ -1598,7 +1598,7 @@ function TaskRow({ task }) {
           style={{
             fontSize: 13,
             fontWeight: 600,
-            color: task.is_completed ? "#424242" : "#e0e0e0",
+            color: task.is_completed ? "#424242" : "var(--text-secondary)",
             textDecoration: task.is_completed ? "line-through" : "none",
           }}
         >
@@ -1613,3 +1613,4 @@ function TaskRow({ task }) {
     </div>
   );
 }
+

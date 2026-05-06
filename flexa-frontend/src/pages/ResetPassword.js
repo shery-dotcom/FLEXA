@@ -52,7 +52,7 @@ export default function ResetPassword() {
           </p>
           <Link
             to="/forgot-password"
-            style={{ color: "#FF6B35", fontSize: 14 }}
+            style={{ color: "var(--accent)", fontSize: 14 }}
           >
             Request a new reset link →
           </Link>
@@ -101,7 +101,7 @@ export default function ResetPassword() {
                   style={{
                     height: 4,
                     borderRadius: 2,
-                    background: "#1a1a1a",
+                    background: "var(--bg-tertiary)",
                     overflow: "hidden",
                     marginBottom: 6,
                   }}
@@ -119,7 +119,7 @@ export default function ResetPassword() {
                         form.password.length >= 12
                           ? "#4caf50"
                           : form.password.length >= 8
-                            ? "#FF6B35"
+                            ? "var(--accent)"
                             : "#ef5350",
                       transition: "width 0.3s, background 0.3s",
                     }}
@@ -150,7 +150,7 @@ export default function ResetPassword() {
             <h3 style={{ fontWeight: 700, marginBottom: 10 }}>
               Password Updated!
             </h3>
-            <p style={{ color: "#9e9e9e", fontSize: 14, marginBottom: 24 }}>
+            <p style={{ color: "var(--text-tertiary)", fontSize: 14, marginBottom: 24 }}>
               Your password has been successfully reset.
             </p>
             <button
@@ -166,8 +166,8 @@ export default function ResetPassword() {
         {!done && (
           <>
             <div className="divider" style={{ margin: "28px 0" }} />
-            <p style={{ textAlign: "center", fontSize: 14, color: "#9e9e9e" }}>
-              <Link to="/login" style={{ color: "#FF6B35", fontWeight: 600 }}>
+            <p style={{ textAlign: "center", fontSize: 14, color: "var(--text-tertiary)" }}>
+              <Link to="/login" style={{ color: "var(--accent)", fontWeight: 600 }}>
                 ← Back to Login
               </Link>
             </p>
@@ -177,5 +177,6 @@ export default function ResetPassword() {
     </div>
   );
 }
+
 
 

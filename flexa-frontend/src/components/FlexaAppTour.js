@@ -102,7 +102,7 @@ const DOT_STYLE = (active) => ({
   width: active ? 22 : 8,
   height: 8,
   borderRadius: 4,
-  background: active ? "#FF6B35" : "rgba(255,107,53,0.25)",
+  background: active ? "var(--accent)" : "rgba(255,107,53,0.25)",
   border: "1px solid rgba(255,107,53,0.4)",
   transition: "all 0.3s ease",
   flexShrink: 0,
@@ -271,7 +271,7 @@ export default function FlexaAppTour({ onDone }) {
                 letterSpacing: 0.5,
               }}
             >
-              <span style={{ color: "#FF6B35" }}>FLEXA</span> Guide
+              <span style={{ color: "var(--accent)" }}>FLEXA</span> Guide
             </div>
           </div>
           {/* Step counter */}
@@ -368,7 +368,7 @@ export default function FlexaAppTour({ onDone }) {
                 borderRadius: 20,
                 padding: "4px 12px",
                 fontSize: 9,
-                color: "#FF6B35",
+                color: "var(--accent)",
                 fontWeight: 700,
                 letterSpacing: 2,
                 textTransform: "uppercase",
@@ -453,7 +453,7 @@ export default function FlexaAppTour({ onDone }) {
                       alignItems: "center",
                       justifyContent: "center",
                       fontSize: 9,
-                      color: "#FF6B35",
+                      color: "var(--accent)",
                       fontWeight: 900,
                     }}
                   >
@@ -534,7 +534,7 @@ export default function FlexaAppTour({ onDone }) {
                   style={{
                     background: "rgba(255,107,53,0.08)",
                     border: "1px solid rgba(255,107,53,0.35)",
-                    color: "#FF6B35",
+                    color: "var(--accent)",
                     padding: "9px 16px",
                     borderRadius: 12,
                     fontSize: 12,
@@ -560,7 +560,7 @@ export default function FlexaAppTour({ onDone }) {
               <button
                 onClick={handleNext}
                 style={{
-                  background: "linear-gradient(135deg,#FF6B35,#E85A2B)",
+                  background: "linear-gradient(135deg,var(--accent),#E85A2B)",
                   border: "none",
                   color: "#0c0a12",
                   padding: "9px 22px",
@@ -584,3 +584,4 @@ export default function FlexaAppTour({ onDone }) {
     </>
   );
 }
+

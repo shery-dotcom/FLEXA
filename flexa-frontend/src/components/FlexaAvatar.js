@@ -100,19 +100,19 @@ export default function FlexaAvatar({
           >
             <span
               className="av-zzz z1"
-              style={{ fontSize: 13, color: "#FF6B35", fontWeight: 900 }}
+              style={{ fontSize: 13, color: "var(--accent)", fontWeight: 900 }}
             >
               z
             </span>
             <span
               className="av-zzz z2"
-              style={{ fontSize: 17, color: "#FF6B35", fontWeight: 900 }}
+              style={{ fontSize: 17, color: "var(--accent)", fontWeight: 900 }}
             >
               z
             </span>
             <span
               className="av-zzz z3"
-              style={{ fontSize: 22, color: "#FF6B35", fontWeight: 900 }}
+              style={{ fontSize: 22, color: "var(--accent)", fontWeight: 900 }}
             >
               Z
             </span>
@@ -190,7 +190,7 @@ export default function FlexaAvatar({
           style={{
             fontSize: 18,
             fontWeight: 900,
-            color: "#FF6B35",
+            color: "var(--accent)",
             letterSpacing: 3,
           }}
         >
@@ -210,7 +210,7 @@ export default function FlexaAvatar({
             }}
           >
             BMI{" "}
-            <span style={{ color: "#FF6B35", fontWeight: 700 }}>
+            <span style={{ color: "var(--accent)", fontWeight: 700 }}>
               {Number(bmi).toFixed(1)}
             </span>
             {" · "}
@@ -290,3 +290,4 @@ const GLOW = {
   heavy: "rgba(124,58,237,0.45)",
   heavy_plus: "rgba(147,51,234,0.45)",
 };
+

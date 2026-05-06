@@ -89,7 +89,7 @@ export default function ProfileSetup() {
         <h1 style={{ fontSize: 26, fontWeight: 800 }}>
           Build Your <span className="text-gold">Profile</span>
         </h1>
-        <p style={{ color: "#9e9e9e", marginTop: 8, fontSize: 14 }}>
+        <p style={{ color: "var(--text-tertiary)", marginTop: 8, fontSize: 14 }}>
           Step 1 of 2 — Tell us about yourself
         </p>
       </div>
@@ -201,10 +201,10 @@ export default function ProfileSetup() {
               }}
             >
               <div>
-                <p style={{ fontSize: 12, color: "#9e9e9e", marginBottom: 4 }}>
+                <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 4 }}>
                   YOUR BMI
                 </p>
-                <p style={{ fontSize: 28, fontWeight: 800, color: "#FF6B35" }}>
+                <p style={{ fontSize: 28, fontWeight: 800, color: "var(--accent)" }}>
                   {bmi}
                 </p>
               </div>
@@ -229,3 +229,4 @@ export default function ProfileSetup() {
     </div>
   );
 }
+

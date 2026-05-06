@@ -8,19 +8,19 @@ const GOAL_OPTIONS = [
   {
     value: "bulking",
     label: "Bulking",
-    icon: <FiTrendingUp size={32} color="#FF6B35" />,
+    icon: <FiTrendingUp size={32} color="var(--accent)" />,
     desc: "Build muscle mass with a calorie surplus",
   },
   {
     value: "cutting",
     label: "Cutting",
-    icon: <FiZap size={32} color="#FF6B35" />,
+    icon: <FiZap size={32} color="var(--accent)" />,
     desc: "Lose fat while preserving lean muscle",
   },
   {
     value: "recomp",
     label: "Recomp",
-    icon: <FiSliders size={32} color="#FF6B35" />,
+    icon: <FiSliders size={32} color="var(--accent)" />,
     desc: "Simultaneously build muscle and burn fat",
   },
 ];
@@ -90,7 +90,7 @@ export default function GoalSetup() {
         <h1 style={{ fontSize: 26, fontWeight: 800 }}>
           Set Your <span className="text-gold">Goal</span>
         </h1>
-        <p style={{ color: "#9e9e9e", marginTop: 8, fontSize: 14 }}>
+        <p style={{ color: "var(--text-tertiary)", marginTop: 8, fontSize: 14 }}>
           Step 2 — We'll personalize your plan based on your goal
         </p>
       </div>
@@ -103,7 +103,7 @@ export default function GoalSetup() {
               marginBottom: 16,
               fontSize: 15,
               fontWeight: 600,
-              color: "#9e9e9e",
+              color: "var(--text-tertiary)",
               textTransform: "uppercase",
               letterSpacing: "0.8px",
             }}
@@ -117,8 +117,8 @@ export default function GoalSetup() {
                 onClick={() => setGoalType(g.value)}
                 style={{
                   background:
-                    goalType === g.value ? "rgba(255,107,53,0.12)" : "#111",
-                  border: `2px solid ${goalType === g.value ? "#FF6B35" : "#242424"}`,
+                    goalType === g.value ? "rgba(255,107,53,0.12)" : "var(--card-bg)",
+                  border: `2px solid ${goalType === g.value ? "var(--accent)" : "#242424"}`,
                   borderRadius: 12,
                   padding: "20px 16px",
                   textAlign: "center",
@@ -131,12 +131,12 @@ export default function GoalSetup() {
                   style={{
                     fontWeight: 700,
                     fontSize: 16,
-                    color: goalType === g.value ? "#FF6B35" : "#fff",
+                    color: goalType === g.value ? "var(--accent)" : "#fff",
                   }}
                 >
                   {g.label}
                 </div>
-                <div style={{ fontSize: 12, color: "#9e9e9e", marginTop: 6 }}>
+                <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 6 }}>
                   {g.desc}
                 </div>
               </div>
@@ -149,7 +149,7 @@ export default function GoalSetup() {
               marginBottom: 16,
               fontSize: 15,
               fontWeight: 600,
-              color: "#9e9e9e",
+              color: "var(--text-tertiary)",
               textTransform: "uppercase",
               letterSpacing: "0.8px",
             }}
@@ -170,8 +170,8 @@ export default function GoalSetup() {
                 onClick={() => setActivity(a.value)}
                 style={{
                   background:
-                    activity === a.value ? "rgba(255,107,53,0.08)" : "#111",
-                  border: `2px solid ${activity === a.value ? "#FF6B35" : "#242424"}`,
+                    activity === a.value ? "rgba(255,107,53,0.08)" : "var(--card-bg)",
+                  border: `2px solid ${activity === a.value ? "var(--accent)" : "#242424"}`,
                   borderRadius: 10,
                   padding: "14px 20px",
                   display: "flex",
@@ -184,12 +184,12 @@ export default function GoalSetup() {
                 <span
                   style={{
                     fontWeight: 600,
-                    color: activity === a.value ? "#FF6B35" : "#e0e0e0",
+                    color: activity === a.value ? "var(--accent)" : "var(--text-secondary)",
                   }}
                 >
                   {a.label}
                 </span>
-                <span style={{ fontSize: 13, color: "#9e9e9e" }}>{a.desc}</span>
+                <span style={{ fontSize: 13, color: "var(--text-tertiary)" }}>{a.desc}</span>
               </div>
             ))}
           </div>
@@ -369,7 +369,7 @@ function AIReportCard({ report, loading, onAdoptGoal, onContinue }) {
           marginBottom: 10,
           fontSize: 13,
           fontWeight: 600,
-          color: "#FF6B35",
+          color: "var(--accent)",
           textTransform: "uppercase",
           letterSpacing: "0.8px",
         }}
@@ -387,9 +387,9 @@ function AIReportCard({ report, loading, onAdoptGoal, onContinue }) {
         {report.next_steps?.map((s, i) => (
           <li
             key={i}
-            style={{ fontSize: 14, color: "#e0e0e0", display: "flex", gap: 10 }}
+            style={{ fontSize: 14, color: "var(--text-secondary)", display: "flex", gap: 10 }}
           >
-            <span style={{ color: "#FF6B35" }}>→</span> {s}
+            <span style={{ color: "var(--accent)" }}>→</span> {s}
           </li>
         ))}
       </ul>
@@ -406,3 +406,4 @@ function AIReportCard({ report, loading, onAdoptGoal, onContinue }) {
     </div>
   );
 }
+

@@ -115,11 +115,11 @@ export default function Login() {
             textAlign: "center",
             marginTop: 24,
             fontSize: 14,
-            color: "#9e9e9e",
+            color: "var(--text-tertiary)",
           }}
         >
           New to Flexa?&nbsp;
-          <Link to="/register" style={{ color: "#FF6B35", fontWeight: 700 }}>
+          <Link to="/register" style={{ color: "var(--accent)", fontWeight: 700 }}>
             Start Your Journey
           </Link>
         </p>
@@ -150,3 +150,4 @@ function GoogleIcon() {
     </svg>
   );
 }
+

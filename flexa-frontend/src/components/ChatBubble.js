@@ -108,7 +108,7 @@ export function TypingIndicator() {
           display: inline-block;
           width: 7px; height: 7px;
           border-radius: 50%;
-          background: #FF6B35;
+          background: var(--accent);
           margin: 0 2px;
           animation: bounce 1.2s infinite ease-in-out;
         }
@@ -131,8 +131,8 @@ const styles = {
     whiteSpace: "pre-wrap",
   },
   userBubble: {
-    background: "linear-gradient(135deg, #FF6B35, #FF5520)",
-    color: "#ffffff",
+    background: "linear-gradient(135deg, var(--accent), #FF5520)",
+    color: "var(--text-primary)",
     borderBottomRightRadius: "4px",
     boxShadow: "0 2px 8px rgba(255,107,53,0.3)",
   },
@@ -146,8 +146,8 @@ const styles = {
     width: 30,
     height: 30,
     borderRadius: "50%",
-    background: "linear-gradient(135deg, #FF6B35, #E85A2B)",
-    color: "#ffffff",
+    background: "linear-gradient(135deg, var(--accent), #E85A2B)",
+    color: "var(--text-primary)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -162,7 +162,7 @@ const styles = {
     height: 30,
     borderRadius: "50%",
     background: "rgba(255,255,255,0.15)",
-    color: "#FF6B35",
+    color: "var(--accent)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -184,3 +184,4 @@ const styles = {
     alignItems: "center",
   },
 };
+

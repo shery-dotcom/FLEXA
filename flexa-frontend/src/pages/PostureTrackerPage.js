@@ -21,7 +21,7 @@ export default function PostureTrackerPage() {
         <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 6 }}>
           Posture <span className="text-gold">Tracker</span>
         </h1>
-        <p style={{ color: "#9e9e9e", fontSize: 14, marginBottom: 18 }}>
+        <p style={{ color: "var(--text-tertiary)", fontSize: 14, marginBottom: 18 }}>
           Select body part and exercise to start real-time posture tracking.
         </p>
 
@@ -36,3 +36,4 @@ export default function PostureTrackerPage() {
     </div>
   );
 }
+

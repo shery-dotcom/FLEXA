@@ -59,6 +59,12 @@
   --status-warning: #ff9800;
   --status-error: #ef5350;
   --status-info: #64b5f6;
+
+  /* Macro nutrition colors */
+  --macro-protein: #4ec9b0;
+  --macro-carbs: #ce9178;
+  --macro-fat: #dcdcaa;
+  --macro-cyan: #00d4ff;
 }
 
 :root[data-theme="dark"] {
@@ -119,6 +125,12 @@
   --status-warning: #ff9800;
   --status-error: #ef5350;
   --status-info: #64b5f6;
+
+  /* Macro nutrition colors */
+  --macro-protein: #4ec9b0;
+  --macro-carbs: #ce9178;
+  --macro-fat: #dcdcaa;
+  --macro-cyan: #00d4ff;
 }
 
 /* Smooth transitions when switching themes */

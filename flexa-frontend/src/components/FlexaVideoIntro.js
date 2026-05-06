@@ -103,7 +103,7 @@ export default function FlexaVideoIntro({ show: showProp, onClose }) {
               width: 42,
               height: 42,
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #FF6B35, #E85A2B)",
+              background: "linear-gradient(135deg, var(--accent), #E85A2B)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -141,7 +141,7 @@ export default function FlexaVideoIntro({ show: showProp, onClose }) {
                 letterSpacing: 1,
               }}
             >
-              Meet <span style={{ color: "#FF6B35" }}>FLEXA</span>
+              Meet <span style={{ color: "var(--accent)" }}>FLEXA</span>
             </div>
           </div>
           {/* Skip X */}
@@ -218,7 +218,7 @@ export default function FlexaVideoIntro({ show: showProp, onClose }) {
             }}
           >
             Your personal AI coach — ask me anything in{" "}
-            <strong style={{ color: "#FF6B35" }}>English or Urdu</strong>.<br />
+            <strong style={{ color: "var(--accent)" }}>English or Urdu</strong>.<br />
             I know your goals and BMI, so my advice is tailored just for you.
           </p>
           <button
@@ -228,7 +228,7 @@ export default function FlexaVideoIntro({ show: showProp, onClose }) {
               padding: "10px 26px",
               borderRadius: 12,
               border: "none",
-              background: "linear-gradient(135deg, #FF6B35, #FF5520)",
+              background: "linear-gradient(135deg, var(--accent), #FF5520)",
               color: "#0a0c14",
               fontWeight: 800,
               fontSize: 14,
@@ -258,3 +258,4 @@ export default function FlexaVideoIntro({ show: showProp, onClose }) {
     </>
   );
 }
+

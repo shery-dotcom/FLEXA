@@ -139,11 +139,11 @@ export default function Register() {
                       gap: 6,
                     }}
                   >
-                    <FiCamera size={24} color="#FF6B35" />
+                    <FiCamera size={24} color="var(--accent)" />
                     <span
                       style={{
                         fontSize: 10,
-                        color: "#9e9e9e",
+                        color: "var(--text-tertiary)",
                         fontWeight: 600,
                       }}
                     >
@@ -188,7 +188,7 @@ export default function Register() {
                 onChange={handleChange}
                 required
               />
-              <p style={{ marginTop: 6, fontSize: 12, color: "#9e9e9e" }}>
+              <p style={{ marginTop: 6, fontSize: 12, color: "var(--text-tertiary)" }}>
                 Use your email here. You will set your username on the next
                 step.
               </p>
@@ -221,7 +221,7 @@ export default function Register() {
                 marginBottom: 20,
               }}
             >
-              <p style={{ fontSize: 12, color: "#9e9e9e", lineHeight: 1.6 }}>
+              <p style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.6 }}>
                 By joining, you commit to consistency, hard work, and
                 data-driven fitness progress.
               </p>
@@ -275,7 +275,7 @@ export default function Register() {
               textAlign: "center",
               marginTop: 24,
               fontSize: 14,
-              color: "#9e9e9e",
+              color: "var(--text-tertiary)",
             }}
           >
             Already have an account?&nbsp;
@@ -288,3 +288,4 @@ export default function Register() {
     </div>
   );
 }
+

@@ -29,7 +29,7 @@ import { useAuth } from "../context/AuthContext";
 import FlexaGuide from "../components/FlexaGuide";
 
 // ──────────────────────────────────────── Constants ────────────────────────
-const GOLD = "#FF6B35";
+const GOLD = "var(--accent)";
 const STEPS = ["Preferences", "Your Plan"];
 
 const REGION_OPTIONS = [
@@ -136,7 +136,7 @@ function MealCard({ meal, onLog }) {
   return (
     <div
       style={{
-        background: "#111",
+        background: "var(--card-bg)",
         border: "1px solid #222",
         borderRadius: 12,
         padding: "14px 16px",
@@ -146,7 +146,7 @@ function MealCard({ meal, onLog }) {
       }}
     >
       <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 600, color: "#e0e0e0", fontSize: 14 }}>
+        <div style={{ fontWeight: 600, color: "var(--text-secondary)", fontSize: 14 }}>
           {meal.food_name}
         </div>
         <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>
@@ -158,13 +158,13 @@ function MealCard({ meal, onLog }) {
           <span style={{ fontSize: 11, color: GOLD }}>
             {meal.calories} kcal
           </span>
-          <span style={{ fontSize: 11, color: "#4ec9b0" }}>
+          <span style={{ fontSize: 11, color: "var(--macro-protein)" }}>
             P {meal.protein_g}g
           </span>
-          <span style={{ fontSize: 11, color: "#ce9178" }}>
+          <span style={{ fontSize: 11, color: "var(--macro-carbs)" }}>
             C {meal.carbs_g}g
           </span>
-          <span style={{ fontSize: 11, color: "#dcdcaa" }}>
+          <span style={{ fontSize: 11, color: "var(--macro-fat)" }}>
             F {meal.fat_g}g
           </span>
         </div>
@@ -650,7 +650,7 @@ export default function DietPlanner() {
                     padding: "7px 20px",
                     borderRadius: 20,
                     cursor: "pointer",
-                    background: prefs.region === r.value ? `${GOLD}22` : "#111",
+                    background: prefs.region === r.value ? `${GOLD}22` : "var(--card-bg)",
                     border: `1px solid ${prefs.region === r.value ? GOLD : "#282828"}`,
                     color: prefs.region === r.value ? GOLD : "#777",
                     fontSize: 13,
@@ -700,7 +700,7 @@ export default function DietPlanner() {
                       padding: "8px 16px",
                       borderRadius: 20,
                       cursor: "pointer",
-                      background: active ? `${GOLD}22` : "#111",
+                      background: active ? `${GOLD}22` : "var(--card-bg)",
                       border: `1px solid ${active ? GOLD : "#282828"}`,
                       color: active ? GOLD : "#777",
                       fontSize: 12,
@@ -738,7 +738,7 @@ export default function DietPlanner() {
                     borderRadius: 8,
                     cursor: "pointer",
                     background:
-                      prefs.meals_per_day === n ? `${GOLD}22` : "#111",
+                      prefs.meals_per_day === n ? `${GOLD}22` : "var(--card-bg)",
                     border: `1px solid ${prefs.meals_per_day === n ? GOLD : "#282828"}`,
                     color: prefs.meals_per_day === n ? GOLD : "#777",
                     fontWeight: 700,
@@ -781,7 +781,7 @@ export default function DietPlanner() {
                       padding: "6px 14px",
                       borderRadius: 20,
                       cursor: "pointer",
-                      background: active ? "rgba(239,68,68,0.12)" : "#111",
+                      background: active ? "rgba(239,68,68,0.12)" : "var(--card-bg)",
                       border: `1px solid ${active ? "#ef4444" : "#282828"}`,
                       color: active ? "#ef4444" : "#666",
                       fontSize: 12,
@@ -920,7 +920,7 @@ export default function DietPlanner() {
                       borderRadius: 8,
                       cursor: "pointer",
                       flexShrink: 0,
-                      background: selectedDay === i ? GOLD : "#111",
+                      background: selectedDay === i ? GOLD : "var(--card-bg)",
                       color: selectedDay === i ? "#000" : "#666",
                       border: `1px solid ${selectedDay === i ? GOLD : "#282828"}`,
                       fontWeight: selectedDay === i ? 700 : 400,
@@ -947,7 +947,7 @@ export default function DietPlanner() {
               alignItems: "center",
               gap: 8,
               fontSize: 12,
-              color: "#4ec9b0",
+              color: "var(--macro-protein)",
             }}
           >
             <FiDroplet size={14} /> Target: {(plan.water_ml / 1000).toFixed(1)}L
@@ -995,7 +995,7 @@ export default function DietPlanner() {
           {plan.tips && plan.tips.length > 0 && (
             <div
               style={{
-                background: "#111",
+                background: "var(--card-bg)",
                 border: "1px solid #222",
                 borderRadius: 12,
                 padding: "16px 18px",
@@ -1074,11 +1074,11 @@ export default function DietPlanner() {
               marginBottom: 16,
             }}
           >
-            <h3 style={{ color: "#e0e0e0", fontSize: 16 }}>Today's Progress</h3>
+            <h3 style={{ color: "var(--text-secondary)", fontSize: 16 }}>Today's Progress</h3>
             <span
               style={{
                 fontSize: 12,
-                color: summary.on_track ? "#4ec9b0" : "#ef4444",
+                color: summary.on_track ? "var(--macro-protein)" : "#ef4444",
               }}
             >
               {summary.on_track ? "✅ On track" : "⚠️ Over limit"}
@@ -1088,7 +1088,7 @@ export default function DietPlanner() {
           {/* Calorie ring summary */}
           <div
             style={{
-              background: "#111",
+              background: "var(--card-bg)",
               border: "1px solid #222",
               borderRadius: 12,
               padding: "16px 20px",
@@ -1111,19 +1111,19 @@ export default function DietPlanner() {
                 label="Protein"
                 consumed={Math.round(summary.protein_consumed_g)}
                 target={Math.round(summary.protein_target_g)}
-                color="#4ec9b0"
+                color="var(--macro-protein)"
               />
               <MacroBar
                 label="Carbs"
                 consumed={Math.round(summary.carbs_consumed_g)}
                 target={Math.round(summary.carbs_target_g)}
-                color="#ce9178"
+                color="var(--macro-carbs)"
               />
               <MacroBar
                 label="Fats"
                 consumed={Math.round(summary.fat_consumed_g)}
                 target={Math.round(summary.fat_target_g)}
-                color="#dcdcaa"
+                color="var(--macro-fat)"
               />
             </div>
           </div>
@@ -1131,8 +1131,8 @@ export default function DietPlanner() {
       ) : (
         <div
           style={{
-            background: "#111",
-            border: "1px solid #1a1a1a",
+            background: "var(--card-bg)",
+            border: "1px solid var(--bg-tertiary)",
             borderRadius: 12,
             padding: "24px 20px",
             textAlign: "center",
@@ -1165,11 +1165,11 @@ export default function DietPlanner() {
             placeholder="Search food (e.g. Chicken Biryani)…"
             style={{
               flex: 1,
-              background: "#111",
+              background: "var(--card-bg)",
               border: "1px solid #282828",
               borderRadius: 8,
               padding: "10px 14px",
-              color: "#e0e0e0",
+              color: "var(--text-secondary)",
               fontSize: 13,
               outline: "none",
             }}
@@ -1205,7 +1205,7 @@ export default function DietPlanner() {
                 key={food.id}
                 style={{
                   background: "#0f0f0f",
-                  border: "1px solid #1a1a1a",
+                  border: "1px solid var(--bg-tertiary)",
                   borderRadius: 10,
                   padding: "10px 14px",
                   display: "flex",
@@ -1215,7 +1215,7 @@ export default function DietPlanner() {
               >
                 <div>
                   <div
-                    style={{ color: "#e0e0e0", fontSize: 13, fontWeight: 500 }}
+                    style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 500 }}
                   >
                     {food.food_name}
                   </div>
@@ -1273,7 +1273,7 @@ export default function DietPlanner() {
                 key={log.id}
                 style={{
                   background: "#0f0f0f",
-                  border: "1px solid #1a1a1a",
+                  border: "1px solid var(--bg-tertiary)",
                   borderRadius: 10,
                   padding: "10px 14px",
                 }}
@@ -1307,11 +1307,11 @@ export default function DietPlanner() {
                       }
                       style={{
                         width: 70,
-                        background: "#1a1a1a",
+                        background: "var(--bg-tertiary)",
                         border: "1px solid #333",
                         borderRadius: 6,
                         padding: "4px 8px",
-                        color: "#e0e0e0",
+                        color: "var(--text-secondary)",
                         fontSize: 12,
                       }}
                     />
@@ -1325,11 +1325,11 @@ export default function DietPlanner() {
                         }))
                       }
                       style={{
-                        background: "#1a1a1a",
+                        background: "var(--bg-tertiary)",
                         border: "1px solid #333",
                         borderRadius: 6,
                         padding: "4px 8px",
-                        color: "#e0e0e0",
+                        color: "var(--text-secondary)",
                         fontSize: 12,
                       }}
                     >
@@ -1443,15 +1443,15 @@ export default function DietPlanner() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#0a0a0a",
-        color: "#e0e0e0",
+        background: "var(--bg-primary)",
+        color: "var(--text-secondary)",
         fontFamily: "'Inter', sans-serif",
       }}
     >
       <FlexaGuide pageKey="diet" />
       <Toaster
         position="top-right"
-        toastOptions={{ style: { background: "#1a1a1a", color: "#e0e0e0" } }}
+        toastOptions={{ style: { background: "var(--bg-tertiary)", color: "var(--text-secondary)" } }}
       />
 
       <div
@@ -1490,14 +1490,14 @@ export default function DietPlanner() {
             }}
           >
             <FiBell
-              color="#4ec9b0"
+              color="var(--macro-protein)"
               size={16}
               style={{ marginTop: 2, flexShrink: 0 }}
             />
             <div style={{ flex: 1 }}>
               <div
                 style={{
-                  color: "#4ec9b0",
+                  color: "var(--macro-protein)",
                   fontWeight: 600,
                   fontSize: 13,
                   marginBottom: 2,
@@ -1513,7 +1513,7 @@ export default function DietPlanner() {
               {reminder.meal && (
                 <div
                   style={{
-                    color: "#ce9178",
+                    color: "var(--macro-carbs)",
                     fontSize: 12,
                     marginTop: 6,
                     fontWeight: 500,
@@ -1533,7 +1533,7 @@ export default function DietPlanner() {
                 flexShrink: 0,
               }}
             >
-              <div style={{ fontSize: 11, color: "#4ec9b0", fontWeight: 600 }}>
+              <div style={{ fontSize: 11, color: "var(--macro-protein)", fontWeight: 600 }}>
                 {(waterToday / 1000).toFixed(2)}L /{" "}
                 {(waterTarget / 1000).toFixed(1)}L
               </div>
@@ -1558,7 +1558,7 @@ export default function DietPlanner() {
                 style={{
                   background: "rgba(78,201,176,0.15)",
                   border: "1px solid rgba(78,201,176,0.4)",
-                  color: "#4ec9b0",
+                  color: "var(--macro-protein)",
                   borderRadius: 6,
                   padding: "4px 10px",
                   fontSize: 12,
@@ -1576,7 +1576,7 @@ export default function DietPlanner() {
         <div
           style={{
             display: "flex",
-            background: "#111",
+            background: "var(--card-bg)",
             borderRadius: 10,
             padding: 4,
             gap: 4,
@@ -1621,3 +1621,4 @@ export default function DietPlanner() {
     </div>
   );
 }
+

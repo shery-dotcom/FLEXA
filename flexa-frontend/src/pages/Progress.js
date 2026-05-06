@@ -80,7 +80,7 @@ function calcMacros(calories, weight, goalType) {
 }
 
 function bmiColor(cat) {
-  if (!cat) return "#9e9e9e";
+  if (!cat) return "var(--text-tertiary)";
   const c = cat.toLowerCase();
   if (c.includes("underweight")) return "#64b5f6";
   if (c.includes("normal") || c.includes("healthy")) return "#4caf50";
@@ -132,13 +132,13 @@ const CustomTooltip = ({ active, payload, label }) => {
   return (
     <div
       style={{
-        background: "#1a1a1a",
-        border: "1px solid #FF6B35",
+        background: "var(--bg-tertiary)",
+        border: "1px solid var(--accent)",
         borderRadius: 8,
         padding: "10px 14px",
       }}
     >
-      <p style={{ color: "#9e9e9e", fontSize: 12, marginBottom: 6 }}>{label}</p>
+      <p style={{ color: "var(--text-tertiary)", fontSize: 12, marginBottom: 6 }}>{label}</p>
       {payload.map((p) => (
         <p
           key={p.name}
@@ -257,7 +257,7 @@ export default function Progress() {
         <h1 style={{ fontSize: 28, fontWeight: 800 }}>
           Health <span className="text-gold">Report</span>
         </h1>
-        <p style={{ color: "#9e9e9e", marginTop: 6, fontSize: 14 }}>
+        <p style={{ color: "var(--text-tertiary)", marginTop: 6, fontSize: 14 }}>
           Your complete fitness picture — metrics, goals & nutrition
         </p>
       </div>
@@ -269,7 +269,7 @@ export default function Progress() {
             style={{
               fontSize: 11,
               fontWeight: 700,
-              color: "#FF6B35",
+              color: "var(--accent)",
               letterSpacing: "2px",
               textTransform: "uppercase",
               marginBottom: 16,
@@ -337,12 +337,12 @@ export default function Progress() {
                   marginBottom: 10,
                 }}
               >
-                <FiTarget size={14} color="#FF6B35" />
+                <FiTarget size={14} color="var(--accent)" />
                 <p
                   style={{
                     fontSize: 11,
                     fontWeight: 700,
-                    color: "#FF6B35",
+                    color: "var(--accent)",
                     textTransform: "uppercase",
                     letterSpacing: "0.8px",
                   }}
@@ -363,7 +363,7 @@ export default function Progress() {
                   >
                     {goalType}
                   </p>
-                  <p style={{ fontSize: 12, color: "#9e9e9e" }}>
+                  <p style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
                     {goalType === "bulking"
                       ? "Calorie surplus to build muscle mass"
                       : goalType === "cutting"
@@ -420,7 +420,7 @@ export default function Progress() {
                     {aiRec.rec}
                   </p>
                   <p
-                    style={{ fontSize: 12, color: "#9e9e9e", lineHeight: 1.5 }}
+                    style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.5 }}
                   >
                     {aiRec.reason}
                   </p>
@@ -458,7 +458,7 @@ export default function Progress() {
                     style={{
                       fontSize: 11,
                       fontWeight: 700,
-                      color: "#FF6B35",
+                      color: "var(--accent)",
                       textTransform: "uppercase",
                       letterSpacing: "0.8px",
                       marginBottom: 6,
@@ -472,14 +472,14 @@ export default function Progress() {
                       style={{
                         fontSize: 14,
                         fontWeight: 500,
-                        color: "#9e9e9e",
+                        color: "var(--text-tertiary)",
                         marginLeft: 6,
                       }}
                     >
                       kcal
                     </span>
                   </p>
-                  <p style={{ fontSize: 12, color: "#9e9e9e", marginTop: 4 }}>
+                  <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 4 }}>
                     {goalType === "bulking"
                       ? `+400 kcal surplus above DEE (${dee?.toLocaleString()} kcal)`
                       : goalType === "cutting"
@@ -500,7 +500,7 @@ export default function Progress() {
                   }}
                 >
                   <div
-                    style={{ flex: macros.proteinPct, background: "#FF6B35" }}
+                    style={{ flex: macros.proteinPct, background: "var(--accent)" }}
                   />
                   <div
                     style={{ flex: macros.carbsPct, background: "#64b5f6" }}
@@ -513,7 +513,7 @@ export default function Progress() {
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  color: "#9e9e9e",
+                  color: "var(--text-tertiary)",
                   textTransform: "uppercase",
                   letterSpacing: "0.8px",
                   marginBottom: 12,
@@ -532,7 +532,7 @@ export default function Progress() {
                   label="Protein"
                   grams={macros.protein}
                   pct={macros.proteinPct}
-                  color="#FF6B35"
+                  color="var(--accent)"
                   note="Muscle repair & growth"
                 />
                 <MacroCard
@@ -562,7 +562,7 @@ export default function Progress() {
             style={{
               fontSize: 11,
               fontWeight: 700,
-              color: "#FF6B35",
+              color: "var(--accent)",
               letterSpacing: "2px",
               textTransform: "uppercase",
               marginBottom: 16,
@@ -614,13 +614,13 @@ export default function Progress() {
                   style={{
                     fontSize: 13,
                     fontWeight: 700,
-                    color: "#FF6B35",
+                    color: "var(--accent)",
                     marginBottom: 4,
                   }}
                 >
                   {m.title}
                 </p>
-                <p style={{ fontSize: 11, color: "#9e9e9e", lineHeight: 1.4 }}>
+                <p style={{ fontSize: 11, color: "var(--text-tertiary)", lineHeight: 1.4 }}>
                   {m.description}
                 </p>
               </div>
@@ -635,7 +635,7 @@ export default function Progress() {
           style={{
             fontSize: 11,
             fontWeight: 700,
-            color: "#FF6B35",
+            color: "var(--accent)",
             letterSpacing: "2px",
             textTransform: "uppercase",
             marginBottom: 16,
@@ -736,12 +736,12 @@ export default function Progress() {
                       textTransform: "capitalize",
                       letterSpacing: "0.4px",
                       background:
-                        summaryPeriod === p ? "#FF6B35" : "transparent",
+                        summaryPeriod === p ? "var(--accent)" : "transparent",
                       borderColor:
                         summaryPeriod === p
-                          ? "#FF6B35"
+                          ? "var(--accent)"
                           : "rgba(255,107,53,0.3)",
-                      color: summaryPeriod === p ? "#000" : "#9e9e9e",
+                      color: summaryPeriod === p ? "#000" : "var(--text-tertiary)",
                       transition: "all 0.2s",
                     }}
                   >
@@ -795,7 +795,7 @@ export default function Progress() {
                         value={s.trend
                           .replace(/_/g, " ")
                           .replace(/\b\w/g, (c) => c.toUpperCase())}
-                        color={s.trend === "on_track" ? "#4caf50" : "#FF6B35"}
+                        color={s.trend === "on_track" ? "#4caf50" : "var(--accent)"}
                       />
                     )}
                     {summaryPeriod === "monthly" && s.month && (
@@ -856,10 +856,10 @@ export default function Progress() {
           ) : logs.length === 0 ? (
             <div className="card" style={{ textAlign: "center", padding: 60 }}>
               <div style={{ display: "flex", justifyContent: "center" }}>
-                <FiBarChart2 size={60} color="#9e9e9e" />
+                <FiBarChart2 size={60} color="var(--text-tertiary)" />
               </div>
               <h3 style={{ marginTop: 16, marginBottom: 8 }}>No Data Yet</h3>
-              <p style={{ color: "#9e9e9e", fontSize: 14 }}>
+              <p style={{ color: "var(--text-tertiary)", fontSize: 14 }}>
                 Start logging your weight to see beautiful charts.
               </p>
             </div>
@@ -876,17 +876,17 @@ export default function Progress() {
                       <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop
                           offset="0%"
-                          stopColor="#FF6B35"
+                          stopColor="var(--accent)"
                           stopOpacity={0.3}
                         />
                         <stop
                           offset="100%"
-                          stopColor="#FF6B35"
+                          stopColor="var(--accent)"
                           stopOpacity={0}
                         />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-tertiary)" />
                     <XAxis
                       dataKey="date"
                       stroke="#616161"
@@ -901,10 +901,10 @@ export default function Progress() {
                     <Area
                       type="monotone"
                       dataKey="Weight"
-                      stroke="#FF6B35"
+                      stroke="var(--accent)"
                       fill="url(#goldGrad)"
                       strokeWidth={2}
-                      dot={{ fill: "#FF6B35", r: 3 }}
+                      dot={{ fill: "var(--accent)", r: 3 }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -920,7 +920,7 @@ export default function Progress() {
                   </h4>
                   <ResponsiveContainer width="100%" height={180}>
                     <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-tertiary)" />
                       <XAxis
                         dataKey="date"
                         stroke="#616161"
@@ -938,7 +938,7 @@ export default function Progress() {
                         dataKey="BMI"
                         stroke="#A08C29"
                         strokeWidth={2}
-                        dot={{ fill: "#FF6B35", r: 3 }}
+                        dot={{ fill: "var(--accent)", r: 3 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -977,7 +977,7 @@ export default function Progress() {
                             style={{
                               textAlign: "left",
                               padding: "8px 12px",
-                              color: "#9e9e9e",
+                              color: "var(--text-tertiary)",
                               fontSize: 11,
                               fontWeight: 600,
                               textTransform: "uppercase",
@@ -996,12 +996,12 @@ export default function Progress() {
                         .map((l) => (
                           <tr
                             key={l.id}
-                            style={{ borderBottom: "1px solid #1a1a1a" }}
+                            style={{ borderBottom: "1px solid var(--bg-tertiary)" }}
                           >
                             <td
                               style={{
                                 padding: "10px 12px",
-                                color: "#FF6B35",
+                                color: "var(--accent)",
                                 fontWeight: 500,
                               }}
                             >
@@ -1021,7 +1021,7 @@ export default function Progress() {
                                 : "—"}
                             </td>
                             <td
-                              style={{ padding: "10px 12px", color: "#9e9e9e" }}
+                              style={{ padding: "10px 12px", color: "var(--text-tertiary)" }}
                             >
                               {l.notes || "—"}
                             </td>
@@ -1046,12 +1046,12 @@ function SummaryRow({ label, value, color }) {
         display: "flex",
         justifyContent: "space-between",
         padding: "8px 0",
-        borderBottom: "1px solid #1a1a1a",
+        borderBottom: "1px solid var(--bg-tertiary)",
       }}
     >
-      <span style={{ fontSize: 13, color: "#9e9e9e" }}>{label}</span>
+      <span style={{ fontSize: 13, color: "var(--text-tertiary)" }}>{label}</span>
       <span
-        style={{ fontSize: 13, fontWeight: 700, color: color || "#e0e0e0" }}
+        style={{ fontSize: 13, fontWeight: 700, color: color || "var(--text-secondary)" }}
       >
         {value}
       </span>
@@ -1065,7 +1065,7 @@ function BMIRef({ color, label }) {
       <div
         style={{ width: 10, height: 10, borderRadius: 2, background: color }}
       />
-      <span style={{ fontSize: 11, color: "#9e9e9e" }}>{label}</span>
+      <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{label}</span>
     </div>
   );
 }
@@ -1074,7 +1074,7 @@ function MetricCard({
   label,
   value,
   sub,
-  subColor = "#9e9e9e",
+  subColor = "var(--text-tertiary)",
   icon,
   tooltip,
 }) {
@@ -1097,12 +1097,12 @@ function MetricCard({
           marginBottom: 10,
         }}
       >
-        <span style={{ color: "#FF6B35" }}>{icon}</span>
+        <span style={{ color: "var(--accent)" }}>{icon}</span>
         <p
           style={{
             fontSize: 11,
             fontWeight: 700,
-            color: "#FF6B35",
+            color: "var(--accent)",
             textTransform: "uppercase",
             letterSpacing: "0.8px",
           }}
@@ -1181,3 +1181,4 @@ function MacroCard({ label, grams, pct, color, note }) {
     </div>
   );
 }
+

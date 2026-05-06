@@ -229,7 +229,7 @@ export default function Profile() {
           <h1 style={{ fontSize: 28, fontWeight: 800 }}>
             My <span className="text-gold">Profile</span>
           </h1>
-          <p style={{ color: "#9e9e9e", marginTop: 6, fontSize: 14 }}>
+          <p style={{ color: "var(--text-tertiary)", marginTop: 6, fontSize: 14 }}>
             Manage your personal details and fitness plan
           </p>
         </div>
@@ -286,7 +286,7 @@ export default function Profile() {
                     justifyContent: "center",
                   }}
                 >
-                  <FiUser size={36} color="#FF6B35" />
+                  <FiUser size={36} color="var(--accent)" />
                 </div>
               )}
               {/* Change picture button */}
@@ -299,8 +299,8 @@ export default function Profile() {
                   width: 28,
                   height: 28,
                   borderRadius: "50%",
-                  background: "#FF6B35",
-                  border: "2px solid #0a0a0a",
+                  background: "var(--accent)",
+                  border: "2px solid var(--bg-primary)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -311,7 +311,7 @@ export default function Profile() {
                 <FiCamera size={13} color="#000" />
               </button>
             </div>
-            <p style={{ fontWeight: 700, fontSize: 15, color: "#e0e0e0" }}>
+            <p style={{ fontWeight: 700, fontSize: 15, color: "var(--text-secondary)" }}>
               {p?.username || "—"}
             </p>
             <p style={{ fontSize: 12, color: "#616161", marginTop: 2 }}>
@@ -319,7 +319,7 @@ export default function Profile() {
             </p>
             {profilePic && (
               <div style={{ marginTop: 12 }}>
-                <p style={{ fontSize: 11, color: "#FF6B35", marginBottom: 8 }}>
+                <p style={{ fontSize: 11, color: "var(--accent)", marginBottom: 8 }}>
                   New photo selected — save profile to apply
                 </p>
                 <button
@@ -344,7 +344,7 @@ export default function Profile() {
               style={{
                 fontSize: 13,
                 fontWeight: 700,
-                color: "#9e9e9e",
+                color: "var(--text-tertiary)",
                 textTransform: "uppercase",
                 letterSpacing: "0.8px",
                 marginBottom: 20,
@@ -390,7 +390,7 @@ export default function Profile() {
           <div
             style={{
               background:
-                "linear-gradient(135deg, #111 0%, rgba(255,107,53,0.06) 100%)",
+                "linear-gradient(135deg, var(--card-bg) 0%, rgba(255,107,53,0.06) 100%)",
               border: "1.5px solid rgba(255,107,53,0.2)",
               borderRadius: 12,
               padding: 24,
@@ -399,7 +399,7 @@ export default function Profile() {
             <p
               style={{
                 fontSize: 12,
-                color: "#9e9e9e",
+                color: "var(--text-tertiary)",
                 textTransform: "uppercase",
                 letterSpacing: "0.8px",
                 marginBottom: 12,
@@ -414,7 +414,7 @@ export default function Profile() {
                 justifyContent: "space-between",
               }}
             >
-              <span style={{ fontSize: 48, fontWeight: 900, color: "#FF6B35" }}>
+              <span style={{ fontSize: 48, fontWeight: 900, color: "var(--accent)" }}>
                 {liveBmi || p?.bmi?.toFixed(1) || "—"}
               </span>
               {bmiInfo && (
@@ -442,7 +442,7 @@ export default function Profile() {
                 style={{
                   fontSize: 13,
                   fontWeight: 700,
-                  color: "#9e9e9e",
+                  color: "var(--text-tertiary)",
                   textTransform: "uppercase",
                   letterSpacing: "0.8px",
                   display: "flex",
@@ -459,7 +459,7 @@ export default function Profile() {
                   style={{
                     background: "none",
                     border: "none",
-                    color: "#FF6B35",
+                    color: "var(--accent)",
                     cursor: "pointer",
                     fontSize: 12,
                     fontWeight: 600,
@@ -479,7 +479,7 @@ export default function Profile() {
                 <p
                   style={{
                     fontSize: 11,
-                    color: "#9e9e9e",
+                    color: "var(--text-tertiary)",
                     marginBottom: 10,
                     fontWeight: 600,
                     textTransform: "uppercase",
@@ -508,7 +508,7 @@ export default function Profile() {
                           goalForm.goal_type === g.value
                             ? "rgba(255,107,53,0.12)"
                             : "transparent",
-                        border: `1.5px solid ${goalForm.goal_type === g.value ? "#FF6B35" : "#2a2a2a"}`,
+                        border: `1.5px solid ${goalForm.goal_type === g.value ? "var(--accent)" : "#2a2a2a"}`,
                         borderRadius: 10,
                         padding: "10px 14px",
                         cursor: "pointer",
@@ -518,7 +518,7 @@ export default function Profile() {
                         transition: "all 0.2s",
                       }}
                     >
-                      <span style={{ color: "#FF6B35" }}>{g.icon}</span>
+                      <span style={{ color: "var(--accent)" }}>{g.icon}</span>
                       <div style={{ textAlign: "left" }}>
                         <p
                           style={{
@@ -526,8 +526,8 @@ export default function Profile() {
                             fontSize: 13,
                             color:
                               goalForm.goal_type === g.value
-                                ? "#FF6B35"
-                                : "#e0e0e0",
+                                ? "var(--accent)"
+                                : "var(--text-secondary)",
                           }}
                         >
                           {g.label}
@@ -544,7 +544,7 @@ export default function Profile() {
                 <p
                   style={{
                     fontSize: 11,
-                    color: "#9e9e9e",
+                    color: "var(--text-tertiary)",
                     marginBottom: 10,
                     fontWeight: 600,
                     textTransform: "uppercase",
@@ -573,7 +573,7 @@ export default function Profile() {
                           goalForm.activity_level === a.value
                             ? "rgba(255,107,53,0.08)"
                             : "transparent",
-                        border: `1.5px solid ${goalForm.activity_level === a.value ? "#FF6B35" : "#2a2a2a"}`,
+                        border: `1.5px solid ${goalForm.activity_level === a.value ? "var(--accent)" : "#2a2a2a"}`,
                         borderRadius: 8,
                         padding: "9px 14px",
                         cursor: "pointer",
@@ -589,8 +589,8 @@ export default function Profile() {
                           fontSize: 13,
                           color:
                             goalForm.activity_level === a.value
-                              ? "#FF6B35"
-                              : "#e0e0e0",
+                              ? "var(--accent)"
+                              : "var(--text-secondary)",
                         }}
                       >
                         {a.label}
@@ -656,7 +656,7 @@ export default function Profile() {
                     style={{
                       fontSize: 22,
                       fontWeight: 800,
-                      color: "#FF6B35",
+                      color: "var(--accent)",
                       textTransform: "capitalize",
                     }}
                   >
@@ -680,7 +680,7 @@ export default function Profile() {
                   <InfoRow
                     label="Goal Score"
                     value={
-                      <span style={{ color: "#FF6B35", fontWeight: 700 }}>
+                      <span style={{ color: "var(--accent)", fontWeight: 700 }}>
                         {Math.round(goal.ml_score * 100)}%
                       </span>
                     }
@@ -743,7 +743,7 @@ export default function Profile() {
                           style={{
                             fontSize: 11,
                             fontWeight: 700,
-                            color: "#FF6B35",
+                            color: "var(--accent)",
                             textTransform: "uppercase",
                             letterSpacing: "0.6px",
                             marginBottom: 6,
@@ -820,7 +820,7 @@ export default function Profile() {
               </>
             ) : (
               <div style={{ textAlign: "center", padding: "20px 0" }}>
-                <p style={{ color: "#9e9e9e", fontSize: 14, marginBottom: 16 }}>
+                <p style={{ color: "var(--text-tertiary)", fontSize: 14, marginBottom: 16 }}>
                   No active goal set
                 </p>
                 <button
@@ -1010,7 +1010,7 @@ export default function Profile() {
                     <p
                       style={{
                         fontSize: 11,
-                        color: "#9e9e9e",
+                        color: "var(--text-tertiary)",
                         marginBottom: 2,
                       }}
                     >
@@ -1020,7 +1020,7 @@ export default function Profile() {
                       style={{
                         fontSize: 24,
                         fontWeight: 800,
-                        color: "#FF6B35",
+                        color: "var(--accent)",
                       }}
                     >
                       {liveBmi}
@@ -1068,7 +1068,7 @@ function InfoRow({ icon, label, value }) {
         justifyContent: "space-between",
         alignItems: "center",
         padding: "10px 0",
-        borderBottom: "1px solid #1a1a1a",
+        borderBottom: "1px solid var(--bg-tertiary)",
       }}
     >
       <span
@@ -1077,12 +1077,12 @@ function InfoRow({ icon, label, value }) {
           alignItems: "center",
           gap: 8,
           fontSize: 13,
-          color: "#9e9e9e",
+          color: "var(--text-tertiary)",
         }}
       >
         {icon} {label}
       </span>
-      <span style={{ fontSize: 13, fontWeight: 600, color: "#e0e0e0" }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}>
         {value}
       </span>
     </div>
@@ -1097,15 +1097,16 @@ function ProfileDetailRow({ label, value }) {
         justifyContent: "space-between",
         alignItems: "center",
         padding: "12px 0",
-        borderBottom: "1px solid #1a1a1a",
+        borderBottom: "1px solid var(--bg-tertiary)",
       }}
     >
-      <span style={{ fontSize: 13, color: "#9e9e9e", fontWeight: 500 }}>
+      <span style={{ fontSize: 13, color: "var(--text-tertiary)", fontWeight: 500 }}>
         {label}
       </span>
-      <span style={{ fontSize: 14, fontWeight: 600, color: "#e0e0e0" }}>
+      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)" }}>
         {value}
       </span>
     </div>
   );
 }
+

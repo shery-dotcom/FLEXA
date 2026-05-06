@@ -35,7 +35,7 @@ export default function ForgotPassword() {
           <>
             <p
               style={{
-                color: "#9e9e9e",
+                color: "var(--text-tertiary)",
                 fontSize: 14,
                 textAlign: "center",
                 marginBottom: 28,
@@ -82,13 +82,13 @@ export default function ForgotPassword() {
             </h3>
             <p
               style={{
-                color: "#9e9e9e",
+                color: "var(--text-tertiary)",
                 fontSize: 14,
                 lineHeight: 1.6,
                 marginBottom: 20,
               }}
             >
-              If <span style={{ color: "#FF6B35" }}>{email}</span> is registered
+              If <span style={{ color: "var(--accent)" }}>{email}</span> is registered
               with Flexa, you'll receive a reset link shortly.
             </p>
 
@@ -107,7 +107,7 @@ export default function ForgotPassword() {
                 <p
                   style={{
                     fontSize: 11,
-                    color: "#FF6B35",
+                    color: "var(--accent)",
                     fontWeight: 700,
                     letterSpacing: "1px",
                     textTransform: "uppercase",
@@ -119,7 +119,7 @@ export default function ForgotPassword() {
                 <Link
                   to={`/reset-password?token=${devToken}`}
                   style={{
-                    color: "#FF6B35",
+                    color: "var(--accent)",
                     fontSize: 13,
                     wordBreak: "break-all",
                     textDecoration: "underline",
@@ -133,9 +133,9 @@ export default function ForgotPassword() {
         )}
 
         <div className="divider" style={{ margin: "28px 0" }} />
-        <p style={{ textAlign: "center", fontSize: 14, color: "#9e9e9e" }}>
+        <p style={{ textAlign: "center", fontSize: 14, color: "var(--text-tertiary)" }}>
           Remembered it?&nbsp;
-          <Link to="/login" style={{ color: "#FF6B35", fontWeight: 600 }}>
+          <Link to="/login" style={{ color: "var(--accent)", fontWeight: 600 }}>
             Back to Login
           </Link>
         </p>
@@ -143,3 +143,4 @@ export default function ForgotPassword() {
     </div>
   );
 }
+

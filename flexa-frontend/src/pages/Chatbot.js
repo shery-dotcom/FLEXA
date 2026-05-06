@@ -290,7 +290,7 @@ export default function Chatbot() {
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerLeft}>
-          <TbRobot size={24} color="#FF6B35" />
+          <TbRobot size={24} color="var(--accent)" />
           <span style={styles.headerTitle}>FLEXA</span>
           <span style={styles.headerSub}>Fitness Companion</span>
         </div>
@@ -502,7 +502,7 @@ export default function Chatbot() {
 const styles = {
   page: {
     minHeight: "100dvh",
-    background: "#0a0a0a",
+    background: "var(--bg-primary)",
     color: "#e8e8e8",
     display: "flex",
     flexDirection: "column",
@@ -528,7 +528,7 @@ const styles = {
   headerTitle: {
     fontSize: 20,
     fontWeight: 800,
-    color: "#FF6B35",
+    color: "var(--accent)",
     letterSpacing: 2,
   },
   headerSub: {
@@ -568,7 +568,7 @@ const styles = {
     fontWeight: 600,
   },
   mobileTabActive: {
-    color: "#FF6B35",
+    color: "var(--accent)",
   },
   main: {
     display: "flex",
@@ -607,7 +607,7 @@ const styles = {
     background: "rgba(255,107,53,0.08)",
     border: "1px solid rgba(255,107,53,0.2)",
     borderRadius: 8,
-    color: "#FF6B35",
+    color: "var(--accent)",
     padding: "7px 10px",
     fontSize: 12,
     cursor: "pointer",
@@ -650,7 +650,7 @@ const styles = {
     padding: "8px 12px",
     borderTop: "1px solid rgba(255,255,255,0.07)",
     alignItems: "flex-end",
-    background: "#0a0a0a",
+    background: "var(--bg-primary)",
     paddingBottom: "max(8px, env(safe-area-inset-bottom))",
     position: "sticky",
     bottom: 0,
@@ -673,10 +673,10 @@ const styles = {
     transition: "border-color 0.2s",
   },
   sendBtn: {
-    background: "linear-gradient(135deg, #FF6B35, #FF5520)",
+    background: "linear-gradient(135deg, var(--accent), #FF5520)",
     border: "none",
     borderRadius: 12,
-    color: "#0a0a0a",
+    color: "var(--bg-primary)",
     width: 42,
     height: 42,
     display: "flex",
@@ -722,3 +722,4 @@ if (typeof document !== "undefined") {
     document.head.appendChild(style);
   }
 }
+

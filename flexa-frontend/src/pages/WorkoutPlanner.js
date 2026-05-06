@@ -253,7 +253,7 @@ export default function WorkoutPlanner() {
           <h1 style={{ fontSize: 28, fontWeight: 800 }}>
             Workout <span className="text-gold">Planner</span>
           </h1>
-          <p style={{ color: "#9e9e9e", marginTop: 6, fontSize: 14 }}>
+          <p style={{ color: "var(--text-tertiary)", marginTop: 6, fontSize: 14 }}>
             AI-generated weekly training plan built around your goal
           </p>
         </div>
@@ -270,7 +270,7 @@ export default function WorkoutPlanner() {
             </button>
             <span
               style={{
-                color: "#FF6B35",
+                color: "var(--accent)",
                 fontWeight: 700,
                 minWidth: 60,
                 textAlign: "center",
@@ -379,7 +379,7 @@ function WeekGrid({ workouts, onViewWorkout }) {
               background: isRest
                 ? "rgba(255,255,255,0.015)"
                 : "linear-gradient(145deg, #141414 0%, #0e0e0e 100%)",
-              border: `1px solid ${isRest ? "#1a1a1a" : "#2a2a2a"}`,
+              border: `1px solid ${isRest ? "var(--bg-tertiary)" : "#2a2a2a"}`,
               borderRadius: 14,
               padding: "22px 20px",
               display: "flex",
@@ -400,7 +400,7 @@ function WeekGrid({ workouts, onViewWorkout }) {
                   bottom: 0,
                   width: 3,
                   background:
-                    "linear-gradient(180deg, #FF6B35 0%, rgba(255,107,53,0.3) 100%)",
+                    "linear-gradient(180deg, var(--accent) 0%, rgba(255,107,53,0.3) 100%)",
                   borderRadius: "14px 0 0 14px",
                 }}
               />
@@ -419,7 +419,7 @@ function WeekGrid({ workouts, onViewWorkout }) {
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  color: isRest ? "#303030" : "#FF6B35",
+                  color: isRest ? "#303030" : "var(--accent)",
                   textTransform: "uppercase",
                   letterSpacing: "1.2px",
                   margin: 0,
@@ -436,15 +436,15 @@ function WeekGrid({ workouts, onViewWorkout }) {
                       difficulty === "advanced"
                         ? "#ef5350"
                         : difficulty === "intermediate"
-                          ? "#FF6B35"
-                          : "#4ec9b0",
+                          ? "var(--accent)"
+                          : "var(--macro-protein)",
                     background:
                       difficulty === "advanced"
                         ? "rgba(239,83,80,0.1)"
                         : difficulty === "intermediate"
                           ? "rgba(255,107,53,0.1)"
                           : "rgba(78,201,176,0.1)",
-                    border: `1px solid ${difficulty === "advanced" ? "#ef535033" : difficulty === "intermediate" ? "#FF6B3533" : "#4ec9b033"}`,
+                    border: `1px solid ${difficulty === "advanced" ? "#ef535033" : difficulty === "intermediate" ? "var(--accent)33" : "var(--macro-protein)33"}`,
                     borderRadius: 20,
                     padding: "2px 8px",
                     textTransform: "capitalize",
@@ -460,7 +460,7 @@ function WeekGrid({ workouts, onViewWorkout }) {
               style={{
                 fontSize: 16,
                 fontWeight: 700,
-                color: isRest ? "#252525" : "#e0e0e0",
+                color: isRest ? "#252525" : "var(--text-secondary)",
                 marginBottom: isRest ? 0 : 6,
                 lineHeight: 1.3,
               }}
@@ -501,7 +501,7 @@ function WeekGrid({ workouts, onViewWorkout }) {
                     gap: 4,
                   }}
                 >
-                  <FiActivity size={11} color="#FF6B35" />
+                  <FiActivity size={11} color="var(--accent)" />
                   {exCount} exercises
                 </span>
                 {duration > 0 && (
@@ -514,7 +514,7 @@ function WeekGrid({ workouts, onViewWorkout }) {
                       gap: 4,
                     }}
                   >
-                    <FiClock size={11} color="#FF6B35" />
+                    <FiClock size={11} color="var(--accent)" />
                     {duration} min
                   </span>
                 )}
@@ -530,7 +530,7 @@ function WeekGrid({ workouts, onViewWorkout }) {
                   border: "1px solid rgba(255,107,53,0.2)",
                   borderRadius: 9,
                   padding: "10px 14px",
-                  color: "#FF6B35",
+                  color: "var(--accent)",
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: "pointer",
@@ -570,10 +570,10 @@ function StatPill({ icon, label }) {
         alignItems: "center",
         gap: 6,
         fontSize: 13,
-        color: "#9e9e9e",
+        color: "var(--text-tertiary)",
       }}
     >
-      <span style={{ color: "#FF6B35" }}>{icon}</span>
+      <span style={{ color: "var(--accent)" }}>{icon}</span>
       {label}
     </div>
   );
@@ -659,7 +659,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
           toast("Rest complete — start your next set!", {
             duration: 4000,
             style: {
-              background: "#1a1a1a",
+              background: "var(--bg-tertiary)",
               border: "1px solid #4caf50",
               color: "#4caf50",
             },
@@ -761,7 +761,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
       toast("Tap ▶ to start the set timer first!", {
         duration: 3000,
         style: {
-          background: "#1a1a1a",
+          background: "var(--bg-tertiary)",
           border: "1px solid #ff9800",
           color: "#ff9800",
         },
@@ -775,7 +775,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
         {
           duration: 4500,
           style: {
-            background: "#1a1a1a",
+            background: "var(--bg-tertiary)",
             border: "1px solid #ef5350",
             color: "#ef5350",
           },
@@ -800,7 +800,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
           {
             duration: 6000,
             style: {
-              background: "#1a1a1a",
+              background: "var(--bg-tertiary)",
               border: "1px solid #ff9800",
               color: "#ff9800",
             },
@@ -877,7 +877,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
       toast("Log at least one completed set before finishing this workout.", {
         duration: 3500,
         style: {
-          background: "#1a1a1a",
+          background: "var(--bg-tertiary)",
           border: "1px solid #ff9800",
           color: "#ff9800",
         },
@@ -942,7 +942,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
           style={{
             background: "none",
             border: "none",
-            color: "#9e9e9e",
+            color: "var(--text-tertiary)",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
@@ -958,7 +958,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
             fontFamily: "monospace",
             fontSize: 16,
             fontWeight: 700,
-            color: "#FF6B35",
+            color: "var(--accent)",
             display: "flex",
             alignItems: "center",
             gap: 6,
@@ -975,7 +975,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
             display: "inline-block",
             fontSize: 11,
             fontWeight: 700,
-            color: "#FF6B35",
+            color: "var(--accent)",
             background: "rgba(255,107,53,0.1)",
             border: "1px solid rgba(255,107,53,0.25)",
             borderRadius: 6,
@@ -990,7 +990,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
         <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>
           {workout.name}
         </h1>
-        <p style={{ color: "#9e9e9e", fontSize: 13, marginBottom: 10 }}>
+        <p style={{ color: "var(--text-tertiary)", fontSize: 13, marginBottom: 10 }}>
           {getMuscleLabel(workout)}
         </p>
         <div
@@ -1036,10 +1036,10 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
               marginBottom: 6,
             }}
           >
-            <span style={{ fontSize: 12, color: "#9e9e9e" }}>
+            <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
               {completedCount} of {exercises.length} exercises logged
             </span>
-            <span style={{ fontSize: 12, color: "#FF6B35", fontWeight: 700 }}>
+            <span style={{ fontSize: 12, color: "var(--accent)", fontWeight: 700 }}>
               {exercises.length > 0
                 ? Math.round((completedCount / exercises.length) * 100)
                 : 0}
@@ -1048,7 +1048,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
           </div>
           <div
             style={{
-              background: "#1a1a1a",
+              background: "var(--bg-tertiary)",
               borderRadius: 6,
               height: 5,
               overflow: "hidden",
@@ -1058,7 +1058,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
               style={{
                 height: "100%",
                 width: `${exercises.length > 0 ? (completedCount / exercises.length) * 100 : 0}%`,
-                background: "#FF6B35",
+                background: "var(--accent)",
                 borderRadius: 6,
                 transition: "width 0.4s ease",
               }}
@@ -1104,7 +1104,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                 {fmtTime(restSec)}
               </span>
             </div>
-            <div style={{ background: "#1a1a1a", borderRadius: 4, height: 4 }}>
+            <div style={{ background: "var(--bg-tertiary)", borderRadius: 4, height: 4 }}>
               <div
                 style={{
                   width: `${restMax > 0 ? (restSec / restMax) * 100 : 0}%`,
@@ -1161,7 +1161,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                   padding: "12px 16px",
                   background: warmupChecked[i]
                     ? "rgba(76,175,80,0.07)"
-                    : "#111",
+                    : "var(--card-bg)",
                   border: `1px solid ${warmupChecked[i] ? "rgba(76,175,80,0.3)" : "#1e1e1e"}`,
                   borderRadius: 10,
                   cursor: "pointer",
@@ -1190,7 +1190,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                     style={{
                       fontSize: 14,
                       fontWeight: 600,
-                      color: warmupChecked[i] ? "#9e9e9e" : "#e0e0e0",
+                      color: warmupChecked[i] ? "var(--text-tertiary)" : "var(--text-secondary)",
                       textDecoration: warmupChecked[i]
                         ? "line-through"
                         : "none",
@@ -1222,7 +1222,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
         <SectionLabel
           icon={<FiActivity size={13} />}
           label="Exercises"
-          color="#FF6B35"
+          color="var(--accent)"
         />
         <button
           type="button"
@@ -1266,8 +1266,8 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                 key={exIdx}
                 style={{
                   background: hasProgress
-                    ? "linear-gradient(135deg,rgba(76,175,80,0.05) 0%,#111 100%)"
-                    : "#111",
+                    ? "linear-gradient(135deg,rgba(76,175,80,0.05) 0%,var(--card-bg) 100%)"
+                    : "var(--card-bg)",
                   border: `1px solid ${
                     hasProgress
                       ? "rgba(76,175,80,0.25)"
@@ -1315,7 +1315,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                           justifyContent: "center",
                           fontSize: 11,
                           fontWeight: 700,
-                          color: hasProgress ? "#4caf50" : "#FF6B35",
+                          color: hasProgress ? "#4caf50" : "var(--accent)",
                           flexShrink: 0,
                         }}
                       >
@@ -1326,7 +1326,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                           style={{
                             fontSize: 14,
                             fontWeight: 700,
-                            color: "#e0e0e0",
+                            color: "var(--text-secondary)",
                             marginBottom: 2,
                           }}
                         >
@@ -1351,7 +1351,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                           style={{
                             fontSize: 14,
                             fontWeight: 800,
-                            color: "#FF6B35",
+                            color: "var(--accent)",
                           }}
                         >
                           {ex.sets} × {ex.reps}
@@ -1448,7 +1448,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                             style={{
                               fontSize: 13,
                               fontWeight: 700,
-                              color: row.done ? "#4caf50" : "#9e9e9e",
+                              color: row.done ? "#4caf50" : "var(--text-tertiary)",
                             }}
                           >
                             {rowIdx + 1}
@@ -1469,7 +1469,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                               borderBottom: row.done
                                 ? "none"
                                 : "1px solid #2a2a2a",
-                              color: row.done ? "#616161" : "#e0e0e0",
+                              color: row.done ? "#616161" : "var(--text-secondary)",
                               fontSize: 14,
                               padding: "4px 4px 4px 0",
                               width: "70%",
@@ -1491,7 +1491,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                               borderBottom: row.done
                                 ? "none"
                                 : "1px solid #2a2a2a",
-                              color: row.done ? "#616161" : "#e0e0e0",
+                              color: row.done ? "#616161" : "var(--text-secondary)",
                               fontSize: 14,
                               padding: "4px 4px 4px 0",
                               width: "70%",
@@ -1538,7 +1538,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                                 border: "1px solid rgba(255,107,53,0.3)",
                                 borderRadius: 6,
                                 padding: "4px 6px",
-                                color: "#FF6B35",
+                                color: "var(--accent)",
                                 fontSize: 11,
                                 fontWeight: 700,
                                 cursor: "pointer",
@@ -1604,8 +1604,8 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                           gap: 6,
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = "#FF6B35";
-                          e.currentTarget.style.color = "#FF6B35";
+                          e.currentTarget.style.borderColor = "var(--accent)";
+                          e.currentTarget.style.color = "var(--accent)";
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.borderColor = "#2a2a2a";
@@ -1661,7 +1661,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                   padding: "12px 16px",
                   background: cooldownChecked[i]
                     ? "rgba(255,107,53,0.06)"
-                    : "#111",
+                    : "var(--card-bg)",
                   border: `1px solid ${
                     cooldownChecked[i] ? "rgba(255,107,53,0.25)" : "#1e1e1e"
                   }`,
@@ -1675,7 +1675,7 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                     width: 22,
                     height: 22,
                     borderRadius: "50%",
-                    border: `2px solid ${cooldownChecked[i] ? "#FF6B35" : "#333"}`,
+                    border: `2px solid ${cooldownChecked[i] ? "var(--accent)" : "#333"}`,
                     background: cooldownChecked[i]
                       ? "rgba(255,107,53,0.15)"
                       : "transparent",
@@ -1685,14 +1685,14 @@ function WorkoutSessionScreen({ workout, onBack, onComplete }) {
                     flexShrink: 0,
                   }}
                 >
-                  {cooldownChecked[i] && <FiCheck size={12} color="#FF6B35" />}
+                  {cooldownChecked[i] && <FiCheck size={12} color="var(--accent)" />}
                 </div>
                 <div style={{ flex: 1 }}>
                   <span
                     style={{
                       fontSize: 14,
                       fontWeight: 600,
-                      color: cooldownChecked[i] ? "#9e9e9e" : "#e0e0e0",
+                      color: cooldownChecked[i] ? "var(--text-tertiary)" : "var(--text-secondary)",
                       textDecoration: cooldownChecked[i]
                         ? "line-through"
                         : "none",
@@ -1778,14 +1778,14 @@ function EmptyState({
           margin: "0 auto 24px",
         }}
       >
-        <FiActivity size={32} color="#FF6B35" />
+        <FiActivity size={32} color="var(--accent)" />
       </div>
       <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
         No workout plan yet
       </h2>
       <p
         style={{
-          color: "#9e9e9e",
+          color: "var(--text-tertiary)",
           fontSize: 14,
           marginBottom: 36,
           lineHeight: 1.6,
@@ -1800,7 +1800,7 @@ function EmptyState({
           style={{
             fontSize: 11,
             fontWeight: 700,
-            color: "#FF6B35",
+            color: "var(--accent)",
             textTransform: "uppercase",
             letterSpacing: "1px",
             marginBottom: 10,
@@ -1817,10 +1817,10 @@ function EmptyState({
                 padding: "10px 18px",
                 borderRadius: 8,
                 border: "1px solid",
-                borderColor: freq === f.value ? "#FF6B35" : "#2a2a2a",
+                borderColor: freq === f.value ? "var(--accent)" : "#2a2a2a",
                 background:
                   freq === f.value ? "rgba(255,107,53,0.1)" : "transparent",
-                color: freq === f.value ? "#FF6B35" : "#9e9e9e",
+                color: freq === f.value ? "var(--accent)" : "var(--text-tertiary)",
                 fontSize: 13,
                 fontWeight: 600,
                 cursor: "pointer",
@@ -1837,7 +1837,7 @@ function EmptyState({
           style={{
             fontSize: 11,
             fontWeight: 700,
-            color: "#FF6B35",
+            color: "var(--accent)",
             textTransform: "uppercase",
             letterSpacing: "1px",
             marginBottom: 10,
@@ -1855,12 +1855,12 @@ function EmptyState({
                 borderRadius: 8,
                 border: "1px solid",
                 borderColor:
-                  experienceLevel === e.value ? "#FF6B35" : "#2a2a2a",
+                  experienceLevel === e.value ? "var(--accent)" : "#2a2a2a",
                 background:
                   experienceLevel === e.value
                     ? "rgba(255,107,53,0.1)"
                     : "transparent",
-                color: experienceLevel === e.value ? "#FF6B35" : "#9e9e9e",
+                color: experienceLevel === e.value ? "var(--accent)" : "var(--text-tertiary)",
                 fontSize: 13,
                 fontWeight: 600,
                 cursor: "pointer",
@@ -1901,7 +1901,7 @@ function WeekEmptyCard({ week, generating, onGenerate }) {
       <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
         Week {week} not generated yet
       </p>
-      <p style={{ color: "#9e9e9e", fontSize: 14, marginBottom: 24 }}>
+      <p style={{ color: "var(--text-tertiary)", fontSize: 14, marginBottom: 24 }}>
         Generate this week's workouts to continue your plan.
       </p>
       <button
@@ -1942,7 +1942,7 @@ function ChangePlanOverlay({
     >
       <div
         style={{
-          background: "#111",
+          background: "var(--card-bg)",
           border: "1px solid rgba(255,107,53,0.25)",
           borderRadius: 16,
           padding: "32px",
@@ -1953,7 +1953,7 @@ function ChangePlanOverlay({
         <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>
           Change Training Plan
         </h3>
-        <p style={{ color: "#9e9e9e", fontSize: 14, marginBottom: 28 }}>
+        <p style={{ color: "var(--text-tertiary)", fontSize: 14, marginBottom: 28 }}>
           This will replace your existing plan with a new one.
         </p>
 
@@ -1962,7 +1962,7 @@ function ChangePlanOverlay({
             style={{
               fontSize: 11,
               fontWeight: 700,
-              color: "#FF6B35",
+              color: "var(--accent)",
               textTransform: "uppercase",
               letterSpacing: "1px",
               marginBottom: 10,
@@ -1979,10 +1979,10 @@ function ChangePlanOverlay({
                   padding: "9px 16px",
                   borderRadius: 8,
                   border: "1px solid",
-                  borderColor: freq === f.value ? "#FF6B35" : "#2a2a2a",
+                  borderColor: freq === f.value ? "var(--accent)" : "#2a2a2a",
                   background:
                     freq === f.value ? "rgba(255,107,53,0.1)" : "transparent",
-                  color: freq === f.value ? "#FF6B35" : "#9e9e9e",
+                  color: freq === f.value ? "var(--accent)" : "var(--text-tertiary)",
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: "pointer",
@@ -1999,7 +1999,7 @@ function ChangePlanOverlay({
             style={{
               fontSize: 11,
               fontWeight: 700,
-              color: "#FF6B35",
+              color: "var(--accent)",
               textTransform: "uppercase",
               letterSpacing: "1px",
               marginBottom: 10,
@@ -2017,12 +2017,12 @@ function ChangePlanOverlay({
                   borderRadius: 8,
                   border: "1px solid",
                   borderColor:
-                    experienceLevel === e.value ? "#FF6B35" : "#2a2a2a",
+                    experienceLevel === e.value ? "var(--accent)" : "#2a2a2a",
                   background:
                     experienceLevel === e.value
                       ? "rgba(255,107,53,0.1)"
                       : "transparent",
-                  color: experienceLevel === e.value ? "#FF6B35" : "#9e9e9e",
+                  color: experienceLevel === e.value ? "var(--accent)" : "var(--text-tertiary)",
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: "pointer",
@@ -2055,3 +2055,4 @@ function ChangePlanOverlay({
     </div>
   );
 }
+
