@@ -10,7 +10,7 @@ Write-Host "Waiting for backend to initialize..." -ForegroundColor Gray
 Start-Sleep -Seconds 4
 
 Write-Host "[2/2] Starting React frontend (port 3000)..." -ForegroundColor Cyan
-Start-Process -FilePath "cmd" -ArgumentList "/k cd /d `"d:\CUI'26\FYP\Flexa\flexa-frontend`" && node node_modules\react-scripts\bin\react-scripts.js start" -WindowStyle Normal
+Start-Process -FilePath "cmd" -ArgumentList "/k cd /d `"d:\CUI'26\FYP\Flexa\flexa-frontend`" && npm start" -WindowStyle Normal
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Yellow
