@@ -79,6 +79,14 @@ export function AuthProvider({ children }) {
 
   const register = async (email, password, phone) => {
     try {
+      // Validate inputs
+      if (!email || !password) {
+        throw new Error("Email and password are required");
+      }
+      if (password.length < 8) {
+        throw new Error("Password must be at least 8 characters");
+      }
+
       const res = await api.post("/auth/register", { email, password, phone });
       const accessToken = res.data?.access_token;
       const refreshToken = res.data?.refresh_token;
@@ -97,14 +105,37 @@ export function AuthProvider({ children }) {
         message: res.data?.message || "Account created and signed in.",
       };
     } catch (err) {
-      const detail = String(err?.response?.data?.detail || "").toLowerCase();
+      const detail = String(
+        err?.response?.data?.detail || err.message || "",
+      ).toLowerCase();
+
+      // Handle specific error cases
       if (
         detail.includes("already registered") ||
         detail.includes("already exists")
       ) {
-        await login(email, password);
-        return { message: "Account already exists. Signed you in." };
+        try {
+          await login(email, password);
+          return { message: "Account already exists. Signed you in." };
+        } catch (loginErr) {
+          throw new Error(
+            "Email already registered. Use correct password to sign in.",
+          );
+        }
       }
+
+      if (detail.includes("google sign-in")) {
+        throw new Error(
+          "This account uses Google sign-in. Please use 'Continue with Google'.",
+        );
+      }
+
+      if (detail.includes("invalid") || detail.includes("failed")) {
+        throw new Error(
+          "Registration failed. Please check your details and try again.",
+        );
+      }
+
       throw err;
     }
   };

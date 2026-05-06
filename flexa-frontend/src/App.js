@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
@@ -19,6 +20,7 @@ import GoogleAuthSuccess from "./pages/GoogleAuthSuccess";
 import PostureTrackerPage from "./pages/PostureTrackerPage";
 import Marketplace from "./pages/Marketplace";
 import OpeningPage from "./pages/OpeningPage";
+import "./styles/theme.css";
 
 // Guard: logged in but no profile → send to profile-setup
 function OnboardingGuard({ children }) {
@@ -48,124 +50,126 @@ function App() {
   }
 
   return (
-    <div className="page">
-      {user && <Navbar />}
-      <Routes>
-        {/* Public routes */}
-        <Route
-          path="/login"
-          element={!user ? <Login /> : <Navigate to="/dashboard" />}
-        />
-        <Route
-          path="/register"
-          element={!user ? <Register /> : <Navigate to="/dashboard" />}
-        />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
+    <ThemeProvider>
+      <div className="page">
+        {user && <Navbar />}
+        <Routes>
+          {/* Public routes */}
+          <Route
+            path="/login"
+            element={!user ? <Login /> : <Navigate to="/dashboard" />}
+          />
+          <Route
+            path="/register"
+            element={!user ? <Register /> : <Navigate to="/dashboard" />}
+          />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
 
-        {/* Onboarding routes — accessible even without profile */}
-        <Route
-          path="/profile-setup"
-          element={
-            <ProtectedRoute>
-              <ProfileSetup />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/goal-setup"
-          element={
-            <ProtectedRoute>
-              <GoalSetup />
-            </ProtectedRoute>
-          }
-        />
+          {/* Onboarding routes — accessible even without profile */}
+          <Route
+            path="/profile-setup"
+            element={
+              <ProtectedRoute>
+                <ProfileSetup />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/goal-setup"
+            element={
+              <ProtectedRoute>
+                <GoalSetup />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Profile page — always available once logged in */}
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          }
-        />
+          {/* Profile page — always available once logged in */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Main app routes — require completed profile */}
-        <Route
-          path="/workouts"
-          element={
-            <OnboardingGuard>
-              <WorkoutPlanner />
-            </OnboardingGuard>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <OnboardingGuard>
-              <Dashboard />
-            </OnboardingGuard>
-          }
-        />
-        <Route
-          path="/progress"
-          element={
-            <OnboardingGuard>
-              <Progress />
-            </OnboardingGuard>
-          }
-        />
-        <Route
-          path="/diet-planner"
-          element={
-            <OnboardingGuard>
-              <DietPlanner />
-            </OnboardingGuard>
-          }
-        />
-        <Route
-          path="/calorie-estimator"
-          element={
-            <OnboardingGuard>
-              <CalorieEstimator />
-            </OnboardingGuard>
-          }
-        />
-        <Route
-          path="/chatbot"
-          element={
-            <OnboardingGuard>
-              <Chatbot />
-            </OnboardingGuard>
-          }
-        />
-        <Route
-          path="/posture-tracker"
-          element={
-            <OnboardingGuard>
-              <PostureTrackerPage />
-            </OnboardingGuard>
-          }
-        />
-        <Route
-          path="/marketplace"
-          element={
-            <OnboardingGuard>
-              <Marketplace />
-            </OnboardingGuard>
-          }
-        />
+          {/* Main app routes — require completed profile */}
+          <Route
+            path="/workouts"
+            element={
+              <OnboardingGuard>
+                <WorkoutPlanner />
+              </OnboardingGuard>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <OnboardingGuard>
+                <Dashboard />
+              </OnboardingGuard>
+            }
+          />
+          <Route
+            path="/progress"
+            element={
+              <OnboardingGuard>
+                <Progress />
+              </OnboardingGuard>
+            }
+          />
+          <Route
+            path="/diet-planner"
+            element={
+              <OnboardingGuard>
+                <DietPlanner />
+              </OnboardingGuard>
+            }
+          />
+          <Route
+            path="/calorie-estimator"
+            element={
+              <OnboardingGuard>
+                <CalorieEstimator />
+              </OnboardingGuard>
+            }
+          />
+          <Route
+            path="/chatbot"
+            element={
+              <OnboardingGuard>
+                <Chatbot />
+              </OnboardingGuard>
+            }
+          />
+          <Route
+            path="/posture-tracker"
+            element={
+              <OnboardingGuard>
+                <PostureTrackerPage />
+              </OnboardingGuard>
+            }
+          />
+          <Route
+            path="/marketplace"
+            element={
+              <OnboardingGuard>
+                <Marketplace />
+              </OnboardingGuard>
+            }
+          />
 
-        {/* Default */}
-        <Route
-          path="/"
-          element={!user ? <OpeningPage /> : <Navigate to="/dashboard" />}
-        />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </div>
+          {/* Default */}
+          <Route
+            path="/"
+            element={!user ? <OpeningPage /> : <Navigate to="/dashboard" />}
+          />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </div>
+    </ThemeProvider>
   );
 }
 

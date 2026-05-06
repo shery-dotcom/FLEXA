@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import api from "../api/axios";
 import toast from "react-hot-toast";
+import { apiCache } from "../utils/apiCache";
 
 const FILTERS = [
   { value: "", label: "All" },
@@ -10,6 +11,7 @@ const FILTERS = [
 ];
 
 const STATIC_LOCATION_LABEL = "G-13 Vostro World";
+const ITEMS_PER_PAGE = 12;
 
 export default function Marketplace() {
   const location = useLocation();
@@ -19,6 +21,8 @@ export default function Marketplace() {
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [specialization, setSpecialization] = useState("");
   const [professionals, setProfessionals] = useState([]);
+  const [filteredProfessionals, setFilteredProfessionals] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedProfessional, setSelectedProfessional] = useState(null);
   const [selectedSlotId, setSelectedSlotId] = useState("");
   const [bookingNotes, setBookingNotes] = useState("");
@@ -27,13 +31,29 @@ export default function Marketplace() {
   const fetchProfessionals = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get("/professionals/search", {
-        params: specialization ? { specialization } : {},
-      });
-      setProfessionals(res.data?.professionals || []);
-    } catch {
+      const cacheKey = `professionals_${specialization}`;
+
+      // Try to get from cache first
+      let data = apiCache.get(cacheKey);
+
+      if (!data) {
+        // Cache miss, fetch from API
+        const res = await api.get("/professionals/search", {
+          params: specialization ? { specialization } : {},
+        });
+        data = res.data?.professionals || [];
+
+        // Cache the results for 5 minutes
+        apiCache.set(cacheKey, data, 300);
+      }
+
+      setProfessionals(data);
+      setFilteredProfessionals(data);
+      setCurrentPage(1);
+    } catch (error) {
       toast.error("Could not load experts.");
       setProfessionals([]);
+      setFilteredProfessionals([]);
     } finally {
       setLoading(false);
     }
@@ -228,159 +248,382 @@ export default function Marketplace() {
           No professionals available right now.
         </div>
       ) : (
-        <div
-          className="marketplace-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: 14,
-          }}
-        >
-          {professionals.map((p) => {
-            const profName = p.user?.username || p.name || "Professional";
-            return (
-              <div
-                key={p.id}
-                style={{
-                  border: "1px solid #FF6B35",
-                  background:
-                    "linear-gradient(135deg, #1a1a2e 0%, #0f0f0f 100%)",
-                  borderRadius: 14,
-                  padding: 16,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 12,
-                  minHeight: 320,
-                  transition: "all 0.3s ease",
-                  cursor: "pointer",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.borderColor = "#ffc857")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.borderColor = "#FF6B35")
-                }
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    gap: 10,
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <h3
+        <>
+          <div style={{ marginBottom: 16, fontSize: 13, color: "#888" }}>
+            Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
+            {Math.min(currentPage * ITEMS_PER_PAGE, professionals.length)} of{" "}
+            {professionals.length} experts
+          </div>
+          <div
+            className="marketplace-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+              gap: 16,
+            }}
+          >
+            {professionals
+              .slice(
+                (currentPage - 1) * ITEMS_PER_PAGE,
+                currentPage * ITEMS_PER_PAGE,
+              )
+              .map((p) => {
+                const profName = p.user?.username || p.name || "Professional";
+                const initials = profName
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase();
+                return (
+                  <div
+                    key={p.id}
+                    style={{
+                      border: "1px solid rgba(255,107,53,0.3)",
+                      background:
+                        "linear-gradient(135deg, rgba(26,26,46,0.8) 0%, rgba(15,15,15,0.9) 100%)",
+                      borderRadius: 14,
+                      padding: 18,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 14,
+                      minHeight: 380,
+                      transition: "all 0.3s ease",
+                      cursor: "pointer",
+                      boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
+                      "&:hover": {
+                        transform: "translateY(-4px)",
+                      },
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "#FF6B35";
+                      e.currentTarget.style.boxShadow =
+                        "0 8px 24px rgba(255,107,53,0.2)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor =
+                        "rgba(255,107,53,0.3)";
+                      e.currentTarget.style.boxShadow =
+                        "0 4px 16px rgba(0,0,0,0.3)";
+                    }}
+                  >
+                    {/* Avatar & Header */}
+                    <div
                       style={{
-                        fontSize: 18,
+                        display: "flex",
+                        gap: 12,
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 56,
+                          height: 56,
+                          borderRadius: "50%",
+                          background:
+                            "linear-gradient(135deg, #FF6B35, #ffc857)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 20,
+                          fontWeight: 700,
+                          color: "#000",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {initials}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h3
+                          style={{
+                            fontSize: 16,
+                            fontWeight: 700,
+                            margin: 0,
+                            color: "#fff",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {profName}
+                        </h3>
+                        <p
+                          style={{
+                            fontSize: 12,
+                            color: "#4ec9b0",
+                            margin: "4px 0 0",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {formatSpecialization(p.specialization)}
+                        </p>
+                        <p
+                          style={{
+                            fontSize: 11,
+                            color: "#888",
+                            margin: "2px 0 0",
+                          }}
+                        >
+                          📍 {p.location || "Multiple locations"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Rating & Experience */}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 8,
+                        fontSize: 12,
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: "rgba(255,107,53,0.1)",
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          textAlign: "center",
+                          border: "1px solid rgba(255,107,53,0.2)",
+                        }}
+                      >
+                        <div style={{ color: "#888", fontSize: 10 }}>
+                          Rating
+                        </div>
+                        <div style={{ color: "#ffc857", fontWeight: 700 }}>
+                          ⭐ {p.average_rating ?? "-"}/5
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          background: "rgba(78,201,176,0.1)",
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          textAlign: "center",
+                          border: "1px solid rgba(78,201,176,0.2)",
+                        }}
+                      >
+                        <div style={{ color: "#888", fontSize: 10 }}>
+                          Experience
+                        </div>
+                        <div style={{ color: "#4ec9b0", fontWeight: 700 }}>
+                          {p.years_experience ?? 0}+ years
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div
+                      style={{
+                        borderTop: "1px solid rgba(255,255,255,0.1)",
+                        paddingTop: 10,
+                      }}
+                    >
+                      <p
+                        style={{
+                          color: "#c8c8c8",
+                          fontSize: 13,
+                          margin: 0,
+                          lineHeight: 1.5,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {p.bio || "Professional fitness and wellness expert"}
+                      </p>
+                    </div>
+
+                    {/* Stats */}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr 1fr",
+                        gap: 8,
+                        fontSize: 11,
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: "#121925",
+                          padding: "8px",
+                          borderRadius: 6,
+                          textAlign: "center",
+                        }}
+                      >
+                        <div style={{ color: "#888", fontSize: 9 }}>
+                          Reviews
+                        </div>
+                        <div style={{ color: "#fff", fontWeight: 600 }}>
+                          {p.total_reviews ?? 0}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          background: "#121925",
+                          padding: "8px",
+                          borderRadius: 6,
+                          textAlign: "center",
+                        }}
+                      >
+                        <div style={{ color: "#888", fontSize: 9 }}>
+                          Sessions
+                        </div>
+                        <div style={{ color: "#fff", fontWeight: 600 }}>
+                          {p.total_sessions_completed ?? 0}+
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          background: "#121925",
+                          padding: "8px",
+                          borderRadius: 6,
+                          textAlign: "center",
+                        }}
+                      >
+                        <div style={{ color: "#888", fontSize: 9 }}>Price</div>
+                        <div style={{ color: "#ffc857", fontWeight: 700 }}>
+                          ${p.consultation_price_usd}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CTA Button */}
+                    <button
+                      onClick={() => openProfessional(p.id)}
+                      style={{
+                        marginTop: "auto",
+                        background: "linear-gradient(135deg, #FF6B35, #ffc857)",
+                        border: "none",
+                        color: "#000",
+                        borderRadius: 10,
+                        padding: "12px 16px",
                         fontWeight: 700,
-                        margin: 0,
-                        color: "#fff",
+                        cursor: "pointer",
+                        fontSize: 14,
+                        transition: "all 0.2s ease",
+                        width: "100%",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "scale(1.02)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "scale(1)";
                       }}
                     >
-                      {profName}
-                    </h3>
-                    <p
-                      style={{
-                        fontSize: 13,
-                        color: "#4ec9b0",
-                        margin: "4px 0 0",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {formatSpecialization(p.specialization)}
-                    </p>
+                      📋 View Profile & Book
+                    </button>
                   </div>
-                  <span
-                    style={{ color: "#FF6B35", fontWeight: 700, fontSize: 16 }}
-                  >
-                    ${p.consultation_price_usd}
-                  </span>
-                </div>
-                <div style={{ borderTop: "1px solid #2a2a2a", paddingTop: 8 }}>
-                  <p
+                );
+              })}
+          </div>
+
+          {/* Pagination Controls */}
+          {professionals.length > ITEMS_PER_PAGE && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 24,
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: "8px 12px",
+                  background: currentPage === 1 ? "#333" : "#FF6B35",
+                  color: currentPage === 1 ? "#666" : "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  cursor: currentPage === 1 ? "default" : "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                ← Previous
+              </button>
+
+              <div style={{ display: "flex", gap: 4 }}>
+                {Array.from(
+                  { length: Math.ceil(professionals.length / ITEMS_PER_PAGE) },
+                  (_, i) => i + 1,
+                ).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
                     style={{
-                      color: "#bdbdbd",
-                      fontSize: 12,
-                      margin: 0,
-                      lineHeight: 1.5,
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
+                      width: 32,
+                      height: 32,
+                      borderRadius: 6,
+                      border: "none",
+                      background:
+                        page === currentPage
+                          ? "linear-gradient(135deg, #FF6B35, #ffc857)"
+                          : "rgba(255,107,53,0.1)",
+                      color: page === currentPage ? "#000" : "#fff",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (page !== currentPage) {
+                        e.target.style.background = "rgba(255,107,53,0.2)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (page !== currentPage) {
+                        e.target.style.background = "rgba(255,107,53,0.1)";
+                      }
                     }}
                   >
-                    {p.bio}
-                  </p>
-                </div>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 8,
-                    fontSize: 12,
-                  }}
-                >
-                  <div
-                    style={{
-                      background: "#121925",
-                      padding: "8px",
-                      borderRadius: 8,
-                      textAlign: "center",
-                    }}
-                  >
-                    <div style={{ color: "#9e9e9e", fontSize: 11 }}>Rating</div>
-                    <div style={{ color: "#ffc857", fontWeight: 700 }}>
-                      {p.average_rating ?? "-"}/5
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      background: "#121925",
-                      padding: "8px",
-                      borderRadius: 8,
-                      textAlign: "center",
-                    }}
-                  >
-                    <div style={{ color: "#9e9e9e", fontSize: 11 }}>
-                      Sessions
-                    </div>
-                    <div style={{ color: "#ffc857", fontWeight: 700 }}>
-                      {p.total_sessions_completed ?? 0}+
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <Badge label={`${p.years_experience ?? 0}y exp`} />
-                  <Badge label={`${p.total_reviews ?? 0} reviews`} />
-                </div>
-                <button
-                  onClick={() => openProfessional(p.id)}
-                  style={{
-                    marginTop: "auto",
-                    background: "linear-gradient(135deg, #FF6B35, #ffc857)",
-                    border: "none",
-                    color: "#000",
-                    borderRadius: 10,
-                    padding: "12px 16px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontSize: 14,
-                    transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.transform = "scale(1.02)")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.transform = "scale(1)")
-                  }
-                >
-                  View Details
-                </button>
+                    {page}
+                  </button>
+                ))}
               </div>
-            );
-          })}
-        </div>
+
+              <button
+                onClick={() =>
+                  setCurrentPage((p) =>
+                    Math.min(
+                      Math.ceil(professionals.length / ITEMS_PER_PAGE),
+                      p + 1,
+                    ),
+                  )
+                }
+                disabled={
+                  currentPage >=
+                  Math.ceil(professionals.length / ITEMS_PER_PAGE)
+                }
+                style={{
+                  padding: "8px 12px",
+                  background:
+                    currentPage >=
+                    Math.ceil(professionals.length / ITEMS_PER_PAGE)
+                      ? "#333"
+                      : "#FF6B35",
+                  color:
+                    currentPage >=
+                    Math.ceil(professionals.length / ITEMS_PER_PAGE)
+                      ? "#666"
+                      : "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  cursor:
+                    currentPage >=
+                    Math.ceil(professionals.length / ITEMS_PER_PAGE)
+                      ? "default"
+                      : "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {(detailLoading || selectedProfessional) && (
@@ -619,35 +862,41 @@ const styles = {
     padding: 16,
   },
   modal: {
-    width: "min(760px, 100%)",
+    width: "min(800px, 100%)",
     maxHeight: "90vh",
     overflowY: "auto",
-    borderRadius: 16,
-    border: "1px solid #314158",
-    background: "linear-gradient(180deg, #111827 0%, #0d131f 100%)",
-    padding: 20,
+    borderRadius: 20,
+    border: "1px solid rgba(255,107,53,0.2)",
+    background:
+      "linear-gradient(180deg, rgba(17,24,39,0.95) 0%, rgba(13,19,31,0.95) 100%)",
+    padding: 28,
+    boxShadow: "0 20px 60px rgba(255,107,53,0.1)",
   },
   modalHeader: {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 12,
+    gap: 16,
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottom: "1px solid rgba(255,107,53,0.15)",
   },
   closeButton: {
-    border: "1px solid #3f4f69",
-    borderRadius: 8,
-    background: "#151f31",
-    color: "#dbe4f2",
+    border: "1px solid rgba(255,107,53,0.3)",
+    borderRadius: 10,
+    background: "rgba(255,107,53,0.1)",
+    color: "#ffc857",
     cursor: "pointer",
-    padding: "8px 12px",
+    padding: "8px 16px",
     fontWeight: 600,
+    fontSize: 13,
+    transition: "all 0.2s ease",
   },
   metaGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-    gap: 10,
-    marginTop: 12,
+    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+    gap: 12,
+    marginTop: 14,
   },
   chipsWrap: {
     display: "flex",
@@ -656,27 +905,33 @@ const styles = {
   },
   input: {
     width: "100%",
-    background: "#0d1524",
+    background: "rgba(13,21,36,0.6)",
     color: "#e2e8f5",
-    border: "1px solid #2c3b52",
-    borderRadius: 10,
-    padding: "10px 12px",
+    border: "1px solid rgba(255,107,53,0.2)",
+    borderRadius: 12,
+    padding: "12px 14px",
+    fontSize: 13,
+    fontFamily: "inherit",
   },
   actionRow: {
-    marginTop: 18,
+    marginTop: 24,
     display: "flex",
-    gap: 10,
+    gap: 12,
     flexWrap: "wrap",
   },
   actionButton: {
-    borderRadius: 10,
-    padding: "10px 14px",
+    borderRadius: 12,
+    padding: "12px 20px",
     fontWeight: 700,
     cursor: "pointer",
+    fontSize: 14,
+    transition: "all 0.2s ease",
+    flex: 1,
+    minWidth: 200,
   },
   bookButton: {
-    border: "1px solid rgba(255,107,53,0.45)",
-    background: "linear-gradient(135deg, #8a6a1f, #3b5b7d)",
-    color: "#f7f1df",
+    border: "none",
+    background: "linear-gradient(135deg, #FF6B35, #ffc857)",
+    color: "#000",
   },
 };

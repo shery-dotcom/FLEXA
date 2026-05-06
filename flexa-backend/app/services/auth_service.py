@@ -46,65 +46,33 @@ class AuthService:
 
     @staticmethod
     async def register(db: AsyncSession, data: RegisterRequest) -> RegisterResponse:
+        """Register a new user with robust validation and error handling"""
+        # Validate and normalize inputs
         email = str(data.email).strip().lower()
+        if not email or "@" not in email:
+            raise HTTPException(status_code=400, detail="Valid email address is required")
+        
         phone = (str(data.phone).strip() if data.phone else None) or None
-
+        password = data.password.strip()
+        
+        if len(password) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        
         # Check if email already exists (case-insensitive)
-        result = await db.execute(
-            select(User).where(func.lower(User.email) == email)
-        )
-        existing_user = result.scalar_one_or_none()
-        if existing_user:
-            if not existing_user.hashed_password:
-                raise HTTPException(
-                    status_code=400,
-                    detail="This account uses Google sign-in. Use Continue with Google.",
-                )
-
-            if verify_password(data.password, existing_user.hashed_password):
-                token_data = {
-                    "sub": str(existing_user.id),
-                    "email": existing_user.email,
-                    "role": existing_user.role,
-                }
-                return RegisterResponse(
-                    message="Account already existed. Signed you in.",
-                    access_token=create_access_token(token_data),
-                    refresh_token=create_refresh_token(token_data),
-                )
-
-            raise HTTPException(
-                status_code=400,
-                detail="Email already registered. Use the existing password to sign in.",
-            )
-
-        # Check if phone already exists when provided
-        if phone:
-            phone_result = await db.execute(select(User).where(User.phone == phone))
-            if phone_result.scalar_one_or_none():
-                raise HTTPException(status_code=400, detail="Phone number already registered")
-
-        user = User(
-            email=email,
-            phone=phone,
-            hashed_password=hash_password(data.password),
-            is_active=True,
-        )
         try:
-            db.add(user)
-            await db.commit()
-            await db.refresh(user)
-        except IntegrityError as exc:
-            await db.rollback()
-            error_text = str(getattr(exc, "orig", exc)).lower()
-            if "users_phone_key" in error_text or "phone" in error_text:
-                raise HTTPException(status_code=400, detail="Phone number already registered")
-            if "users_email_key" in error_text or "email" in error_text:
-                existing_res = await db.execute(
-                    select(User).where(func.lower(User.email) == email)
-                )
-                existing_user = existing_res.scalar_one_or_none()
-                if existing_user and existing_user.hashed_password and verify_password(data.password, existing_user.hashed_password):
+            result = await db.execute(
+                select(User).where(func.lower(User.email) == email)
+            )
+            existing_user = result.scalar_one_or_none()
+            
+            if existing_user:
+                if not existing_user.hashed_password:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="This account uses Google sign-in. Use Continue with Google.",
+                    )
+
+                if verify_password(password, existing_user.hashed_password):
                     token_data = {
                         "sub": str(existing_user.id),
                         "email": existing_user.email,
@@ -115,14 +83,58 @@ class AuthService:
                         access_token=create_access_token(token_data),
                         refresh_token=create_refresh_token(token_data),
                     )
+
                 raise HTTPException(
                     status_code=400,
                     detail="Email already registered. Use the existing password to sign in.",
                 )
-            raise HTTPException(
-                status_code=400,
-                detail="Registration failed due to invalid or duplicate data",
-            )
+
+            # Check if phone already exists when provided
+            if phone:
+                phone_result = await db.execute(select(User).where(User.phone == phone))
+                if phone_result.scalar_one_or_none():
+                    raise HTTPException(status_code=400, detail="Phone number already registered")
+        except HTTPException:
+            raise
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail="Database query failed")
+
+        # Create new user
+        user = User(
+            id=uuid.uuid4(),
+            email=email,
+            phone=phone,
+            hashed_password=hash_password(password),
+            is_active=True,
+        )
+        
+        try:
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+        except IntegrityError as exc:
+            await db.rollback()
+            error_text = str(getattr(exc, "orig", exc)).lower()
+            
+            # Handle specific constraint violations
+            if "phone" in error_text:
+                raise HTTPException(status_code=400, detail="Phone number already registered")
+            elif "email" in error_text:
+                # Double-check in case of race condition
+                retry_result = await db.execute(
+                    select(User).where(func.lower(User.email) == email)
+                )
+                retry_user = retry_result.scalar_one_or_none()
+                if retry_user:
+                    raise HTTPException(status_code=400, detail="Email already registered. Try logging in.")
+            
+            raise HTTPException(status_code=400, detail="Registration failed. Please try again.")
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail="Registration failed due to server error")
+        
+        # Generate tokens
         token_data = {"sub": str(user.id), "email": user.email, "role": user.role}
         return RegisterResponse(
             message="Registration successful. Please complete your profile.",

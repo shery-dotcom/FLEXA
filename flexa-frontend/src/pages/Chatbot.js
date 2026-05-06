@@ -1,9 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import api from "../api/axios";
 import FlexaAvatar from "../components/FlexaAvatar";
 import ChatBubble, { TypingIndicator } from "../components/ChatBubble";
-import { FiSend, FiTrash2, FiRefreshCw, FiMic } from "react-icons/fi";
+import {
+  FiSend,
+  FiTrash2,
+  FiRefreshCw,
+  FiMic,
+  FiSun,
+  FiMoon,
+} from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
 import FlexaVideoIntro from "../components/FlexaVideoIntro";
 import useSpeechRecognition from "../hooks/useSpeechRecognition";
@@ -58,6 +66,7 @@ const QUICK_ACTIONS = [
 
 export default function Chatbot() {
   const { user } = useAuth();
+  const { isDark, toggleTheme, theme } = useTheme();
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -286,6 +295,13 @@ export default function Chatbot() {
           <span style={styles.headerSub}>Fitness Companion</span>
         </div>
         <div style={styles.headerActions}>
+          <button
+            style={styles.iconBtn}
+            onClick={toggleTheme}
+            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDark ? <FiSun size={16} /> : <FiMoon size={16} />}
+          </button>
           <button
             style={styles.iconBtn}
             onClick={handleRefreshAvatar}
