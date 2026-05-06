@@ -61,7 +61,9 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 #root {
@@ -101,8 +103,6 @@ h6 {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-light);
-}
-  background: var(--gold);
 }
 
 /* ===== BUTTONS ===== */
