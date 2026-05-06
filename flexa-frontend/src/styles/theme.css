@@ -1,23 +1,23 @@
-/* Theme support - Light and Dark modes */
-/* All color variables for comprehensive theming */
+/* Dark Mode Only - Optimized for Readability */
+/* Comprehensive CSS variables for professional dark theme */
 
-:root[data-theme="light"] {
-  /* Backgrounds */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f5;
-  --bg-tertiary: #e8e8e8;
-  --bg-hover: #f0f0f0;
-  --bg-light: #fafafa;
+:root {
+  /* Backgrounds - Improved contrast */
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #121212;
+  --bg-tertiary: #1e1e1e;
+  --bg-hover: #262626;
+  --bg-light: #0d0d0d;
 
-  /* Text colors */
-  --text-primary: #1a1a1a;
-  --text-secondary: #555555;
-  --text-tertiary: #888888;
-  --text-inverse: #ffffff;
+  /* Text colors - Enhanced readability */
+  --text-primary: #f5f5f5;
+  --text-secondary: #d0d0d0;
+  --text-tertiary: #999999;
+  --text-inverse: #1a1a1a;
 
   /* Borders & dividers */
-  --border-color: rgba(0, 0, 0, 0.15);
-  --border-light: rgba(0, 0, 0, 0.08);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-light: rgba(255, 255, 255, 0.06);
 
   /* Accent colors */
   --accent: #ff6b35;
@@ -27,102 +27,36 @@
   /* UI Elements */
   --btn-primary-bg: #ff6b35;
   --btn-primary-text: #ffffff;
-  --btn-secondary-bg: #f0f0f0;
-  --btn-secondary-text: #1a1a1a;
-  --btn-hover: rgba(255, 107, 53, 0.1);
+  --btn-secondary-bg: #262626;
+  --btn-secondary-text: #f5f5f5;
+  --btn-hover: rgba(255, 107, 53, 0.2);
 
-  /* Input fields */
-  --input-bg: #ffffff;
-  --input-border: rgba(0, 0, 0, 0.15);
-  --input-text: #1a1a1a;
-  --input-placeholder: #999999;
+  /* Input fields - Better visibility */
+  --input-bg: #1a1a1a;
+  --input-border: rgba(255, 255, 255, 0.15);
+  --input-text: #f5f5f5;
+  --input-placeholder: #888888;
 
-  /* Card */
-  --card-bg: #ffffff;
-  --card-border: rgba(0, 0, 0, 0.1);
-  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  /* Card - Professional appearance */
+  --card-bg: #161616;
+  --card-border: rgba(255, 255, 255, 0.1);
+  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 
   /* Navigation */
-  --nav-bg: rgba(255, 255, 255, 0.95);
-  --nav-text: #1a1a1a;
-  --nav-border: rgba(0, 0, 0, 0.1);
+  --nav-bg: rgba(16, 16, 16, 0.95);
+  --nav-text: #f5f5f5;
+  --nav-border: rgba(255, 255, 255, 0.1);
 
   /* Chat bubbles */
   --chat-user-bg: #ff6b35;
   --chat-user-text: #ffffff;
-  --chat-assistant-bg: #f0f0f0;
-  --chat-assistant-text: #1a1a1a;
-  --chat-assistant-border: #e0e0e0;
-
-  /* Status colors */
-  --status-success: #4caf50;
-  --status-warning: #ff9800;
-  --status-error: #ef5350;
-  --status-info: #64b5f6;
-
-  /* Macro nutrition colors */
-  --macro-protein: #4ec9b0;
-  --macro-carbs: #ce9178;
-  --macro-fat: #dcdcaa;
-  --macro-cyan: #00d4ff;
-}
-
-:root[data-theme="dark"] {
-  /* Backgrounds */
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #111111;
-  --bg-tertiary: #1a1a1a;
-  --bg-hover: #1f1f1f;
-  --bg-light: #0d0d0d;
-
-  /* Text colors */
-  --text-primary: #ffffff;
-  --text-secondary: #c8c8c8;
-  --text-tertiary: #888888;
-  --text-inverse: #1a1a1a;
-
-  /* Borders & dividers */
-  --border-color: rgba(255, 255, 255, 0.1);
-  --border-light: rgba(255, 255, 255, 0.05);
-
-  /* Accent colors */
-  --accent: #ff6b35;
-  --accent-light: #ff8c5a;
-  --accent-dark: #e85a2b;
-
-  /* UI Elements */
-  --btn-primary-bg: #ff6b35;
-  --btn-primary-text: #000000;
-  --btn-secondary-bg: #1f1f1f;
-  --btn-secondary-text: #ffffff;
-  --btn-hover: rgba(255, 107, 53, 0.2);
-
-  /* Input fields */
-  --input-bg: #1a1a1a;
-  --input-border: rgba(255, 255, 255, 0.1);
-  --input-text: #ffffff;
-  --input-placeholder: #666666;
-
-  /* Card */
-  --card-bg: #111111;
-  --card-border: rgba(255, 255, 255, 0.08);
-  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
-
-  /* Navigation */
-  --nav-bg: rgba(10, 10, 10, 0.95);
-  --nav-text: #ffffff;
-  --nav-border: rgba(255, 107, 53, 0.28);
-
-  /* Chat bubbles */
-  --chat-user-bg: #ff6b35;
-  --chat-user-text: #000000;
-  --chat-assistant-bg: rgba(255, 255, 255, 0.07);
-  --chat-assistant-text: #e8e8e8;
+  --chat-assistant-bg: #262626;
+  --chat-assistant-text: #f5f5f5;
   --chat-assistant-border: rgba(255, 255, 255, 0.1);
 
   /* Status colors */
-  --status-success: #4caf50;
-  --status-warning: #ff9800;
+  --status-success: #66bb6a;
+  --status-warning: #ffb74d;
   --status-error: #ef5350;
   --status-info: #64b5f6;
 
@@ -131,50 +65,82 @@
   --macro-carbs: #ce9178;
   --macro-fat: #dcdcaa;
   --macro-cyan: #00d4ff;
+
+  /* Additional UI colors for better structure */
+  --scrollbar-thumb: rgba(255, 107, 53, 0.5);
+  --scrollbar-track: rgba(255, 107, 53, 0.1);
+  --focus-ring: rgba(255, 107, 53, 0.3);
 }
 
-/* Smooth transitions when switching themes */
+/* Smooth transitions for better UX */
 body {
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
 }
 
-/* Ensure all text is readable in both modes */
+/* Readable links with accent color */
 a {
   color: var(--accent);
+  transition: opacity 0.2s ease;
 }
 
+a:hover {
+  opacity: 0.8;
+}
+
+/* Form elements - consistent styling */
 input,
 textarea,
 select {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border-color: var(--border-color);
-}
-
-button {
+  background-color: var(--input-bg);
+  color: var(--input-text);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
   transition: all 0.2s ease;
 }
 
-/* Override specific component colors for better light mode support */
-:root[data-theme="light"] .btn-gold {
-  background: linear-gradient(135deg, #ff6b35, #ff9500);
-  color: #ffffff;
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
-:root[data-theme="light"] .btn-ghost {
-  background: transparent;
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
+/* Button styling */
+button {
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
-:root[data-theme="light"] .spinner {
-  border-color: rgba(0, 0, 0, 0.1);
-  border-top-color: #ff6b35;
+button:hover {
+  transform: translateY(-1px);
 }
 
-:root[data-theme="dark"] .spinner {
-  border-color: rgba(255, 255, 255, 0.1);
-  border-top-color: #ff6b35;
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Selection styling */
+::selection {
+  background-color: var(--accent);
+  color: var(--text-inverse);
 }

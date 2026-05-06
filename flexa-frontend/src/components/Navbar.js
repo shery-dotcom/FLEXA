@@ -17,7 +17,6 @@ import {
 } from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
 import FlexaVideoIntro from "./FlexaVideoIntro";
-import ThemeToggle from "./ThemeToggle";
 
 const NAV_LINKS = [
   { to: "/dashboard", label: "Home", icon: <FiGrid /> },
@@ -81,8 +80,9 @@ export default function Navbar() {
           height: size,
           borderRadius: "50%",
           objectFit: "cover",
-          border: "2px solid rgba(255,107,53,0.6)",
+          border: "3px solid var(--accent)",
           display: "block",
+          boxShadow: "0 0 10px rgba(255,107,53,0.3)",
         }}
       />
     ) : (
@@ -92,11 +92,12 @@ export default function Navbar() {
           height: size,
           borderRadius: "50%",
           background: "rgba(255,107,53,0.15)",
-          border: "2px solid rgba(255,107,53,0.5)",
+          border: "2px solid var(--accent)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           flexShrink: 0,
+          boxShadow: "0 0 10px rgba(255,107,53,0.2)",
         }}
       >
         <FiUser size={Math.floor(size * 0.45)} color="var(--accent)" />
@@ -146,7 +147,6 @@ export default function Navbar() {
 
           {/* Right side – avatar dropdown */}
           <div style={styles.right}>
-            <ThemeToggle />
             <div
               ref={avatarRef}
               style={{ position: "relative" }}
@@ -241,7 +241,13 @@ export default function Navbar() {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <AvatarCircle size={42} />
               <div>
-                <p style={{ color: "var(--accent)", fontWeight: 700, fontSize: 14 }}>
+                <p
+                  style={{
+                    color: "var(--accent)",
+                    fontWeight: 700,
+                    fontSize: 14,
+                  }}
+                >
                   {displayName}
                 </p>
                 <p style={{ color: "#616161", fontSize: 12 }}>{user?.email}</p>
@@ -483,4 +489,3 @@ const styles = {
     background: "rgba(0,0,0,0.5)",
   },
 };
-

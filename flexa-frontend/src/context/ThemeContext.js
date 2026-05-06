@@ -1,34 +1,18 @@
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, { createContext, useContext, useEffect } from "react";
 
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
-  const [isDark, setIsDark] = useState(() => {
-    // Check localStorage for saved preference
-    const saved = localStorage.getItem("flexa_theme_dark");
-    if (saved !== null) {
-      return JSON.parse(saved);
-    }
-    // Default to dark mode
-    return true;
-  });
-
+  // Dark mode only - set on mount
   useEffect(() => {
-    localStorage.setItem("flexa_theme_dark", JSON.stringify(isDark));
-    // Update root element class for global styles
-    if (isDark) {
-      document.documentElement.setAttribute("data-theme", "dark");
-    } else {
-      document.documentElement.setAttribute("data-theme", "light");
-    }
-  }, [isDark]);
+    document.documentElement.setAttribute("data-theme", "dark");
+  }, []);
 
-  const toggleTheme = () => setIsDark((prev) => !prev);
-
-  const theme = isDark ? darkTheme : lightTheme;
+  // Provide theme object for dark mode
+  const theme = darkTheme;
 
   return (
-    <ThemeContext.Provider value={{ isDark, toggleTheme, theme }}>
+    <ThemeContext.Provider value={{ theme }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -42,35 +26,7 @@ export function useTheme() {
   return context;
 }
 
-// Light theme
-const lightTheme = {
-  bg: {
-    primary: "#ffffff",
-    secondary: "#f5f5f5",
-    tertiary: "#e8e8e8",
-  },
-  text: {
-    primary: "#1a1a1a",
-    secondary: "#555555",
-    tertiary: "#888888",
-  },
-  accent: "#FF6B35",
-  border: "rgba(0, 0, 0, 0.15)",
-  chatBubble: {
-    user: {
-      bg: "#FF6B35",
-      text: "#ffffff",
-    },
-    assistant: {
-      bg: "#f0f0f0",
-      text: "#1a1a1a",
-      border: "#e0e0e0",
-    },
-  },
-};
-
-// Dark theme (default)
-const darkTheme = {
+// Dark theme (default - only theme)
   bg: {
     primary: "#0a0a0a",
     secondary: "#111111",
