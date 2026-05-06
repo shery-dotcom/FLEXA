@@ -1,6 +1,10 @@
 /* ============================================================
-   FLEXA GLOBAL STYLES — Gold & Black Aesthetic
+   FLEXA GLOBAL STYLES — Theme-aware
    ============================================================ */
+
+/* Import theme CSS variables */
+@import url("./theme.css");
+
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap");
 
 :root {
@@ -52,11 +56,12 @@ html {
 
 body {
   font-family: var(--font-main);
-  background-color: var(--black);
-  color: var(--white);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 #root {
@@ -64,12 +69,13 @@ body {
 }
 
 a {
-  color: var(--gold);
+  color: var(--accent);
   text-decoration: none;
   transition: var(--transition);
 }
 a:hover {
-  color: var(--gold-light);
+  color: var(--accent-light);
+  opacity: 0.8;
 }
 
 h1,
@@ -84,16 +90,18 @@ h6 {
 
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--black-2);
+  background: var(--bg-secondary);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--gold-dark);
-  border-radius: 3px;
+  background: var(--accent);
+  border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-light);
+}
   background: var(--gold);
 }
 

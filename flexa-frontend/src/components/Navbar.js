@@ -17,6 +17,7 @@ import {
 } from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
 import FlexaVideoIntro from "./FlexaVideoIntro";
+import ThemeToggle from "./ThemeToggle";
 
 const NAV_LINKS = [
   { to: "/dashboard", label: "Home", icon: <FiGrid /> },
@@ -145,6 +146,7 @@ export default function Navbar() {
 
           {/* Right side – avatar dropdown */}
           <div style={styles.right}>
+            <ThemeToggle />
             <div
               ref={avatarRef}
               style={{ position: "relative" }}
@@ -322,11 +324,11 @@ const styles = {
     position: "sticky",
     top: 0,
     zIndex: 200,
-    background:
-      "linear-gradient(90deg, rgba(14,20,30,0.96) 0%, rgba(28,18,8,0.96) 52%, rgba(10,26,28,0.96) 100%)",
-    borderBottom: "1px solid rgba(255,107,53,0.28)",
+    background: "var(--nav-bg)",
+    borderBottom: "1px solid var(--nav-border)",
     backdropFilter: "blur(12px)",
-    boxShadow: "0 6px 24px rgba(0,0,0,0.28)",
+    boxShadow: "var(--card-shadow)",
+    transition: "all 0.3s ease",
   },
   inner: {
     maxWidth: 1280,
@@ -341,9 +343,10 @@ const styles = {
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: 26,
     letterSpacing: 4,
-    color: "#FF6B35",
+    color: "var(--accent)",
     textDecoration: "none",
     flexShrink: 0,
+    transition: "color 0.3s ease",
   },
   links: { display: "flex", alignItems: "center", gap: 4 },
   link: {
@@ -352,20 +355,21 @@ const styles = {
     gap: 6,
     padding: "6px 16px",
     borderRadius: 20,
-    color: "#d8dde5",
+    color: "var(--nav-text)",
     textDecoration: "none",
     fontSize: 14,
     fontWeight: 600,
     border: "1px solid transparent",
     transition: "all 0.22s ease",
     whiteSpace: "nowrap",
+    opacity: 0.8,
   },
   activeLink: {
-    color: "#f7f1df",
-    background: "linear-gradient(135deg, #8a6a1f, #3b5b7d)",
-    border: "1px solid rgba(255,107,53,0.55)",
+    color: "var(--text-primary)",
+    background: "var(--btn-hover)",
+    border: "1px solid var(--accent)",
     fontWeight: 700,
-    boxShadow: "0 0 0 1px rgba(255,255,255,0.04) inset",
+    opacity: 1,
   },
   right: { display: "flex", alignItems: "center", gap: 12 },
   hamburger: {
@@ -373,7 +377,7 @@ const styles = {
     background: "none",
     border: "none",
     cursor: "pointer",
-    color: "#FF6B35",
+    color: "var(--accent)",
     padding: 6,
     borderRadius: 6,
     alignItems: "center",
@@ -384,22 +388,24 @@ const styles = {
     top: "calc(100% + 10px)",
     right: 0,
     minWidth: 220,
-    background: "#141414",
-    border: "1px solid #2a2a2a",
+    background: "var(--card-bg)",
+    border: "1px solid var(--border-color)",
     borderRadius: 12,
-    boxShadow: "0 8px 32px rgba(0,0,0,0.65)",
+    boxShadow: "var(--card-shadow)",
     zIndex: 300,
     overflow: "hidden",
+    transition: "all 0.3s ease",
   },
   avatarDropdownHeader: {
     display: "flex",
     alignItems: "center",
     gap: 12,
     padding: "16px 16px 12px",
+    borderBottom: "1px solid var(--border-light)",
   },
   avatarDropdownDivider: {
     height: 1,
-    background: "#1a1a1a",
+    background: "var(--border-color)",
     margin: "0 0 4px",
   },
   avatarDropdownItem: {
@@ -410,12 +416,12 @@ const styles = {
     padding: "12px 16px",
     background: "none",
     border: "none",
-    color: "#e0e0e0",
+    color: "var(--text-secondary)",
     fontSize: 14,
     fontWeight: 500,
     cursor: "pointer",
     textAlign: "left",
-    transition: "background 0.15s",
+    transition: "all 0.15s ease",
   },
   drawer: {
     position: "fixed",
@@ -423,8 +429,8 @@ const styles = {
     left: 0,
     right: 0,
     zIndex: 199,
-    background: "linear-gradient(180deg, #111827 0%, #0f1116 100%)",
-    borderBottom: "1px solid rgba(255,107,53,0.24)",
+    background: "var(--bg-secondary)",
+    borderBottom: "1px solid var(--nav-border)",
     display: "flex",
     flexDirection: "column",
     padding: "12px 0",
@@ -437,7 +443,7 @@ const styles = {
   },
   drawerDivider: {
     height: 1,
-    background: "#1a1a1a",
+    background: "var(--border-color)",
     margin: "4px 0",
   },
   drawerLink: {
@@ -445,17 +451,16 @@ const styles = {
     alignItems: "center",
     gap: 12,
     padding: "14px 20px",
-    color: "#dbe2ee",
+    color: "var(--text-secondary)",
     textDecoration: "none",
     fontSize: 15,
     fontWeight: 500,
-    transition: "all 0.2s",
+    transition: "all 0.2s ease",
   },
   drawerLinkActive: {
-    color: "#f6f1e0",
-    background:
-      "linear-gradient(90deg, rgba(60,90,130,0.25), rgba(138,106,31,0.22))",
-    borderLeft: "3px solid rgba(255,107,53,0.9)",
+    color: "var(--text-primary)",
+    background: "var(--btn-hover)",
+    borderLeft: "3px solid var(--accent)",
   },
   drawerLogout: {
     display: "flex",
@@ -464,11 +469,12 @@ const styles = {
     padding: "14px 20px",
     background: "none",
     border: "none",
-    color: "#ef5350",
+    color: "var(--status-error)",
     fontSize: 15,
     fontWeight: 500,
     cursor: "pointer",
     textAlign: "left",
+    transition: "all 0.2s ease",
   },
   backdrop: {
     position: "fixed",

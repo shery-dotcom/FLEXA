@@ -1,25 +1,124 @@
 /* Theme support - Light and Dark modes */
+/* All color variables for comprehensive theming */
 
 :root[data-theme="light"] {
+  /* Backgrounds */
   --bg-primary: #ffffff;
   --bg-secondary: #f5f5f5;
   --bg-tertiary: #e8e8e8;
+  --bg-hover: #f0f0f0;
+  --bg-light: #fafafa;
+
+  /* Text colors */
   --text-primary: #1a1a1a;
   --text-secondary: #555555;
   --text-tertiary: #888888;
+  --text-inverse: #ffffff;
+
+  /* Borders & dividers */
   --border-color: rgba(0, 0, 0, 0.15);
+  --border-light: rgba(0, 0, 0, 0.08);
+
+  /* Accent colors */
   --accent: #ff6b35;
+  --accent-light: #ff8c5a;
+  --accent-dark: #e85a2b;
+
+  /* UI Elements */
+  --btn-primary-bg: #ff6b35;
+  --btn-primary-text: #ffffff;
+  --btn-secondary-bg: #f0f0f0;
+  --btn-secondary-text: #1a1a1a;
+  --btn-hover: rgba(255, 107, 53, 0.1);
+
+  /* Input fields */
+  --input-bg: #ffffff;
+  --input-border: rgba(0, 0, 0, 0.15);
+  --input-text: #1a1a1a;
+  --input-placeholder: #999999;
+
+  /* Card */
+  --card-bg: #ffffff;
+  --card-border: rgba(0, 0, 0, 0.1);
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  /* Navigation */
+  --nav-bg: rgba(255, 255, 255, 0.95);
+  --nav-text: #1a1a1a;
+  --nav-border: rgba(0, 0, 0, 0.1);
+
+  /* Chat bubbles */
+  --chat-user-bg: #ff6b35;
+  --chat-user-text: #ffffff;
+  --chat-assistant-bg: #f0f0f0;
+  --chat-assistant-text: #1a1a1a;
+  --chat-assistant-border: #e0e0e0;
+
+  /* Status colors */
+  --status-success: #4caf50;
+  --status-warning: #ff9800;
+  --status-error: #ef5350;
+  --status-info: #64b5f6;
 }
 
 :root[data-theme="dark"] {
+  /* Backgrounds */
   --bg-primary: #0a0a0a;
   --bg-secondary: #111111;
   --bg-tertiary: #1a1a1a;
+  --bg-hover: #1f1f1f;
+  --bg-light: #0d0d0d;
+
+  /* Text colors */
   --text-primary: #ffffff;
   --text-secondary: #c8c8c8;
   --text-tertiary: #888888;
+  --text-inverse: #1a1a1a;
+
+  /* Borders & dividers */
   --border-color: rgba(255, 255, 255, 0.1);
+  --border-light: rgba(255, 255, 255, 0.05);
+
+  /* Accent colors */
   --accent: #ff6b35;
+  --accent-light: #ff8c5a;
+  --accent-dark: #e85a2b;
+
+  /* UI Elements */
+  --btn-primary-bg: #ff6b35;
+  --btn-primary-text: #000000;
+  --btn-secondary-bg: #1f1f1f;
+  --btn-secondary-text: #ffffff;
+  --btn-hover: rgba(255, 107, 53, 0.2);
+
+  /* Input fields */
+  --input-bg: #1a1a1a;
+  --input-border: rgba(255, 255, 255, 0.1);
+  --input-text: #ffffff;
+  --input-placeholder: #666666;
+
+  /* Card */
+  --card-bg: #111111;
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+
+  /* Navigation */
+  --nav-bg: rgba(10, 10, 10, 0.95);
+  --nav-text: #ffffff;
+  --nav-border: rgba(255, 107, 53, 0.28);
+
+  /* Chat bubbles */
+  --chat-user-bg: #ff6b35;
+  --chat-user-text: #000000;
+  --chat-assistant-bg: rgba(255, 255, 255, 0.07);
+  --chat-assistant-text: #e8e8e8;
+  --chat-assistant-border: rgba(255, 255, 255, 0.1);
+
+  /* Status colors */
+  --status-success: #4caf50;
+  --status-warning: #ff9800;
+  --status-error: #ef5350;
+  --status-info: #64b5f6;
 }
 
 /* Smooth transitions when switching themes */
