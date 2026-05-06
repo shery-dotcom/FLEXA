@@ -12,9 +12,7 @@ export function ThemeProvider({ children }) {
   const theme = darkTheme;
 
   return (
-    <ThemeContext.Provider value={{ theme }}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={{ theme }}>{children}</ThemeContext.Provider>
   );
 }
 
@@ -27,6 +25,7 @@ export function useTheme() {
 }
 
 // Dark theme (default - only theme)
+const darkTheme = {
   bg: {
     primary: "#0a0a0a",
     secondary: "#111111",
