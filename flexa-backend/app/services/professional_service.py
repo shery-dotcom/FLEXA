@@ -1,6 +1,6 @@
 import uuid
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
 from sqlalchemy.orm import selectinload
@@ -89,8 +89,8 @@ class ProfessionalService:
             if not professional:
                 raise HTTPException(status_code=404, detail="Professional not found")
 
-            # Get available slots for next 7 days (without strict timezone filtering)
-            now = datetime.now()
+            # Get available slots for the next 7 days using timezone-aware datetimes.
+            now = datetime.now(timezone.utc)
             seven_days_from_now = now + timedelta(days=7)
             slots_res = await db.execute(
                 select(AvailabilitySlot)

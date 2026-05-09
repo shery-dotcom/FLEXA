@@ -12,6 +12,27 @@ import api from "../api/axios";
 import FlexaGuide from "../components/FlexaGuide";
 
 const GOLD = "#FF6B35";
+
+/**
+ * Safely extract a displayable error message from any Axios error.
+ * Handles:
+ *   - Plain string:   detail = "some message"
+ *   - Pydantic v2:    detail = [{type, loc, msg, input, url}, ...]
+ *   - Generic:        error.message
+ */
+function parseApiError(e, fallback = "Something went wrong.") {
+  const detail = e?.response?.data?.detail;
+  if (!detail) return e?.message || fallback;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    // Pydantic v2 validation errors — each item has a `msg` field
+    const msgs = detail.map((d) => d?.msg || JSON.stringify(d)).filter(Boolean);
+    return msgs.length ? msgs.join("; ") : fallback;
+  }
+  if (typeof detail === "object") return detail?.msg || JSON.stringify(detail);
+  return fallback;
+}
+
 const MAX_IMAGE_EDGE = 1280;
 const JPEG_QUALITY = 0.9;
 
@@ -179,10 +200,7 @@ export default function CalorieEstimator() {
         setSelectedPrediction("");
       }
     } catch (e) {
-      toast.error(
-        e.response?.data?.detail ||
-          "Analysis failed. Make sure the backend is running.",
-      );
+      toast.error(parseApiError(e, "Analysis failed. Make sure the backend is running."));
     } finally {
       setLoading(false);
     }
