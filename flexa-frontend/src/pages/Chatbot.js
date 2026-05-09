@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
-import FlexaAvatar from "../components/FlexaAvatar";
 import ChatBubble, { TypingIndicator } from "../components/ChatBubble";
 import { FiSend, FiTrash2, FiRefreshCw, FiMic } from "react-icons/fi";
 import { TbRobot } from "react-icons/tb";
@@ -278,202 +277,225 @@ export default function Chatbot() {
   return (
     <div style={styles.page}>
       <FlexaVideoIntro />
-      {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.headerLeft}>
-          <TbRobot size={24} color="var(--accent)" />
-          <span style={styles.headerTitle}>FLEXA</span>
-          <span style={styles.headerSub}>Fitness Companion</span>
-        </div>
-        <div style={styles.headerActions}>
-          <button
-            style={styles.iconBtn}
-            onClick={handleRefreshAvatar}
-            title="Refresh avatar from latest progress"
-          >
-            <FiRefreshCw size={16} />
-          </button>
-          <button
-            style={{ ...styles.iconBtn, color: "#FF0055" }}
-            onClick={handleClearHistory}
-            title="Clear chat history"
-          >
-            <FiTrash2 size={16} />
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile tab switcher */}
-      {isMobile && (
-        <div style={styles.mobileTabs}>
-          <button
-            style={{
-              ...styles.mobileTab,
-              ...(mobileTab === "chat" ? styles.mobileTabActive : {}),
-            }}
-            onClick={() => setMobileTab("chat")}
-          >
-            Chat
-          </button>
-          <button
-            style={{
-              ...styles.mobileTab,
-              ...(mobileTab === "avatar" ? styles.mobileTabActive : {}),
-            }}
-            onClick={() => setMobileTab("avatar")}
-          >
-            Avatar
-          </button>
-        </div>
-      )}
-
-      {/* Main layout */}
-      <div
-        style={{
-          ...styles.main,
-          overflow: isMobile ? "visible" : "hidden",
-        }}
-      >
-        {/* Left panel — Avatar */}
-        <div
-          style={{
-            ...styles.avatarPanel,
-            width: isMobile ? "100%" : 280,
-            minWidth: isMobile ? 0 : 280,
-            borderRight: isMobile ? "none" : styles.avatarPanel.borderRight,
-            display: isMobile
-              ? mobileTab === "avatar"
-                ? "flex"
-                : "none"
-              : "flex",
-          }}
-        >
-          <FlexaAvatar
-            avatarClass={avatarState.avatarClass}
-            animation={avatarState.animation}
-            streakDays={avatarState.streakDays}
-            badge={avatarState.badge}
-            personalityMode={avatarState.personalityMode}
-            bmi={avatarState.bmi}
-            bmiCategory={avatarState.bmiCategory}
-          />
-
-          {/* Quick actions */}
-          <div style={styles.quickActionsLabel}>Quick Actions</div>
-          <div style={styles.quickActions}>
-            {QUICK_ACTIONS.map((qa) => (
-              <button
-                key={qa.label}
-                style={styles.chip}
-                onClick={() => handleSend(qa.text)}
-                disabled={isTyping}
-              >
-                {qa.label}
-              </button>
-            ))}
+      <div style={styles.shell}>
+        {/* Header */}
+        <div style={styles.header}>
+          <div style={styles.headerLeft}>
+            <TbRobot size={24} color="var(--accent)" />
+            <span style={styles.headerTitle}>FLEXA</span>
+            <span style={styles.headerSub}>Fitness Companion</span>
           </div>
-        </div>
-
-        {/* Right panel — Chat */}
-        <div
-          style={{
-            ...styles.chatPanel,
-            display: isMobile
-              ? mobileTab === "chat"
-                ? "flex"
-                : "none"
-              : "flex",
-            minHeight: 0,
-          }}
-        >
-          {/* Messages */}
-          <div style={styles.messages}>
-            {isLoading ? (
-              <div style={styles.centerMsg}>Loading chat history…</div>
-            ) : (
-              <>
-                {messages.map((msg) => (
-                  <ChatBubble
-                    key={msg.id}
-                    role={msg.role}
-                    content={msg.content}
-                    timestamp={msg.timestamp}
-                    language={msg.language}
-                  />
-                ))}
-                {isTyping && <TypingIndicator />}
-                <div ref={messagesEndRef} />
-              </>
-            )}
-          </div>
-
-          {/* Error */}
-          {error && <div style={styles.errorBar}>{error}</div>}
-
-          {/* Input */}
-          <div style={styles.inputRow}>
-            <textarea
-              ref={inputRef}
-              style={{
-                ...styles.textarea,
-                fontSize: isMobile ? 16 : 14,
-                direction: /[\u0600-\u06FF]/.test(input) ? "rtl" : "ltr",
-              }}
-              placeholder={
-                language === "ur"
-                  ? "یہاں پیغام لکھیں…"
-                  : "Ask FLEXA anything… (Urdu & English)"
-              }
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={1}
-              maxLength={2000}
-              disabled={isTyping}
-            />
-            {isSpeechSupported && (
-              <button
-                title={isListening ? "Stop listening" : "Speak your message"}
-                style={{
-                  ...styles.micBtn,
-                  background: isListening
-                    ? "rgba(239,68,68,0.15)"
-                    : "rgba(255,255,255,0.07)",
-                  border: isListening
-                    ? "1px solid rgba(239,68,68,0.5)"
-                    : "1px solid rgba(255,255,255,0.1)",
-                  color: isListening ? "#FF0055" : "rgba(255,255,255,0.6)",
-                  animation: isListening
-                    ? "micPulse 1.2s ease-in-out infinite"
-                    : "none",
-                }}
-                onClick={handleMicClick}
-                disabled={isTyping}
-                aria-label={
-                  isListening ? "Stop recording" : "Start voice input"
-                }
-                aria-pressed={isListening}
-              >
-                <FiMic size={17} />
-              </button>
-            )}
+          <div style={styles.headerActions}>
             <button
-              style={{
-                ...styles.sendBtn,
-                opacity: !input.trim() || isTyping ? 0.5 : 1,
-                cursor: !input.trim() || isTyping ? "not-allowed" : "pointer",
-              }}
-              onClick={() => handleSend()}
-              disabled={!input.trim() || isTyping}
+              style={styles.iconBtn}
+              onClick={handleRefreshAvatar}
+              title="Refresh avatar from latest progress"
             >
-              <FiSend size={18} />
+              <FiRefreshCw size={16} />
+            </button>
+            <button
+              style={{ ...styles.iconBtn, color: "#FF0055" }}
+              onClick={handleClearHistory}
+              title="Clear chat history"
+            >
+              <FiTrash2 size={16} />
             </button>
           </div>
+        </div>
 
-          <div style={styles.hint}>
-            {isListening
-              ? "🎙 Listening… speak now"
-              : "Press Enter to send · Shift+Enter for new line · اردو میں لکھ سکتے ہیں"}
+        {/* Mobile tab switcher */}
+        {isMobile && (
+          <div style={styles.mobileTabs}>
+            <button
+              style={{
+                ...styles.mobileTab,
+                ...(mobileTab === "chat" ? styles.mobileTabActive : {}),
+              }}
+              onClick={() => setMobileTab("chat")}
+            >
+              Chat
+            </button>
+            <button
+              style={{
+                ...styles.mobileTab,
+                ...(mobileTab === "avatar" ? styles.mobileTabActive : {}),
+              }}
+              onClick={() => setMobileTab("avatar")}
+            >
+              Avatar
+            </button>
+          </div>
+        )}
+
+        {/* Main layout */}
+        <div
+          style={{
+            ...styles.main,
+            overflow: isMobile ? "visible" : "hidden",
+          }}
+        >
+          {/* Left panel — Avatar */}
+          <div
+            style={{
+              ...styles.avatarPanel,
+              width: isMobile ? "100%" : 280,
+              minWidth: isMobile ? 0 : 280,
+              borderRight: isMobile ? "none" : styles.avatarPanel.borderRight,
+              display: isMobile
+                ? mobileTab === "avatar"
+                  ? "flex"
+                  : "none"
+                : "flex",
+            }}
+          >
+            <div
+              style={{
+                padding: "18px 18px 12px",
+                marginBottom: 10,
+                borderRadius: 18,
+                border: "1px solid rgba(255,107,53,0.16)",
+                background:
+                  "linear-gradient(180deg, rgba(255,107,53,0.08), rgba(255,255,255,0.02))",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 18,
+                  fontWeight: 900,
+                  color: "var(--accent)",
+                }}
+              >
+                FLEXA
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "rgba(255,255,255,0.55)",
+                  marginTop: 4,
+                  lineHeight: 1.5,
+                }}
+              >
+                Ask about workouts, nutrition, and your goals.
+              </div>
+            </div>
+
+            {/* Quick actions */}
+            <div style={styles.quickActionsLabel}>Quick Actions</div>
+            <div style={styles.quickActions}>
+              {QUICK_ACTIONS.map((qa) => (
+                <button
+                  key={qa.label}
+                  style={styles.chip}
+                  onClick={() => handleSend(qa.text)}
+                  disabled={isTyping}
+                >
+                  {qa.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Right panel — Chat */}
+          <div
+            style={{
+              ...styles.chatPanel,
+              display: isMobile
+                ? mobileTab === "chat"
+                  ? "flex"
+                  : "none"
+                : "flex",
+              minHeight: 0,
+            }}
+          >
+            {/* Messages */}
+            <div style={styles.messages}>
+              {isLoading ? (
+                <div style={styles.centerMsg}>Loading chat history…</div>
+              ) : (
+                <>
+                  {messages.map((msg) => (
+                    <ChatBubble
+                      key={msg.id}
+                      role={msg.role}
+                      content={msg.content}
+                      timestamp={msg.timestamp}
+                      language={msg.language}
+                    />
+                  ))}
+                  {isTyping && <TypingIndicator />}
+                  <div ref={messagesEndRef} />
+                </>
+              )}
+            </div>
+
+            {/* Error */}
+            {error && <div style={styles.errorBar}>{error}</div>}
+
+            {/* Input */}
+            <div style={styles.inputRow}>
+              <textarea
+                ref={inputRef}
+                style={{
+                  ...styles.textarea,
+                  fontSize: isMobile ? 16 : 14,
+                  direction: /[\u0600-\u06FF]/.test(input) ? "rtl" : "ltr",
+                }}
+                placeholder={
+                  language === "ur"
+                    ? "یہاں پیغام لکھیں…"
+                    : "Ask FLEXA anything… (Urdu & English)"
+                }
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                rows={1}
+                maxLength={2000}
+                disabled={isTyping}
+              />
+              {isSpeechSupported && (
+                <button
+                  title={isListening ? "Stop listening" : "Speak your message"}
+                  style={{
+                    ...styles.micBtn,
+                    background: isListening
+                      ? "rgba(239,68,68,0.15)"
+                      : "rgba(255,255,255,0.07)",
+                    border: isListening
+                      ? "1px solid rgba(239,68,68,0.5)"
+                      : "1px solid rgba(255,255,255,0.1)",
+                    color: isListening ? "#FF0055" : "rgba(255,255,255,0.6)",
+                    animation: isListening
+                      ? "micPulse 1.2s ease-in-out infinite"
+                      : "none",
+                  }}
+                  onClick={handleMicClick}
+                  disabled={isTyping}
+                  aria-label={
+                    isListening ? "Stop recording" : "Start voice input"
+                  }
+                  aria-pressed={isListening}
+                >
+                  <FiMic size={17} />
+                </button>
+              )}
+              <button
+                style={{
+                  ...styles.sendBtn,
+                  opacity: !input.trim() || isTyping ? 0.5 : 1,
+                  cursor: !input.trim() || isTyping ? "not-allowed" : "pointer",
+                }}
+                onClick={() => handleSend()}
+                disabled={!input.trim() || isTyping}
+              >
+                <FiSend size={18} />
+              </button>
+            </div>
+
+            <div style={styles.hint}>
+              {isListening
+                ? "🎙 Listening… speak now"
+                : "Press Enter to send · Shift+Enter for new line · اردو میں لکھ سکتے ہیں"}
+            </div>
           </div>
         </div>
       </div>
@@ -491,6 +513,17 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     fontFamily: "'Inter', sans-serif",
+  },
+  shell: {
+    width: "100%",
+    maxWidth: 1280,
+    margin: "0 auto",
+    padding: "0 16px 16px",
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
+    flex: 1,
+    minHeight: 0,
   },
   header: {
     display: "flex",

@@ -25,8 +25,8 @@ const NAV_LINKS = [
   { to: "/calorie-estimator", label: "Calories", icon: <FiCamera /> },
   { to: "/posture-tracker", label: "Posture", icon: <FiVideo /> },
   { to: "/chatbot", label: "FLEXA", icon: <TbRobot /> },
-  { to: "/progress", label: "Report", icon: <FiTrendingUp /> },
   { to: "/marketplace", label: "Experts", icon: <FiBriefcase /> },
+  { to: "/progress", label: "Report", icon: <FiTrendingUp /> },
 ];
 
 export default function Navbar() {

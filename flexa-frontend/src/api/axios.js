@@ -15,7 +15,15 @@ const api = axios.create({
 
 // Add request interceptor to ensure proper headers
 api.interceptors.request.use((config) => {
-  // Ensure Content-Type is always set
+  const isFormData =
+    typeof FormData !== "undefined" && config.data instanceof FormData;
+
+  if (isFormData) {
+    delete config.headers["Content-Type"];
+    return config;
+  }
+
+  // Ensure Content-Type is always set for JSON requests.
   if (!config.headers["Content-Type"]) {
     config.headers["Content-Type"] = "application/json";
   }

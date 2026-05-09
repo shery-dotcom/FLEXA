@@ -101,6 +101,7 @@ function MacroTile({ label, value, unit, color }) {
         padding: "14px 16px",
         textAlign: "center",
         flex: 1,
+        minHeight: 82,
       }}
     >
       <div style={{ fontSize: 22, fontWeight: 800, color }}>
@@ -188,7 +189,6 @@ export default function CalorieEstimator() {
       const res = await api.post(
         `/diet/upload-meal-image?portion_g=${portionG}${confirmedParam}`,
         formData,
-        { headers: { "Content-Type": undefined } },
       );
       setResult(res.data);
       if (
@@ -200,7 +200,9 @@ export default function CalorieEstimator() {
         setSelectedPrediction("");
       }
     } catch (e) {
-      toast.error(parseApiError(e, "Analysis failed. Make sure the backend is running."));
+      toast.error(
+        parseApiError(e, "Analysis failed. Make sure the backend is running."),
+      );
     } finally {
       setLoading(false);
     }
@@ -259,7 +261,13 @@ export default function CalorieEstimator() {
       />
 
       <div
-        style={{ maxWidth: 620, margin: "0 auto", padding: "40px 20px 80px" }}
+        style={{
+          maxWidth: 960,
+          width: "100%",
+          margin: "0 auto",
+          padding: "36px 20px 80px",
+          boxSizing: "border-box",
+        }}
       >
         {/* Header */}
         <div style={{ marginBottom: 32 }}>
@@ -352,13 +360,21 @@ export default function CalorieEstimator() {
             </div>
           </div>
         ) : (
-          <div style={{ marginBottom: 24 }}>
+          <div
+            style={{
+              marginBottom: 24,
+              background: "#0d0d0d",
+              border: "1px solid #1a1a1a",
+              borderRadius: 16,
+              padding: 14,
+            }}
+          >
             <img
               src={preview}
               alt="Food preview"
               style={{
                 width: "100%",
-                maxHeight: 320,
+                maxHeight: 360,
                 objectFit: "contain",
                 borderRadius: 14,
                 border: "1px solid #222",
@@ -484,6 +500,7 @@ export default function CalorieEstimator() {
               border: `1px solid ${GOLD}33`,
               borderRadius: 16,
               padding: "24px 20px",
+              boxShadow: "0 12px 34px rgba(0,0,0,0.28)",
             }}
           >
             {!!result.message && (
@@ -612,7 +629,13 @@ export default function CalorieEstimator() {
               >
                 Nutritional Estimate ({result.portion_g}g portion)
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                  gap: 8,
+                }}
+              >
                 <MacroTile
                   label="Calories"
                   value={Math.round(result.estimated_calories)}
